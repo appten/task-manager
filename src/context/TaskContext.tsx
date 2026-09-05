@@ -1,10 +1,21 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Task, TabType, FilterStatus, SubTask, AIAnalysisResult } from '../types/task';
+import {
+  Task,
+  TabType,
+  FilterStatus,
+  SubTask,
+  AIAnalysisResult,
+  ScheduleComparisonResult,
+} from '../types/task';
 import { INITIAL_TASKS, getFormattedDate } from '../data/seedTasks';
 import { analyzeTasksWithCircadianAI } from '../services/geminiService';
-import { scheduleDailyTasksSmartly } from '../services/smartScheduler';
+import {
+  scheduleDailyTasksSmartly,
+  createSmartBreakTask,
+  compareSchedules,
+} from '../services/smartScheduler';
 
 interface TaskContextType {
   tasks: Task[];
@@ -45,12 +56,32 @@ interface TaskContextType {
   isGoalModalOpen: boolean;
   setIsGoalModalOpen: (open: boolean) => void;
   autoScheduleDay: (dateStr: string) => void;
+  addRecoveryBreak: (dateStr: string, type: 'lunch' | 'hydration' | 'afternoon' | 'dinner', startTime?: string) => void;
   resetToSampleData: () => void;
+
+  // Fitur Jadwal Paralel: Versi Ori vs Versi AI (1x Klik Berpindah)
+  activeScheduleVersion: 'ori' | 'ai';
+  setActiveScheduleVersion: (version: 'ori' | 'ai') => void;
+  toggleScheduleVersion: () => void;
+  getTasksForDateAndVersion: (dateStr: string, version?: 'ori' | 'ai') => Task[];
+
+  // Fitur Komparasi & Pengaturan Jadwal AI (Sebelum vs Sesudah)
+  previewAiSchedule: (dateStr: string) => ScheduleComparisonResult | null;
+  applyAiSchedule: (dateStr: string) => void;
+  revertToOriginal: (dateStr: string) => void;
+  refreshAiSchedule: (dateStr: string) => ScheduleComparisonResult | null;
+  getComparisonForDate: (dateStr: string) => ScheduleComparisonResult | null;
+  hasOriginalSnapshot: (dateStr: string) => boolean;
+  hasAiProposal: (dateStr: string) => boolean;
+  activeScheduleModes: Record<string, 'original' | 'ai'>;
+  toggleScheduleMode: (dateStr: string, mode: 'original' | 'ai') => void;
 }
 
 const STORAGE_KEY = 'ten_my_id_tasks_v01';
 const STORAGE_ANALYSIS_KEY = 'ten_my_id_ai_analysis_v01';
 const STORAGE_GOAL_KEY = 'ten_my_id_user_goal_v01';
+const STORAGE_ORIGINAL_KEY = 'ten_my_id_original_schedules_v01';
+const STORAGE_VERSION_KEY = 'ten_my_id_active_schedule_version_v01';
 
 const DEFAULT_LIFE_GOAL = 'Merilis produk digital berdampak, menjaga kesehatan fisik prima, dan mandiri finansial di tahun 2026';
 
@@ -74,6 +105,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // State Analisis AI & Jam Biologis
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
   const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
+
+  // State Jadwal Asli & Proposal AI untuk Komparasi Sebelum/Sesudah
+  const [originalSchedules, setOriginalSchedules] = useState<Record<string, Task[]>>({});
+  const [aiProposals, setAiProposals] = useState<Record<string, Task[]>>({});
+  const [activeScheduleModes, setActiveScheduleModes] = useState<Record<string, 'original' | 'ai'>>({});
+
+  // Mode Jadwal Paralel (Versi Ori vs Versi AI - 1x Klik Berpindah)
+  const [activeScheduleVersion, setActiveScheduleVersion] = useState<'ori' | 'ai'>('ori');
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -101,6 +140,18 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (savedGoal && savedGoal.trim()) {
         setUserGoal(savedGoal);
       }
+
+      // Load saved Original Schedules
+      const savedOriginals = localStorage.getItem(STORAGE_ORIGINAL_KEY);
+      if (savedOriginals) {
+        setOriginalSchedules(JSON.parse(savedOriginals));
+      }
+
+      // Load saved Schedule Version (Ori vs AI)
+      const savedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
+      if (savedVersion === 'ai' || savedVersion === 'ori') {
+        setActiveScheduleVersion(savedVersion);
+      }
     } catch (e) {
       console.warn('Gagal membaca localStorage, menggunakan data seed:', e);
       setTasks(INITIAL_TASKS);
@@ -119,6 +170,28 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
   }, [tasks, isHydrated]);
+
+  // Sync originalSchedules to localStorage
+  useEffect(() => {
+    if (isHydrated && Object.keys(originalSchedules).length > 0) {
+      try {
+        localStorage.setItem(STORAGE_ORIGINAL_KEY, JSON.stringify(originalSchedules));
+      } catch (e) {
+        console.error('Gagal menyimpan originalSchedules ke localStorage:', e);
+      }
+    }
+  }, [originalSchedules, isHydrated]);
+
+  // Sync activeScheduleVersion to localStorage
+  useEffect(() => {
+    if (isHydrated) {
+      try {
+        localStorage.setItem(STORAGE_VERSION_KEY, activeScheduleVersion);
+      } catch (e) {
+        console.error('Gagal menyimpan activeScheduleVersion ke localStorage:', e);
+      }
+    }
+  }, [activeScheduleVersion, isHydrated]);
 
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
@@ -309,31 +382,191 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast('Analisis dihapus dari penyimpanan lokal.');
   }, [showToast]);
 
-  const autoScheduleDay = useCallback(
+  const hasOriginalSnapshot = useCallback(
     (dateStr: string) => {
-      const dayTasks = tasks.filter((t) => t.dueDate === dateStr);
-      if (dayTasks.length === 0) {
-        showToast('Tidak ada tugas pada tanggal ini untuk dijadwalkan.');
-        return;
+      return Boolean(originalSchedules[dateStr] && originalSchedules[dateStr].length > 0);
+    },
+    [originalSchedules]
+  );
+
+  const hasAiProposal = useCallback(
+    (dateStr: string) => {
+      return Boolean(aiProposals[dateStr] && aiProposals[dateStr].length > 0);
+    },
+    [aiProposals]
+  );
+
+  const toggleScheduleMode = useCallback((dateStr: string, mode: 'original' | 'ai') => {
+    setActiveScheduleModes((prev) => ({ ...prev, [dateStr]: mode }));
+  }, []);
+
+  const previewAiSchedule = useCallback(
+    (dateStr: string): ScheduleComparisonResult | null => {
+      let orig = originalSchedules[dateStr];
+      if (!orig || orig.length === 0) {
+        orig = tasks.filter((t) => t.dueDate === dateStr && !t.isBreakTask);
+        if (orig.length > 0) {
+          setOriginalSchedules((prev) => ({ ...prev, [dateStr]: orig }));
+        }
       }
 
-      const scheduled = scheduleDailyTasksSmartly(dayTasks);
-      setTasks((prev) =>
-        prev.map((t) => {
-          if (t.dueDate === dateStr) {
-            const found = scheduled.find((s) => s.id === t.id);
-            return found || t;
-          }
-          return t;
-        })
-      );
-      showToast('Jadwal harian AI berhasil disusun tanpa bentrok! ⚡📅');
+      if (orig.length === 0) {
+        showToast('Tidak ada tugas pada tanggal ini untuk dijadwalkan.');
+        return null;
+      }
+
+      const aiScheduled = scheduleDailyTasksSmartly(orig);
+      setAiProposals((prev) => ({ ...prev, [dateStr]: aiScheduled }));
+      return compareSchedules(orig, aiScheduled);
     },
-    [tasks, showToast]
+    [originalSchedules, tasks, showToast]
+  );
+
+  const applyAiSchedule = useCallback(
+    (dateStr: string) => {
+      let proposal = aiProposals[dateStr];
+      let orig = originalSchedules[dateStr];
+
+      if (!orig || orig.length === 0) {
+        orig = tasks.filter((t) => t.dueDate === dateStr && !t.isBreakTask);
+        setOriginalSchedules((prev) => ({ ...prev, [dateStr]: orig }));
+      }
+
+      if (!proposal || proposal.length === 0) {
+        if (orig.length === 0) {
+          showToast('Tidak ada tugas pada tanggal ini.');
+          return;
+        }
+        proposal = scheduleDailyTasksSmartly(orig);
+        setAiProposals((prev) => ({ ...prev, [dateStr]: proposal }));
+      }
+
+      setTasks((prev) => {
+        const otherDayTasks = prev.filter((t) => t.dueDate !== dateStr);
+        return [...otherDayTasks, ...proposal];
+      });
+
+      setActiveScheduleModes((prev) => ({ ...prev, [dateStr]: 'ai' }));
+      const hasBreak = proposal.some((t) => t.isBreakTask);
+      if (hasBreak) {
+        showToast('Jadwal AI & Jeda Istirahat Energi berhasil diterapkan! ⚡☕');
+      } else {
+        showToast('Jadwal AI berhasil diterapkan tanpa bentrok! ⚡📅');
+      }
+    },
+    [aiProposals, originalSchedules, tasks, showToast]
+  );
+
+  const revertToOriginal = useCallback(
+    (dateStr: string) => {
+      const orig = originalSchedules[dateStr];
+      if (orig && orig.length > 0) {
+        setTasks((prev) => {
+          const otherDayTasks = prev.filter((t) => t.dueDate !== dateStr);
+          return [...otherDayTasks, ...orig];
+        });
+      } else {
+        setTasks((prev) => prev.filter((t) => !(t.dueDate === dateStr && t.isBreakTask)));
+      }
+
+      setActiveScheduleModes((prev) => ({ ...prev, [dateStr]: 'original' }));
+      showToast('Jadwal dikembalikan ke susunan asli (sebelum AI) 📋');
+    },
+    [originalSchedules, showToast]
+  );
+
+  const refreshAiSchedule = useCallback(
+    (dateStr: string): ScheduleComparisonResult | null => {
+      const baseline =
+        originalSchedules[dateStr] && originalSchedules[dateStr].length > 0
+          ? originalSchedules[dateStr]
+          : tasks.filter((t) => t.dueDate === dateStr && !t.isBreakTask);
+
+      if (baseline.length === 0) {
+        showToast('Tidak ada tugas pada tanggal ini untuk diperbarui.');
+        return null;
+      }
+
+      const freshAi = scheduleDailyTasksSmartly(baseline);
+      setAiProposals((prev) => ({ ...prev, [dateStr]: freshAi }));
+      showToast('Rekomendasi AI berhasil diperbarui dengan data terkini! 🔄⚡');
+      return compareSchedules(baseline, freshAi);
+    },
+    [originalSchedules, tasks, showToast]
+  );
+
+  const getComparisonForDate = useCallback(
+    (dateStr: string): ScheduleComparisonResult | null => {
+      const orig =
+        originalSchedules[dateStr] ||
+        tasks.filter((t) => t.dueDate === dateStr && !t.isBreakTask);
+      const ai =
+        aiProposals[dateStr] ||
+        (orig.length > 0 ? scheduleDailyTasksSmartly(orig) : []);
+      if (orig.length === 0 && ai.length === 0) return null;
+      return compareSchedules(orig, ai);
+    },
+    [originalSchedules, aiProposals, tasks]
+  );
+
+  const autoScheduleDay = useCallback(
+    (dateStr: string) => {
+      applyAiSchedule(dateStr);
+    },
+    [applyAiSchedule]
+  );
+
+  const addRecoveryBreak = useCallback(
+    (
+      dateStr: string,
+      type: 'lunch' | 'hydration' | 'afternoon' | 'dinner',
+      startTimeStr: string = '12:00'
+    ) => {
+      const duration = type === 'lunch' || type === 'dinner' ? 45 : 15;
+      const breakTask = createSmartBreakTask(dateStr, type, startTimeStr, duration);
+      setTasks((prev) => [breakTask, ...prev]);
+      showToast(`Jeda istirahat "${breakTask.title}" ditambahkan! ☕`);
+    },
+    [showToast]
+  );
+
+  const toggleScheduleVersion = useCallback(() => {
+    setActiveScheduleVersion((prev) => {
+      const next = prev === 'ori' ? 'ai' : 'ori';
+      showToast(next === 'ai' ? 'Beralih ke Versi AI (Jadwal Teroptimasi) ⚡' : 'Beralih ke Versi Ori (Jadwal Asli) 📋');
+      return next;
+    });
+  }, [showToast]);
+
+  const getTasksForDateAndVersion = useCallback(
+    (dateStr: string, version: 'ori' | 'ai' = activeScheduleVersion): Task[] => {
+      const dayTasks = tasks.filter((t) => t.dueDate === dateStr);
+
+      if (version === 'ori') {
+        // Versi Ori: tampilkan tugas asli pengguna (hilangkan tugas jeda istirahat otomatis)
+        return dayTasks.filter((t) => !t.isBreakTask || t.breakType === 'custom');
+      }
+
+      // Versi AI: ambil tugas non-break, lalu susun secara cerdas menggunakan smartScheduler
+      const nonBreakTasks = dayTasks.filter((t) => !t.isBreakTask);
+      if (nonBreakTasks.length === 0) {
+        return dayTasks;
+      }
+      return scheduleDailyTasksSmartly(nonBreakTasks);
+    },
+    [tasks, activeScheduleVersion]
   );
 
   const resetToSampleData = useCallback(() => {
     setTasks(INITIAL_TASKS);
+    setOriginalSchedules({});
+    setAiProposals({});
+    setActiveScheduleModes({});
+    setActiveScheduleVersion('ori');
+    try {
+      localStorage.removeItem(STORAGE_ORIGINAL_KEY);
+      localStorage.removeItem(STORAGE_VERSION_KEY);
+    } catch {}
     showToast('Data direset ke data contoh');
   }, [showToast]);
 
@@ -372,7 +605,21 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isGoalModalOpen,
         setIsGoalModalOpen,
         autoScheduleDay,
+        addRecoveryBreak,
         resetToSampleData,
+        previewAiSchedule,
+        applyAiSchedule,
+        revertToOriginal,
+        refreshAiSchedule,
+        getComparisonForDate,
+        hasOriginalSnapshot,
+        hasAiProposal,
+        activeScheduleModes,
+        toggleScheduleMode,
+        activeScheduleVersion,
+        setActiveScheduleVersion,
+        toggleScheduleVersion,
+        getTasksForDateAndVersion,
       }}
     >
       {children}

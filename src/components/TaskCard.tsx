@@ -109,7 +109,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
   };
 
   return (
-    <div className={`task-card ${task.isCompleted ? 'completed' : ''}`}>
+    <div
+      className={`task-card ${task.isCompleted ? 'completed' : ''} ${
+        task.isBreakTask ? 'break-task-card' : ''
+      }`}
+    >
       <div className="task-card-header">
         {/* Checkbox Lingkaran Utama */}
         <button
@@ -143,8 +147,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 
           {/* Baris Keterangan yang Rapi dan Bersih */}
           <div className="task-meta-row">
+            {/* Badge Jeda Istirahat / Pemulihan Energi */}
+            {task.isBreakTask && (
+              <span className="meta-item meta-break">
+                ☕ Jeda Istirahat
+              </span>
+            )}
+
             {/* Prioritas Tinggi */}
-            {task.priority === 'high' && (
+            {task.priority === 'high' && !task.isBreakTask && (
               <span className="meta-urgent">
                 <AlertCircle size={10} />
                 Penting

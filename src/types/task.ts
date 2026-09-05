@@ -1,6 +1,6 @@
 export type Priority = 'low' | 'medium' | 'high';
 
-export type Category = 'Pekerjaan' | 'Pribadi' | 'Belajar' | 'Kesehatan' | 'Lainnya';
+export type Category = 'Pekerjaan' | 'Pribadi' | 'Belajar' | 'Kesehatan' | 'Istirahat' | 'Lainnya';
 
 export interface SubTask {
   id: string;
@@ -24,6 +24,9 @@ export interface Task {
   dueTime?: string; // Format: HH:mm (Batas jam akhir / jam utama)
   
   // Jadwal Mulai & Selesai yang Fleksibel & Opsional
+  // Catatan penting:
+  // - startTime = Waktu paling awal tugas HANYA BISA dimulai (Earliest Start Window)
+  // - endTime = Waktu batas akhir tugas HARUS SELESAI (Latest Finish Deadline)
   startDate?: string; // Tanggal mulai pengerjaan (opsional)
   startTime?: string; // Jam mulai pengerjaan (opsional, e.g. "07:00")
   endDate?: string; // Tanggal selesai pengerjaan (opsional)
@@ -40,6 +43,10 @@ export interface Task {
   scheduledSessions?: ScheduledSession[]; // Sesi-sesi waktu teralokasi bebas bentrok
   schedulingNote?: string; // Catatan alasan pembagian jadwal dari AI
   isAiScheduled?: boolean; // Penanda jadwal telah dioptimasi oleh AI
+
+  // Fitur Pemulihan Energi & Istirahat (Break & Recovery)
+  isBreakTask?: boolean; // Penanda apakah tugas ini adalah jeda istirahat / hidrasi / makan
+  breakType?: 'lunch' | 'hydration' | 'afternoon' | 'dinner' | 'custom';
 
   // Keselarasan Tujuan Hidup
   goalAlignmentScore?: number; // Skor keselarasan terhadap tujuan hidup: -100 s/d 100
@@ -77,4 +84,41 @@ export interface AIAnalysisResult {
   overallSummary: string;
   userGoalContext?: string;
   tasksAnalysis: TaskAnalysisItem[];
+}
+
+export type ScheduleChangeType = 'unchanged' | 'rescheduled' | 'added_break' | 'split';
+
+export interface ScheduleItemDiff {
+  taskId: string;
+  taskTitle: string;
+  isBreakTask?: boolean;
+  breakType?: 'lunch' | 'hydration' | 'afternoon' | 'dinner' | 'custom';
+  changeType: ScheduleChangeType;
+  
+  // Data Sebelum (Original)
+  beforeTime?: string;
+  beforeWindow?: string;
+  
+  // Data Sesudah (AI)
+  afterTime: string;
+  afterSessions?: ScheduledSession[];
+  
+  reason: string;
+  priority: Priority;
+  category: Category;
+}
+
+export interface ScheduleComparisonResult {
+  dateStr: string;
+  originalTasks: Task[];
+  aiTasks: Task[];
+  diffs: ScheduleItemDiff[];
+  summary: {
+    totalTasks: number;
+    rescheduledCount: number;
+    breaksAddedCount: number;
+    splitCount: number;
+    unchangedCount: number;
+    energyProtectionNote: string;
+  };
 }

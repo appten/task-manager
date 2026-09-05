@@ -259,8 +259,10 @@ export const analyzeTasksWithCircadianAI = async (
     .map(
       (t, idx) =>
         `${idx + 1}. [ID: ${t.id}] "${t.title}" (Prioritas: ${t.priority}, Kategori: ${t.category}${
-          t.dueDate ? `, Jatuh tempo: ${t.dueDate}` : ''
-        }${t.description ? `, Catatan: ${t.description}` : ''}${
+          t.isBreakTask ? ' [JEDA ISTIRAHAT/RECOVERY]' : ''
+        }${t.startTime ? `, Waktu Mulai Paling Awal: ${t.startTime} (HANYA BISA DIMULAI SETELAH JAM INI)` : ''}${
+          t.endTime ? `, Batas Selesai/Deadline: ${t.endTime} (HARUS SELESAI SEBELUM JAM INI)` : ''
+        }${t.dueDate ? `, Tanggal: ${t.dueDate}` : ''}${t.description ? `, Catatan: ${t.description}` : ''}${
           t.subTasks && t.subTasks.length > 0
             ? `, Memiliki ${t.subTasks.length} sub-tugas: [${t.subTasks.map((s) => s.title).join(', ')}]`
             : ''
@@ -272,22 +274,29 @@ export const analyzeTasksWithCircadianAI = async (
     ? `\nTujuan Besar Hidup Pengguna Tahun Ini: "${userGoal}"\n`
     : '\nTujuan Besar Hidup Pengguna: Belum dispesifikasi (Gunakan standar efektivitas dan produktivitas hidup optimal).\n';
 
-  const prompt = `Sebagai pakar produktivitas tingkat tinggi dan ahli chronobiology (ritme sirkadian / jam biologis tubuh manusia):
+  const prompt = `Sebagai pakar produktivitas tingkat tinggi, ergonomi kerja, dan ahli chronobiology (ritme sirkadian / jam biologis & manajemen energi manusia):
 
 Waktu saat ini: ${currentTimeFormatted}.
 ${goalPromptSection}
 Daftar Tugas Pengguna:
 ${tasksDescription}
 
+ATURAN PENTING PENJADWALAN WAKTU:
+1. "Waktu Mulai" berarti tugas tersebut HANYA BISA DIMULAI pada atau setelah waktu tersebut (Earliest Start Window). DILARANG merekomendasikan memulai sebelum jam mulai ini.
+2. "Batas Selesai" berarti tugas HARUS SELESAI SEBELUM waktu tersebut (Latest Finish Deadline). Pengerjaan harus tuntas sebelum batas akhir ini.
+3. KESEIMBANGAN ENERGI & WAKTU LELAH / ISTIRAHAT:
+   - Energi manusia memiliki batas kapasitas biologis. Kerja intensif di atas 90 menit tanpa jeda akan menurunkan fokus secara drastis.
+   - Perhatikan kebutuhan istirahat wajar: makan siang (12:00-13:00), hidrasi/peregangan berkala, dan jeda sore (15:30-16:30).
+   - Pastikan beban kerja harian seimbang: tidak berlebihan (menghindari burnout/stres) dan tidak berkekurangan (tetap produktif menuju tujuan hidup).
+   - Jika saat ini adalah jam makan atau waktu lelah, sarankan jeda pemulihan energi terlebih dahulu sebelum masuk ke tugas berat.
+
 Analisis yang harus kamu lakukan:
-1. Tugas mana yang paling penting untuk SEGERA dilakukan saat ini juga dengan mempertimbangkan jam biologis DAN keselarasan dengan tujuan hidup pengguna.
+1. Tugas mana yang paling tepat untuk DIKERJAKAN SAAT INI JUGA dengan mempertimbangkan jam biologis, aturan waktu mulai/selesai, DAN keselarasan tujuan hidup.
 2. Estimasi usaha yang diperlukan (pilih salah satu: "Ringan", "Sedang", "Tinggi").
 3. Estimasi durasi penyelesaian yang realistis (misal: "20 - 30 menit", "45 menit", "1 - 2 jam").
-4. Hubungan dengan jam biologis tubuh pada saat itu juga (misal: fase puncak fokus pagi kortisol tinggi, fase penurunan energi siang, fase performa sore, fase relaksasi malam).
-5. Skor keselarasan terhadap tujuan besar hidup pengguna berupa angka integer antara -100 hingga +100:
-   - Positif (+1 hingga +100): Tugas ini mendekatkan ke tujuan hidup.
-   - 0: Netral/Rutinitas biasa.
-   - Negatif (-1 hingga -100): Menjauhkan atau membuang waktu dari tujuan.
+4. Hubungan dengan jam biologis & status energi tubuh saat ini (misal: fase puncak fokus kortisol pagi, fase pemulihan setelah makan siang, fase performa sore, fase relaksasi malam).
+5. Skor keselarasan terhadap tujuan besar hidup pengguna berupa angka integer antara -100 hingga +100.
+
 
 WAJIB hasilkan output HANYA dalam format JSON murni:
 {

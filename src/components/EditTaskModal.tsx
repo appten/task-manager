@@ -156,10 +156,11 @@ export const EditTaskModal: React.FC = () => {
             <div className="schedule-card-header">
               <div className="schedule-card-title">
                 <Clock size={15} />
-                <span>Jadwal Mulai & Selesai (Opsional)</span>
+                <span>Ketentuan Waktu Pengerjaan (Opsional)</span>
               </div>
               <span className="schedule-card-hint">
-                Jadwal yang Anda isi terkunci (fixed), AI hanya mengisi kekosongan.
+                <strong>Mulai</strong>: Tugas hanya bisa dimulai pada/setelah waktu ini.<br />
+                <strong>Selesai</strong>: Tugas harus sudah beres sebelum batas waktu ini.
               </span>
             </div>
 
@@ -167,7 +168,7 @@ export const EditTaskModal: React.FC = () => {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="edit-task-start-date">
-                  <Calendar size={12} /> Tgl Mulai
+                  <Calendar size={12} /> Tgl Mulai Terawal
                 </label>
                 <input
                   id="edit-task-start-date"
@@ -182,7 +183,7 @@ export const EditTaskModal: React.FC = () => {
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="edit-task-start-time">
-                  <Clock size={12} /> Jam Mulai
+                  <Clock size={12} /> Jam Mulai Terawal
                 </label>
                 <input
                   id="edit-task-start-time"
@@ -192,6 +193,9 @@ export const EditTaskModal: React.FC = () => {
                   onChange={(e) => setStartTime(e.target.value)}
                   placeholder="--:--"
                 />
+                <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                  Hanya boleh mulai ≥ jam ini
+                </span>
               </div>
             </div>
 
@@ -199,7 +203,7 @@ export const EditTaskModal: React.FC = () => {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="edit-task-end-date">
-                  <Calendar size={12} /> Tgl Selesai
+                  <Calendar size={12} /> Tgl Batas Akhir
                 </label>
                 <input
                   id="edit-task-end-date"
@@ -211,7 +215,7 @@ export const EditTaskModal: React.FC = () => {
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="edit-task-end-time">
-                  <Clock size={12} /> Jam Selesai
+                  <Clock size={12} /> Batas Jam Selesai
                 </label>
                 <input
                   id="edit-task-end-time"
@@ -221,6 +225,9 @@ export const EditTaskModal: React.FC = () => {
                   onChange={(e) => setEndTime(e.target.value)}
                   placeholder="--:--"
                 />
+                <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                  Harus selesai ≤ jam ini
+                </span>
               </div>
             </div>
 
@@ -315,6 +322,7 @@ export const EditTaskModal: React.FC = () => {
               <option value="Pribadi">🏠 Pribadi</option>
               <option value="Belajar">📚 Belajar</option>
               <option value="Kesehatan">🏃 Kesehatan</option>
+              <option value="Istirahat">☕ Istirahat & Recharge</option>
               <option value="Lainnya">✨ Lainnya</option>
             </select>
           </div>
