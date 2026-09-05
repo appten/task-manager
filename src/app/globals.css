@@ -1,1 +1,2170 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Material Design 3 (Material You) Light Theme Tokens */
+  --md-sys-color-primary: #0b57d0;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #d3e3fd;
+  --md-sys-color-on-primary-container: #041e49;
+
+  --md-sys-color-surface: #ffffff;
+  --md-sys-color-surface-container: #f0f4f9;
+  --md-sys-color-surface-container-high: #e9eef6;
+  --md-sys-color-surface-variant: #e1e3e1;
+  --md-sys-color-on-surface: #1f1f1f;
+  --md-sys-color-on-surface-variant: #444746;
+  --md-sys-color-outline: #c4c7c5;
+  --md-sys-color-outline-variant: #e0e2ec;
+
+  --md-sys-color-secondary: #00639b;
+  --md-sys-color-secondary-container: #c2e7ff;
+  --md-sys-color-on-secondary-container: #001d35;
+
+  /* Priority & Status colors (Google palette) */
+  --color-success: #137333;
+  --color-success-bg: #e6f4ea;
+  --color-success-border: #ceead6;
+
+  --color-warning: #b06000;
+  --color-warning-bg: #fef7e0;
+  --color-warning-border: #feefc3;
+
+  --color-danger: #b3261e;
+  --color-danger-bg: #fce8e6;
+  --color-danger-border: #fad2cf;
+
+  --color-info: #0b57d0;
+  --color-info-bg: #e8f0fe;
+  --color-info-border: #d2e3fc;
+
+  /* Elevation Shadows (Material Elevation) */
+  --elevation-1: 0 1px 3px 1px rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --elevation-2: 0 2px 6px 2px rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --elevation-3: 0 4px 12px 3px rgba(0, 0, 0, 0.1), 0 1px 3px 0 rgba(0, 0, 0, 0.06);
+
+  --font-family: 'Roboto', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  font-family: var(--font-family);
+  background-color: #f1f5f9;
+  color: var(--md-sys-color-on-surface);
+  overflow-x: hidden;
+  user-select: none;
+}
+
+/* Background preview for desktop */
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #e2e8f0;
+}
+
+/* Android Device Frame for Desktop View */
+.mobile-viewport-wrapper {
+  width: 100%;
+  max-width: 420px;
+  height: 94vh;
+  height: 94dvh;
+  max-height: 890px;
+  background: #ffffff;
+  border-radius: 36px;
+  box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.2), 0 0 0 8px #0f172a, 0 0 0 9px #334155;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Real Mobile Screen (Responsive Fullscreen) */
+@media (max-width: 480px) {
+  body {
+    background: #ffffff;
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+  }
+  .mobile-viewport-wrapper {
+    max-width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* Android Status Bar (Material Style) */
+.android-status-bar {
+  height: 38px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f1f1f;
+  background: #ffffff;
+  z-index: 50;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.android-punch-hole {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #0f172a;
+  box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.android-system-icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #444746;
+}
+
+/* Android Top App Bar */
+.android-app-bar {
+  padding: 10px 18px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #edf0f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 40;
+}
+
+.app-bar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-bar-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--md-sys-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(11, 87, 208, 0.25);
+}
+
+.app-bar-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f1f1f;
+  letter-spacing: -0.01em;
+}
+
+.app-bar-subtitle {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+}
+
+.app-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.android-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--md-sys-color-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.android-icon-btn:hover {
+  background: #f0f4f9;
+  color: var(--md-sys-color-on-surface);
+}
+
+.android-icon-btn:active {
+  background: #e1e7f0;
+  transform: scale(0.94);
+}
+
+/* App Main Content Area */
+.app-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: #f8fafc;
+}
+
+.scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 12px 85px;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.scrollable-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Material 3 Android Bottom Navigation Bar */
+.android-bottom-nav-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #f0f4f9;
+  border-top: 1px solid #e2e8f0;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 6px;
+  z-index: 50;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.android-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex: 1;
+  padding: 4px 0;
+  position: relative;
+}
+
+/* Material You Active Pill Indicator */
+.nav-icon-wrapper {
+  width: 54px;
+  height: 28px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #444746;
+  transition: all 0.2s ease;
+}
+
+.android-nav-item.active .nav-icon-wrapper {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.android-nav-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #444746;
+  transition: color 0.2s ease;
+}
+
+.android-nav-item.active .android-nav-label {
+  color: var(--md-sys-color-on-surface);
+  font-weight: 700;
+}
+
+.android-nav-badge {
+  position: absolute;
+  top: 2px;
+  right: 22px;
+  background: #b3261e;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+/* Material Search Bar - Compact */
+.android-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.android-search-bar:focus-within {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 2px 6px rgba(11, 87, 208, 0.12);
+}
+
+.android-search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #1f1f1f;
+  font-family: inherit;
+}
+
+.android-search-input::placeholder {
+  color: #747775;
+}
+
+/* Filter Chips (Material 3 Filter Chips) - Compact */
+.filter-scroll-container {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  margin-bottom: 8px;
+  scrollbar-width: none;
+}
+
+.filter-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.material-chip {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #c4c7c5;
+  color: #444746;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.material-chip:hover {
+  background: #f0f4f9;
+}
+
+.material-chip.active {
+  background: var(--md-sys-color-secondary-container);
+  border-color: #7cacf8;
+  color: var(--md-sys-color-on-secondary-container);
+  font-weight: 700;
+}
+
+/* Android Task Card - Compact & Space-Efficient */
+.task-card {
+  background: #ffffff;
+  border: 1px solid #e0e2ec;
+  border-radius: 12px;
+  padding: 9px 12px;
+  margin-bottom: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.15s ease;
+}
+
+.task-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+.task-card.completed {
+  background: #fcfcfc;
+  border-color: #e8ecf1;
+}
+
+.task-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Android Checkbox (Circular / Rounded Google Tasks Style) */
+.android-checkbox {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 50%;
+  border: 1.8px solid #747775;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: #ffffff;
+  margin-top: 1px;
+}
+
+.android-checkbox:hover {
+  border-color: var(--md-sys-color-primary);
+  background: #f0f4f9;
+}
+
+.android-checkbox.checked {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #ffffff;
+}
+
+.task-main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #1f1f1f;
+  word-break: break-word;
+}
+
+.task-title.completed-title {
+  text-decoration: line-through;
+  color: #8c9095;
+}
+
+.task-desc-compact {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+/* Task Meta Information - Clean, Focused, Distraction-Free */
+.task-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+/* Only High/Urgent priority is subtly highlighted to keep focus on what matters */
+.meta-urgent {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #b3261e;
+  background: #fce8e6;
+  font-weight: 600;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Subtle, distraction-free subtask trigger button */
+.meta-subtask-btn {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meta-subtask-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+.meta-subtask-btn.active {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+
+/* 1-Click AI Subtask Generator Button */
+.meta-ai-btn {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #15803d;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meta-ai-btn:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.meta-ai-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@keyframes spinAnimation {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spinAnimation 0.8s linear infinite;
+}
+
+/* Subdued Card Actions (Not screaming for attention) */
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0.45;
+  transition: opacity 0.2s ease;
+}
+
+.task-card:hover .card-actions,
+.task-card:active .card-actions,
+.task-card:focus-within .card-actions {
+  opacity: 1;
+}
+
+.card-action-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.card-action-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.card-action-btn.delete-btn:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Android 3-Dot More Menu */
+.more-menu-container {
+  position: relative;
+}
+
+.more-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: transparent;
+}
+
+.more-menu-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: #ffffff;
+  border: 1px solid #e0e2ec;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.05);
+  min-width: 215px;
+  z-index: 80;
+  overflow: hidden;
+  padding: 5px;
+  animation: popoverFadeIn 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popoverFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.93) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.more-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1f1f1f;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s ease;
+}
+
+.more-menu-item:hover {
+  background: #f0f4f9;
+}
+
+.more-menu-item.ai-item {
+  color: #0b57d0;
+  font-weight: 600;
+}
+
+.more-menu-item.ai-item:hover {
+  background: #e8f0fe;
+}
+
+.more-menu-item.delete-item {
+  color: #b3261e;
+}
+
+.more-menu-item.delete-item:hover {
+  background: #fee2e2;
+}
+
+.meta-item.meta-estimate {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Compact Sub-task Accordion Section */
+.subtask-accordion-body {
+  margin-top: 6px;
+  margin-left: 30px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 2.5px solid var(--md-sys-color-primary);
+  border-top: 1px solid #eef2f6;
+  border-right: 1px solid #eef2f6;
+  border-bottom: 1px solid #eef2f6;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  animation: fadeIn 0.15s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 1px 0;
+}
+
+.subtask-checkbox {
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  border-radius: 3px;
+  border: 1.4px solid #747775;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: #ffffff;
+}
+
+.subtask-checkbox.checked {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #ffffff;
+}
+
+.subtask-title {
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.25;
+}
+
+.subtask-title.checked-text {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+/* Material 3 Outlined Form Controls */
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid #e0e2ec;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #444746;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #c4c7c5;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #1f1f1f;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px var(--md-sys-color-primary-container);
+}
+
+.form-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Priority Selector in Material Style */
+.priority-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.priority-btn {
+  padding: 9px 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: #f0f4f9;
+  border: 1px solid #e0e2ec;
+  color: #444746;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.priority-btn.active.high {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #b91c1c;
+}
+
+.priority-btn.active.medium {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+.priority-btn.active.low {
+  background: #e0f2fe;
+  border-color: #0284c7;
+  color: #0369a1;
+}
+
+/* Sub-task Builder Wrapper */
+.subtask-builder-wrapper {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subtask-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.subtask-add-btn {
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--md-sys-color-primary-container);
+  border: 1px solid #a8c7fa;
+  color: var(--md-sys-color-on-primary-container);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.subtask-add-btn:hover {
+  background: #c2e7ff;
+}
+
+.built-subtask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.built-subtask-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.built-subtask-chip button {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+/* Material Primary Button (Filled Button) */
+.btn-primary {
+  width: 100%;
+  padding: 12px;
+  border-radius: 24px;
+  background: var(--md-sys-color-primary);
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(11, 87, 208, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.btn-primary:hover {
+  background: #0842a0;
+  box-shadow: 0 4px 10px rgba(11, 87, 208, 0.35);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* Google Calendar Style (Material Light) */
+.calendar-card {
+  background: #ffffff;
+  border: 1px solid #e0e2ec;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.calendar-month-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.calendar-month-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1f1f1f;
+}
+
+.calendar-nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.calendar-weekday {
+  font-size: 12px;
+  font-weight: 600;
+  color: #747775;
+  padding: 4px 0 8px;
+}
+
+.calendar-date-cell {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  color: #1f1f1f;
+}
+
+.calendar-date-cell:hover {
+  background: #f0f4f9;
+}
+
+.calendar-date-cell.other-month {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.calendar-date-cell.is-today {
+  border: 1.5px solid var(--md-sys-color-primary);
+  color: var(--md-sys-color-primary);
+  font-weight: 700;
+}
+
+.calendar-date-cell.is-selected {
+  background: var(--md-sys-color-primary) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(11, 87, 208, 0.35);
+}
+
+.calendar-dot-row {
+  display: flex;
+  gap: 2px;
+  position: absolute;
+  bottom: 3px;
+}
+
+.calendar-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary);
+}
+
+.calendar-date-cell.is-selected .calendar-dot {
+  background: #ffffff;
+}
+
+/* Calendar Selected Date Agenda */
+.calendar-agenda-wrapper {
+  margin-top: 18px;
+}
+
+.agenda-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.agenda-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f1f1f;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Material 3 Bottom Sheet Modal (Light) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-sheet {
+  width: 100%;
+  max-width: 420px;
+  max-height: 88vh;
+  background: #ffffff;
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  padding: 16px 20px 28px;
+  overflow-y: auto;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheet-handle-bar {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #c4c7c5;
+  margin: 0 auto 16px;
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.sheet-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1f1f1f;
+}
+
+/* Toast Floating Notification */
+.toast-container {
+  position: absolute;
+  top: 48px;
+  left: 20px;
+  right: 20px;
+  z-index: 90;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.toast-box {
+  background: #1f1f1f;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  padding: 10px 18px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: toastPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes toastPop {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  color: #747775;
+}
+
+.empty-icon-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #f0f4f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: var(--md-sys-color-primary);
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f1f1f;
+  margin-bottom: 4px;
+}
+
+.empty-desc {
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: 250px;
+}
+
+/* =================================================== */
+/* AI Chrono-Productivity & Circadian Analysis Styling */
+/* =================================================== */
+.ai-trigger-banner {
+  background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 1px 3px rgba(11, 87, 208, 0.06);
+}
+
+.ai-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.ai-banner-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #0b57d0;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(11, 87, 208, 0.25);
+}
+
+.ai-banner-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.ai-banner-desc {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+  line-height: 1.3;
+}
+
+.ai-banner-btn {
+  background: #0b57d0;
+  color: #ffffff;
+  border: none;
+  border-radius: 20px;
+  padding: 7px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(11, 87, 208, 0.25);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.ai-banner-btn:hover:not(:disabled) {
+  background: #0842a0;
+  transform: translateY(-1px);
+}
+
+.ai-banner-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* AI Analysis Card (Saved Locally) */
+.ai-card-wrapper {
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(11, 87, 208, 0.08);
+  transition: all 0.2s ease;
+}
+
+.ai-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  cursor: pointer;
+  gap: 8px;
+}
+
+.ai-header-info {
+  flex: 1;
+}
+
+.ai-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0b57d0;
+  background: #e8f0fe;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 3px;
+  letter-spacing: 0.01em;
+}
+
+.ai-card-main-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.ai-card-time-tag {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.ai-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.ai-refresh-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ai-refresh-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.ai-toggle-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+/* Collapsed summary pill */
+.ai-collapsed-summary {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+  cursor: pointer;
+}
+
+/* Expanded Content */
+.ai-expanded-content {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.ai-section-box {
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.ai-section-box.circadian-box {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+}
+
+.ai-section-box.strategy-box {
+  background: #fefce8;
+  border: 1px solid #fef08a;
+}
+
+.ai-section-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.circadian-state-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0369a1;
+  margin-bottom: 2px;
+}
+
+.circadian-advice-text {
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.4;
+}
+
+/* Per-task Breakdown */
+.ai-tasks-breakdown {
+  margin-top: 4px;
+}
+
+.ai-task-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-task-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  transition: all 0.15s ease;
+}
+
+.ai-task-card.top-priority {
+  background: #f0fdf4;
+  border-color: #86efac;
+  box-shadow: 0 1px 4px rgba(22, 163, 74, 0.1);
+}
+
+.top-priority-banner {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #15803d;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-task-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-task-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.ai-urgency-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.ai-task-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.metric-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #64748b;
+}
+
+.ai-biological-fit {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: #0284c7;
+  background: #e0f2fe;
+  padding: 3px 6px;
+  border-radius: 4px;
+  line-height: 1.3;
+}
+
+.ai-reason-text {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.35;
+  font-style: italic;
+}
+
+.ai-collapse-text-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.ai-collapse-text-btn:hover {
+  color: #0f172a;
+}
+
+/* =========================================================
+   Goal Settings & AI Alignment Score Badges (-100 s/d 100)
+   ========================================================= */
+
+/* Header Target / Goal Button Highlight */
+.goal-btn-highlight {
+  color: #16a34a !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  position: relative;
+}
+
+.goal-btn-highlight:hover {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+}
+
+/* Goal Alignment Score Badge on Task Card */
+.meta-item.meta-goal {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1.5px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  border-width: 1px;
+  border-style: solid;
+  transition: transform 0.15s ease;
+}
+
+.meta-item.meta-goal:hover {
+  transform: scale(1.04);
+}
+
+.meta-item.meta-goal.positive {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.meta-item.meta-goal.neutral {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.meta-item.meta-goal.negative {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+/* Goal Settings Modal Sheet */
+.goal-settings-modal {
+  max-height: 90vh;
+}
+
+.goal-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.goal-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #ecfdf5;
+  color: #059669;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #a7f3d0;
+}
+
+.modal-subtitle {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+/* Goal Info & Legend Box */
+.goal-info-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+
+.goal-info-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.goal-info-title svg {
+  color: #0284c7;
+}
+
+.goal-info-text {
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.score-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.legend-item {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+
+.legend-item.legend-pos {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+.legend-item.legend-neu {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.legend-item.legend-neg {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.legend-badge {
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 2px;
+}
+
+.legend-desc {
+  font-size: 9.5px;
+  line-height: 1.2;
+  opacity: 0.9;
+}
+
+/* Textarea for Goal */
+.goal-textarea {
+  width: 100%;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1e293b;
+  background: #ffffff;
+  resize: vertical;
+  line-height: 1.45;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.goal-textarea:focus {
+  outline: none;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.form-help {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* Preset quick goals buttons */
+.preset-goals-container {
+  margin-top: 14px;
+}
+
+.preset-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.preset-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preset-tag-btn {
+  text-align: left;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 11px;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.35;
+}
+
+.preset-tag-btn:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+/* =========================================================
+   Flexible Schedule Card Group (Start & End Times)
+   ========================================================= */
+
+.schedule-card-group {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.schedule-card-header {
+  margin-bottom: 10px;
+}
+
+.schedule-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.schedule-card-title svg {
+  color: #0284c7;
+}
+
+.schedule-card-hint {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+.quick-effort-chips {
+  display: flex;
+  gap: 4px;
+}
+
+.effort-chip {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.effort-chip:hover {
+  background: #f1f5f9;
+}
+
+.effort-chip.active {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+.concurrent-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #334155;
+  cursor: pointer;
+}
+
+.concurrent-checkbox-label input {
+  accent-color: #0284c7;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+/* Badges on TaskCard */
+.meta-item.meta-time-range {
+  color: #0284c7;
+  font-weight: 600;
+}
+
+.meta-item.meta-split-sessions {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.meta-item.meta-concurrent {
+  background: #faf5ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   Calendar Daily Timeline View (06:00 - 22:00)
+   ========================================================= */
+
+/* View Mode Switcher (Timeline vs List) */
+.view-mode-toggle {
+  display: flex;
+  background: #e2e8f0;
+  border-radius: 10px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* AI Auto-Schedule Banner */
+.timeline-ai-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-top: 10px;
+  margin-bottom: 8px;
+}
+
+.timeline-ai-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #166534;
+  flex: 1;
+}
+
+.ai-schedule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.ai-schedule-btn:hover {
+  background: #15803d;
+}
+
+/* Unscheduled Tasks Alert Dock */
+.unscheduled-tasks-box {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.unscheduled-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #b45309;
+  margin-bottom: 6px;
+}
+
+.unscheduled-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.unscheduled-chip {
+  background: #ffffff;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #78350f;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.unscheduled-chip:hover {
+  background: #fef3c7;
+}
+
+.chip-effort {
+  background: #fef08a;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Timeline Layout */
+.daily-timeline-container {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 12px 10px;
+  margin-top: 6px;
+}
+
+.timeline-hour-row {
+  display: flex;
+  align-items: flex-start;
+  min-height: 48px;
+  position: relative;
+}
+
+.timeline-time-col {
+  width: 48px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.hour-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-content-col {
+  flex: 1;
+  position: relative;
+  padding-bottom: 6px;
+}
+
+.timeline-guide-line {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed #e2e8f0;
+  pointer-events: none;
+}
+
+.timeline-empty-slot {
+  height: 38px;
+}
+
+.timeline-blocks-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  z-index: 2;
+}
+
+.timeline-task-block {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.timeline-task-block:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.timeline-task-block.priority-high {
+  border-left-color: #ef4444;
+  background: #fff5f5;
+}
+
+.timeline-task-block.priority-medium {
+  border-left-color: #f59e0b;
+  background: #fffdf5;
+}
+
+.timeline-task-block.priority-low {
+  border-left-color: #10b981;
+  background: #f0fdf9;
+}
+
+.timeline-task-block.completed {
+  opacity: 0.65;
+  border-left-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.timeline-block-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeline-mini-checkbox {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1.5px solid #94a3b8;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.timeline-mini-checkbox.checked {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.timeline-block-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.3;
+  flex: 1;
+}
+
+.timeline-block-title.checked-title {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+.timeline-block-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  margin-left: 20px;
+}
+
+.block-time-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #0284c7;
+}
+
+.block-session-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.block-multitask-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: #f3e8ff;
+  color: #7e22ce;
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.block-split-indicator {
+  font-size: 9px;
+  font-weight: 700;
+  color: #d97706;
+  background: #fef3c7;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+
