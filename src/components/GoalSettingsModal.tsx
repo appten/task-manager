@@ -1,16 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Target, X, Check, Sparkles, HelpCircle, ArrowUpRight, Minus, ArrowDownRight } from 'lucide-react';
+import { Target, X, Check, Sparkles, HelpCircle, ArrowUpRight, Minus, ArrowDownRight, Key, Eye, EyeOff } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
+import { getGeminiApiKey, setGeminiApiKey } from '../services/geminiService';
 
 export const GoalSettingsModal: React.FC = () => {
   const { userGoal, saveUserGoal, isGoalModalOpen, setIsGoalModalOpen } = useTask();
   const [goalInput, setGoalInput] = useState(userGoal);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
 
   useEffect(() => {
     if (isGoalModalOpen) {
       setGoalInput(userGoal);
+      setApiKeyInput(getGeminiApiKey());
     }
   }, [isGoalModalOpen, userGoal]);
 
@@ -20,6 +24,7 @@ export const GoalSettingsModal: React.FC = () => {
     e.preventDefault();
     if (!goalInput.trim()) return;
     saveUserGoal(goalInput);
+    setGeminiApiKey(apiKeyInput);
     setIsGoalModalOpen(false);
   };
 
@@ -117,6 +122,43 @@ export const GoalSettingsModal: React.FC = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="form-group" style={{ marginTop: '16px', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label htmlFor="gemini-api-key-input" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '13px', color: '#1e293b' }}>
+                <Key size={15} style={{ color: '#0284c7' }} />
+                <span>Gemini API Key</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                {showApiKey ? <EyeOff size={13} /> : <Eye size={13} />}
+                <span>{showApiKey ? 'Sembunyikan' : 'Lihat'}</span>
+              </button>
+            </div>
+            <input
+              id="gemini-api-key-input"
+              type={showApiKey ? 'text' : 'password'}
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              placeholder="Masukkan Gemini API Key..."
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                fontSize: '12px',
+                fontFamily: 'monospace',
+                background: '#ffffff',
+                boxSizing: 'border-box'
+              }}
+            />
+            <span style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', display: 'block', lineHeight: 1.4 }}>
+              Disimpan aman di browser Anda (localStorage). Dapat dipakai langsung tanpa build ulang Cloudflare.
+            </span>
           </div>
 
           <div className="form-actions-dual" style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>

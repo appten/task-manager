@@ -1,15 +1,54 @@
 import { Task, AIAnalysisResult } from '../types/task';
 
 // Gemini API Service for Sub-tasks, Circadian Productivity, and Life Goal Alignment Analysis
-const DEFAULT_API_KEY = '';
+
+export const getGeminiApiKey = (): string => {
+  if (typeof window !== 'undefined') {
+    const localKey = localStorage.getItem('gemini_api_key');
+    if (localKey && localKey.trim()) return localKey.trim();
+  }
+  return process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
+};
+
+export const setGeminiApiKey = (key: string): void => {
+  if (typeof window !== 'undefined') {
+    if (key.trim()) {
+      localStorage.setItem('gemini_api_key', key.trim());
+    } else {
+      localStorage.removeItem('gemini_api_key');
+    }
+  }
+};
+
+const handleGeminiError = async (response: Response): Promise<never> => {
+  const errText = await response.text();
+  console.error('Gemini API error:', response.status, errText);
+  let errMsg = `Status ${response.status}`;
+  try {
+    const errJson = JSON.parse(errText);
+    if (errJson.error?.message) {
+      errMsg = errJson.error.message;
+    }
+  } catch {}
+
+  if (response.status === 403) {
+    throw new Error(
+      `Akses ditolak (403): ${errMsg}. Periksa apakah API key aktif atau apakah ada pembatasan referrer/domain di Google Cloud Console.`
+    );
+  }
+  throw new Error(`Gagal menghubungi Gemini AI (${response.status}): ${errMsg}`);
+};
 
 export const generateSubTasksWithAI = async (
   title: string,
   description?: string,
   existingSubTasks?: string[]
 ): Promise<string[]> => {
-  const apiKey =
-    process.env.NEXT_PUBLIC_GEMINI_API_KEY || DEFAULT_API_KEY;
+  const apiKey = getGeminiApiKey();
+
+  if (!apiKey) {
+    throw new Error('Gemini API key belum diatur. Masukkan API key di menu Pengaturan / Goals.');
+  }
 
   if (!title.trim()) {
     throw new Error('Judul tugas tidak boleh kosong');
@@ -54,9 +93,7 @@ Ketentuan:
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    console.error('Gemini API error:', errText);
-    throw new Error(`Gagal menghubungi Gemini AI (${response.status})`);
+    return handleGeminiError(response);
   }
 
   const data = await response.json();
@@ -95,8 +132,11 @@ export const generateSubTasksAndEstimateWithAI = async (
   existingSubTasks?: string[],
   userGoal?: string
 ): Promise<SubTasksAndEstimateResult> => {
-  const apiKey =
-    process.env.NEXT_PUBLIC_GEMINI_API_KEY || DEFAULT_API_KEY;
+  const apiKey = getGeminiApiKey();
+
+  if (!apiKey) {
+    throw new Error('Gemini API key belum diatur. Masukkan API key di menu Pengaturan / Goals.');
+  }
 
   if (!title.trim()) {
     throw new Error('Judul tugas tidak boleh kosong');
@@ -158,9 +198,7 @@ WAJIB mengembalikan HANYA format JSON murni:
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    console.error('Gemini API error:', errText);
-    throw new Error(`Gagal menghubungi Gemini AI (${response.status})`);
+    return handleGeminiError(response);
   }
 
   const data = await response.json();
@@ -198,8 +236,11 @@ export const analyzeTasksWithCircadianAI = async (
   tasks: Task[],
   userGoal?: string
 ): Promise<AIAnalysisResult> => {
-  const apiKey =
-    process.env.NEXT_PUBLIC_GEMINI_API_KEY || DEFAULT_API_KEY;
+  const apiKey = getGeminiApiKey();
+
+  if (!apiKey) {
+    throw new Error('Gemini API key belum diatur. Masukkan API key di menu Pengaturan / Goals.');
+  }
 
   if (!tasks || tasks.length === 0) {
     throw new Error('Tidak ada tugas untuk dianalisis.');
@@ -291,9 +332,7 @@ WAJIB hasilkan output HANYA dalam format JSON murni:
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    console.error('Gemini API error during task analysis:', errText);
-    throw new Error(`Gagal menghubungi Gemini AI (${response.status})`);
+    return handleGeminiError(response);
   }
 
   const data = await response.json();
