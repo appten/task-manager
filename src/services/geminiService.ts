@@ -47,7 +47,7 @@ export const generateSubTasksWithAI = async (
   const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
-    throw new Error('Gemini API key belum diatur. Masukkan API key di menu Pengaturan / Goals.');
+    throw new Error('Gemini API key belum diatur. Pastikan environment variable NEXT_PUBLIC_GEMINI_API_KEY sudah diset di Cloudflare.');
   }
 
   if (!title.trim()) {
@@ -135,7 +135,7 @@ export const generateSubTasksAndEstimateWithAI = async (
   const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
-    throw new Error('Gemini API key belum diatur. Masukkan API key di menu Pengaturan / Goals.');
+    throw new Error('Gemini API key belum diatur. Pastikan environment variable NEXT_PUBLIC_GEMINI_API_KEY sudah diset di Cloudflare.');
   }
 
   if (!title.trim()) {
@@ -239,7 +239,7 @@ export const analyzeTasksWithCircadianAI = async (
   const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
-    throw new Error('Gemini API key belum diatur. Masukkan API key di menu Pengaturan / Goals.');
+    throw new Error('Gemini API key belum diatur. Pastikan environment variable NEXT_PUBLIC_GEMINI_API_KEY sudah diset di Cloudflare.');
   }
 
   if (!tasks || tasks.length === 0) {
