@@ -166,6 +166,7 @@ export const CalendarView: React.FC = () => {
     selectedDate,
     setSelectedDate,
     setActiveTab,
+    setIsTaskFormOpen,
     autoScheduleDay,
     addRecoveryBreak,
     setEditingTask,
@@ -812,7 +813,10 @@ export const CalendarView: React.FC = () => {
             <button
               type="button"
               className="btn-primary"
-              onClick={() => setActiveTab('new')}
+              onClick={() => {
+                setActiveTab('inbox');
+                setIsTaskFormOpen(true);
+              }}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

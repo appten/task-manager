@@ -2797,5 +2797,1277 @@ body {
   box-shadow: 0 1px 4px rgba(22, 163, 74, 0.2);
 }
 
+/* ==========================================================================
+   MENU INBOX & TODAY 5 TUGAS (VERSION-01)
+   ========================================================================== */
 
+/* 1. Inbox Styles */
+.inbox-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inbox-quick-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.inbox-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.inbox-main-icon {
+  color: #0284c7;
+  background: #e0f2fe;
+  padding: 6px;
+  border-radius: 10px;
+  box-sizing: content-box;
+}
+
+.inbox-heading {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.inbox-subheading {
+  font-size: 11.5px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.btn-toggle-task-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+}
+
+.btn-toggle-task-form:hover {
+  background: #0369a1;
+  transform: translateY(-1px);
+}
+
+.btn-toggle-task-form.open {
+  background: #64748b;
+  box-shadow: none;
+}
+
+.inbox-form-wrapper {
+  animation: slideDownFade 0.25s ease-out;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  padding: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Banner Panduan Today di Inbox */
+.inbox-today-hint-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fde68a;
+  border-radius: 14px;
+  padding: 11px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.inbox-today-hint-banner:hover {
+  border-color: #f59e0b;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+.hint-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hint-icon-wrap {
+  background: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.2);
+}
+
+.hint-banner-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.hint-banner-desc {
+  font-size: 11px;
+  color: #b45309;
+  margin-top: 2px;
+}
+
+.highlight-tag {
+  background: #ffffff;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.btn-hint-action {
+  background: #ffffff;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-hint-action:hover {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+/* 2. Today Card Accents & Meta Button */
+.task-card.is-today-selected {
+  border-left: 3.5px solid #f59e0b;
+  background: linear-gradient(to right, #fffdfa, #ffffff);
+}
+
+.today-rank-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  border: 1px solid #fde68a;
+}
+
+.meta-today-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meta-today-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.meta-today-btn.active {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #b45309;
+  font-weight: 700;
+}
+
+/* 3. Today View Layout & Hero Card */
+.today-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.today-hero-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #ffffff;
+  border-radius: 18px;
+  padding: 18px 16px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.today-hero-card::after {
+  content: '';
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.2) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.today-hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.today-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.today-sun-icon {
+  animation: spinSlow 16s linear infinite;
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.today-date-text {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.today-hero-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+}
+
+.today-hero-subtitle {
+  font-size: 12px;
+  color: #cbd5e1;
+  margin: 0 0 14px 0;
+  line-height: 1.4;
+}
+
+/* Progres Bar Today */
+.today-progress-section {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.today-progress-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: #e2e8f0;
+  margin-bottom: 6px;
+}
+
+.today-progress-percent {
+  font-weight: 800;
+  color: #fcd34d;
+}
+
+.today-progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.today-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #10b981);
+  border-radius: 4px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Stats Pills */
+.today-stats-pills {
+  display: flex;
+  gap: 8px;
+}
+
+.today-pill {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+/* Slots Section */
+.today-slots-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.today-slots-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.today-slots-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.btn-select-from-inbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #0284c7;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-select-from-inbox:hover {
+  background: #f0f9ff;
+}
+
+.today-slots-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.today-slot-item {
+  position: relative;
+}
+
+/* Slot Kosong */
+.today-empty-slot {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 12px 14px;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.today-empty-slot:hover {
+  border-color: #0284c7;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.empty-slot-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-slot-content {
+  flex: 1;
+}
+
+.empty-slot-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.empty-slot-subtitle {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.btn-empty-slot-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f0f9ff;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.today-empty-slot:hover .btn-empty-slot-add {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+/* Empty State khusus Today */
+.today-empty-state {
+  border: 1.5px dashed #fde68a;
+  background: #fffbeb;
+  border-radius: 16px;
+  padding: 24px 16px;
+}
+
+.today-empty-icon {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+/* Filosofi Tip Card */
+.today-philosophy-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 4px;
+}
+
+.philosophy-icon {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.philosophy-text {
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.philosophy-text strong {
+  color: #334155;
+}
+
+/* Badge Today di Bottom Nav */
+.today-badge {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+/* ==========================================================================
+   FILTER WAKTU DITERIMA & PENGABAIAN TUGAS (7 HARI & 14 HARI)
+   ========================================================================== */
+
+/* Alert Banner Tugas Tertimbun */
+.neglected-alert-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+  border: 1px solid #fecdd3;
+  border-radius: 14px;
+  padding: 10px 14px;
+  gap: 10px;
+  box-shadow: 0 1px 3px rgba(225, 29, 72, 0.06);
+}
+
+.neglected-alert-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.neglected-alert-icon {
+  color: #e11d48;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.neglected-alert-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #9f1239;
+}
+
+.neglected-alert-desc {
+  font-size: 11px;
+  color: #be123c;
+  margin-top: 1px;
+  line-height: 1.35;
+}
+
+.btn-filter-neglected {
+  background: #e11d48;
+  color: #ffffff;
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-filter-neglected:hover {
+  background: #be123c;
+}
+
+/* Header Group Filter */
+.inbox-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.filter-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.filter-group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.btn-sort-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0284c7;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sort-toggle:hover {
+  background: #f0f9ff;
+  border-color: #0284c7;
+}
+
+.age-filter-scroll {
+  padding-bottom: 2px;
+}
+
+.age-chip {
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+}
+
+.neglected-chip-7.active {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+  border-color: #d97706 !important;
+}
+
+.neglected-chip-14.active {
+  background: #e11d48 !important;
+  color: #ffffff !important;
+  border-color: #be123c !important;
+}
+
+/* Active Filter Bar */
+.active-filter-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  color: #0369a1;
+}
+
+.btn-reset-filter {
+  background: none;
+  border: none;
+  color: #0284c7;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Badges Row di TaskCard */
+.task-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+/* Indikator Neglected di TaskCard */
+.neglected-rank-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.neglected-rank-indicator.badge-7 {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+}
+
+.neglected-rank-indicator.badge-14 {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+  animation: pulseNeglected 3s infinite;
+}
+
+@keyframes pulseNeglected {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
+  }
+}
+
+/* Card Accents untuk Tugas Diabaikan */
+.task-card.is-neglected-7 {
+  border-left: 3.5px solid #f59e0b;
+}
+
+.task-card.is-neglected-14 {
+  border-left: 3.5px solid #e11d48;
+  background: linear-gradient(to right, #fff5f5, #ffffff);
+}
+
+/* Meta pill waktu diterima */
+.meta-created-item {
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px !important;
+}
+
+/* ==========================================================================
+   MODAL RIWAYAT TUGAS SELESAI (COMPLETED HISTORY MODAL)
+   ========================================================================== */
+
+.history-btn-action {
+  position: relative;
+  color: #10b981 !important;
+}
+
+.history-btn-action:hover {
+  background: #ecfdf5 !important;
+}
+
+.navbar-badge-dot {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  background: #10b981;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================================
+   HALAMAN RIWAYAT TUGAS SELESAI (FULL SCREEN VIEW)
+   ========================================================================== */
+
+.fullscreen-history-page {
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeInSlideUp 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 1. Header Layar Penuh */
+.history-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  gap: 8px;
+}
+
+.btn-history-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-history-back:hover {
+  background: #e2e8f0;
+}
+
+.history-header-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-page-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.history-count-badge {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 12px;
+}
+
+.btn-header-clear-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-header-clear-all:hover {
+  background: #e11d48;
+  color: #ffffff;
+  border-color: #e11d48;
+}
+
+/* 2. Hero Card Pencapaian */
+.history-page-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-bottom: 1px solid #a7f3d0;
+  padding: 12px 16px;
+}
+
+.hero-trophy-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.trophy-gold {
+  color: #f59e0b;
+}
+
+.hero-text-wrap {
+  flex: 1;
+}
+
+.hero-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #065f46;
+}
+
+.hero-desc {
+  font-size: 11px;
+  color: #047857;
+  margin-top: 1px;
+  line-height: 1.35;
+}
+
+/* 3. Search Section */
+.history-page-search-section {
+  padding: 10px 14px 2px 14px;
+  background: #f8fafc;
+}
+
+.history-full-search {
+  margin-bottom: 0 !important;
+  height: 38px !important;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+}
+
+.btn-cancel-search {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* 4. Content Area & Cards */
+.history-page-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px 24px 14px;
+}
+
+.history-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-card-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.15s ease;
+}
+
+.history-card-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.history-card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.history-check-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ecfdf5;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  border: 1px solid #a7f3d0;
+}
+
+.history-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-card-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #475569;
+  text-decoration: line-through;
+  line-height: 1.35;
+}
+
+.history-card-desc {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-top: 3px;
+  line-height: 1.3;
+}
+
+.history-card-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.history-pill-category {
+  font-size: 10px;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-weight: 600;
+}
+
+.history-meta-subitem {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  color: #64748b;
+}
+
+.history-meta-subitem.highlight-time {
+  color: #059669;
+  font-weight: 700;
+  background: #ecfdf5;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Actions Row di Kartu Riwayat */
+.history-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 8px;
+}
+
+.btn-action-restore {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-action-restore:hover {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+}
+
+.btn-action-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-action-delete:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+/* Empty state full screen */
+.history-fullscreen-empty {
+  margin-top: 40px;
+  background: #ffffff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 18px;
+  padding: 32px 18px;
+}
+
+.history-large-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #ecfdf5;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px auto;
+}
+
+/* ==========================================================================
+   Kategori / Jenis Inbox Selector & Badges (Kegiatan/Acara, Tugas, Pengingat)
+   ========================================================================== */
+.inbox-type-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.inbox-type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 10px 6px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #64748b;
+  position: relative;
+}
+
+.inbox-type-btn:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.inbox-type-btn-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+}
+
+.inbox-type-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.inbox-type-desc {
+  font-size: 9.5px;
+  opacity: 0.75;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+/* Status Active Tiap Jenis */
+.inbox-type-btn.kegiatan.active {
+  background: #f5f3ff;
+  border-color: #8b5cf6;
+  color: #6d28d9;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+}
+
+.inbox-type-btn.tugas.active {
+  background: #f0f9ff;
+  border-color: #0284c7;
+  color: #0369a1;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.15);
+}
+
+.inbox-type-btn.pengingat.active {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #b45309;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+/* Badges di TaskCard untuk Jenis Inbox (Halus, Tenang & Elegan) */
+.meta-inbox-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1.5px 6px;
+  border-radius: 6px;
+  letter-spacing: 0.2px;
+}
+
+.meta-inbox-badge.kegiatan {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ede9fe;
+}
+
+.meta-inbox-badge.tugas {
+  background: #f0f9ff;
+  color: #0284c7;
+  border: 1px solid #e0f2fe;
+}
+
+.meta-inbox-badge.pengingat {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fef3c7;
+}
+
+/* Indikator Prioritas Bersih & Ringkas */
+.meta-urgent-clean {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #e11d48;
+  background: #fff1f2;
+  padding: 1.5px 6px;
+  border-radius: 6px;
+  border: 1px solid #ffe4e6;
+}
+
+/* Waktu & Tanggal Ringkas */
+.meta-date-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  color: #475569;
+  font-weight: 500;
+  background: #f8fafc;
+  padding: 1.5px 6px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.meta-time-text {
+  color: #64748b;
+  font-size: 10px;
+}
+
+/* Tombol Today Ringkas & Tidak Mencolok */
+.meta-today-btn-clean {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1.5px 6px;
+  border-radius: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meta-today-btn-clean:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.meta-today-btn-clean.active {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #d97706;
+}
 

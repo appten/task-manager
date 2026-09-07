@@ -2,6 +2,8 @@ export type Priority = 'low' | 'medium' | 'high';
 
 export type Category = 'Pekerjaan' | 'Pribadi' | 'Belajar' | 'Kesehatan' | 'Istirahat' | 'Lainnya';
 
+export type InboxType = 'kegiatan' | 'tugas' | 'pengingat';
+
 export interface SubTask {
   id: string;
   title: string;
@@ -20,6 +22,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
+  inboxType?: InboxType; // 'kegiatan' (Kegiatan / Acara) | 'tugas' (Tugas) | 'pengingat' (Pengingat)
   dueDate: string; // Format: YYYY-MM-DD (Batas akhir / tanggal utama)
   dueTime?: string; // Format: HH:mm (Batas jam akhir / jam utama)
   
@@ -52,16 +55,23 @@ export interface Task {
   goalAlignmentScore?: number; // Skor keselarasan terhadap tujuan hidup: -100 s/d 100
   goalAlignmentReason?: string; // Penjelasan ringkas keselarasan tujuan
 
+  // Fitur Pilihan Today (Maksimal 5 tugas fokus)
+  isToday?: boolean;
+  todayOrder?: number;
+
   priority: Priority;
   category: Category;
   isCompleted: boolean;
+  completedAt?: string;
   subTasks: SubTask[];
   createdAt: string;
 }
 
-export type TabType = 'tasks' | 'new' | 'calendar';
+export type TabType = 'inbox' | 'today' | 'calendar';
 
 export type FilterStatus = 'all' | 'active' | 'completed';
+
+export type AgeFilter = 'all' | 'today' | 'neglected_7' | 'neglected_14';
 
 export interface TaskAnalysisItem {
   taskId: string;

@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTask } from '../context/TaskContext';
-import { Priority, Category, SubTask, Task } from '../types/task';
-import { X, Plus, Trash2, Calendar, Clock, Tag, Flag, CheckCircle } from 'lucide-react';
+import { Priority, Category, SubTask, Task, InboxType } from '../types/task';
+import { X, Plus, Trash2, Calendar, Clock, Tag, Flag, CheckCircle, CheckSquare, Bell } from 'lucide-react';
 
 export const EditTaskModal: React.FC = () => {
   const { editingTask, setEditingTask, updateTask } = useTask();
 
+  const [inboxType, setInboxType] = useState<InboxType>('tugas');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -29,6 +30,7 @@ export const EditTaskModal: React.FC = () => {
 
   useEffect(() => {
     if (editingTask) {
+      setInboxType(editingTask.inboxType || 'tugas');
       setTitle(editingTask.title);
       setDescription(editingTask.description || '');
       setDueDate(editingTask.dueDate);
@@ -79,6 +81,7 @@ export const EditTaskModal: React.FC = () => {
       ...editingTask,
       title: title.trim(),
       description: description.trim() || undefined,
+      inboxType,
       dueDate: finalDueDate,
       dueTime: finalDueTime,
       startDate: startDate || finalDueDate,
@@ -104,7 +107,7 @@ export const EditTaskModal: React.FC = () => {
         <div className="sheet-handle-bar" />
 
         <div className="sheet-header">
-          <div className="sheet-title">Edit Task</div>
+          <div className="sheet-title">Edit Item Inbox</div>
           <button
             type="button"
             className="android-icon-btn"
@@ -116,10 +119,57 @@ export const EditTaskModal: React.FC = () => {
         </div>
 
         <form onSubmit={handleSave} className="form-container">
+          {/* Kategori / Jenis Inbox */}
+          <div className="form-group" style={{ marginBottom: '14px' }}>
+            <label className="form-label" style={{ marginBottom: '6px' }}>
+              Kategori / Jenis Inbox <span style={{ color: '#f43f5e' }}>*</span>
+            </label>
+            <div className="inbox-type-selector">
+              <button
+                type="button"
+                className={`inbox-type-btn kegiatan ${inboxType === 'kegiatan' ? 'active' : ''}`}
+                onClick={() => setInboxType('kegiatan')}
+              >
+                <Calendar size={16} />
+                <div className="inbox-type-btn-content">
+                  <span className="inbox-type-title">Kegiatan / Acara</span>
+                  <span className="inbox-type-desc">Agenda, rapat, event</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                className={`inbox-type-btn tugas ${inboxType === 'tugas' ? 'active' : ''}`}
+                onClick={() => setInboxType('tugas')}
+              >
+                <CheckSquare size={16} />
+                <div className="inbox-type-btn-content">
+                  <span className="inbox-type-title">Tugas</span>
+                  <span className="inbox-type-desc">Pekerjaan & to-do</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                className={`inbox-type-btn pengingat ${inboxType === 'pengingat' ? 'active' : ''}`}
+                onClick={() => setInboxType('pengingat')}
+              >
+                <Bell size={16} />
+                <div className="inbox-type-btn-content">
+                  <span className="inbox-type-title">Pengingat</span>
+                  <span className="inbox-type-desc">Notifikasi & memo</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Judul Task */}
           <div className="form-group">
             <label className="form-label" htmlFor="edit-task-title">
-              Judul Task <span style={{ color: '#f43f5e' }}>*</span>
+              {inboxType === 'kegiatan'
+                ? 'Nama Kegiatan / Acara'
+                : inboxType === 'pengingat'
+                ? 'Pengingat Untuk'
+                : 'Judul Tugas'}{' '}
+              <span style={{ color: '#f43f5e' }}>*</span>
             </label>
             <input
               id="edit-task-title"

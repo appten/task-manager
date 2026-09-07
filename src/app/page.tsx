@@ -4,11 +4,12 @@ import React from 'react';
 import { TaskProvider, useTask } from '../context/TaskContext';
 import { Header } from '../components/Header';
 import { BottomNav } from '../components/BottomNav';
-import { TaskList } from '../components/TaskList';
-import { TaskForm } from '../components/TaskForm';
+import { InboxView } from '../components/InboxView';
+import { TodayView } from '../components/TodayView';
 import { CalendarView } from '../components/CalendarView';
 import { EditTaskModal } from '../components/EditTaskModal';
 import { GoalSettingsModal } from '../components/GoalSettingsModal';
+import { CompletedHistoryModal } from '../components/CompletedHistoryModal';
 import { Toast } from '../components/Toast';
 
 const MainScreen: React.FC = () => {
@@ -25,13 +26,13 @@ const MainScreen: React.FC = () => {
       {/* Main Scrollable View Area */}
       <main className="app-screen">
         <div className="scrollable-content">
-          {activeTab === 'tasks' && <TaskList />}
-          {activeTab === 'new' && <TaskForm />}
+          {activeTab === 'inbox' && <InboxView />}
+          {activeTab === 'today' && <TodayView />}
           {activeTab === 'calendar' && <CalendarView />}
         </div>
       </main>
 
-      {/* Bottom Navigation for 3 Main Menus */}
+      {/* Bottom Navigation for 3 Main Menus (Inbox, Today, Kalender) */}
       <BottomNav />
 
       {/* Edit Task Modal / Sheet */}
@@ -39,6 +40,9 @@ const MainScreen: React.FC = () => {
 
       {/* Yearly Goals & AI Personalization Settings Modal */}
       <GoalSettingsModal />
+
+      {/* Modal Riwayat Tugas Selesai */}
+      <CompletedHistoryModal />
     </div>
   );
 };

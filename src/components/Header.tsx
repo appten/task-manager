@@ -2,10 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTask } from '../context/TaskContext';
-import { CheckCheck, RotateCcw, Target, Wifi, BatteryMedium, Signal } from 'lucide-react';
+import { CheckCheck, History, Target, Wifi, BatteryMedium, Signal } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { tasks, resetToSampleData, setIsGoalModalOpen } = useTask();
+  const {
+    tasks,
+    todayTasks,
+    activeTab,
+    setIsGoalModalOpen,
+    setIsHistoryModalOpen,
+  } = useTask();
   const [currentTime, setCurrentTime] = useState('10:00');
 
   useEffect(() => {
@@ -21,6 +27,31 @@ export const Header: React.FC = () => {
   }, []);
 
   const pendingCount = tasks.filter((t) => !t.isCompleted).length;
+  const todayCompleted = todayTasks.filter((t) => t.isCompleted).length;
+
+  // Header Title & Subtitle dinamis
+  const getHeaderInfo = () => {
+    switch (activeTab) {
+      case 'today':
+        return {
+          title: 'Fokus Today',
+          subtitle: `${todayCompleted}/${todayTasks.length} tugas tuntas hari ini`,
+        };
+      case 'calendar':
+        return {
+          title: 'Kalender & Jadwal',
+          subtitle: 'Alokasi waktu & agenda harian',
+        };
+      case 'inbox':
+      default:
+        return {
+          title: 'Inbox Tugas',
+          subtitle: pendingCount > 0 ? `${pendingCount} tugas aktif di Inbox` : 'Semua tugas selesai 🎉',
+        };
+    }
+  };
+
+  const headerInfo = getHeaderInfo();
 
   return (
     <>
@@ -42,12 +73,8 @@ export const Header: React.FC = () => {
             <CheckCheck size={22} strokeWidth={2.4} />
           </div>
           <div>
-            <h1 className="app-bar-title">Tugas Saya</h1>
-            <div className="app-bar-subtitle">
-              {pendingCount > 0
-                ? `${pendingCount} tugas aktif`
-                : 'Semua tugas selesai 🎉'}
-            </div>
+            <h1 className="app-bar-title">{headerInfo.title}</h1>
+            <div className="app-bar-subtitle">{headerInfo.subtitle}</div>
           </div>
         </div>
 
@@ -60,13 +87,19 @@ export const Header: React.FC = () => {
           >
             <Target size={19} />
           </button>
+          {/* Tombol Riwayat Tugas Selesai */}
           <button
-            className="android-icon-btn"
-            onClick={resetToSampleData}
-            title="Reset ke data contoh"
-            aria-label="Reset data"
+            className="android-icon-btn history-btn-action"
+            onClick={() => setIsHistoryModalOpen(true)}
+            title="Riwayat Tugas Selesai"
+            aria-label="Riwayat Tugas Selesai"
           >
-            <RotateCcw size={18} />
+            <History size={19} />
+            {tasks.filter((t) => t.isCompleted).length > 0 && (
+              <span className="navbar-badge-dot">
+                {tasks.filter((t) => t.isCompleted).length}
+              </span>
+            )}
           </button>
         </div>
       </header>

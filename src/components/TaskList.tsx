@@ -26,6 +26,7 @@ export const TaskList: React.FC = () => {
     selectedCategory,
     setSelectedCategory,
     setActiveTab,
+    setIsTaskFormOpen,
   } = useTask();
 
   // Filter logic
@@ -146,7 +147,10 @@ export const TaskList: React.FC = () => {
               type="button"
               className="btn-primary"
               style={{ maxWidth: '180px', marginTop: '16px', padding: '10px' }}
-              onClick={() => setActiveTab('new')}
+              onClick={() => {
+                setActiveTab('inbox');
+                setIsTaskFormOpen(true);
+              }}
             >
               + Buat Task Baru
             </button>

@@ -2,45 +2,49 @@
 
 import React from 'react';
 import { useTask } from '../context/TaskContext';
-import { CheckSquare, PlusCircle, CalendarDays } from 'lucide-react';
+import { Inbox, Sun, CalendarDays } from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
-  const { activeTab, setActiveTab, tasks } = useTask();
+  const { activeTab, setActiveTab, tasks, todayTasks } = useTask();
 
-  const pendingCount = tasks.filter((t) => !t.isCompleted).length;
+  const inboxPendingCount = tasks.filter((t) => !t.isCompleted).length;
+  const todayActiveCount = todayTasks.filter((t) => !t.isCompleted).length;
 
   return (
     <nav className="android-bottom-nav-container" aria-label="Menu Navigasi Android">
-      {/* Menu 1: Task */}
+      {/* Menu 1: Inbox */}
       <button
         type="button"
-        className={`android-nav-item ${activeTab === 'tasks' ? 'active' : ''}`}
-        onClick={() => setActiveTab('tasks')}
-        aria-label="Menu Tugas"
+        className={`android-nav-item ${activeTab === 'inbox' ? 'active' : ''}`}
+        onClick={() => setActiveTab('inbox')}
+        aria-label="Menu Inbox Tugas"
       >
         <div className="nav-icon-wrapper">
-          <CheckSquare size={20} strokeWidth={activeTab === 'tasks' ? 2.4 : 2} />
+          <Inbox size={21} strokeWidth={activeTab === 'inbox' ? 2.4 : 2} />
         </div>
-        <span className="android-nav-label">Tugas</span>
-        {pendingCount > 0 && (
-          <span className="android-nav-badge">{pendingCount}</span>
+        <span className="android-nav-label">Inbox</span>
+        {inboxPendingCount > 0 && (
+          <span className="android-nav-badge">{inboxPendingCount}</span>
         )}
       </button>
 
-      {/* Menu 2: New / Entry */}
+      {/* Menu 2: Today (5 List Tugas Terpilih) */}
       <button
         type="button"
-        className={`android-nav-item ${activeTab === 'new' ? 'active' : ''}`}
-        onClick={() => setActiveTab('new')}
-        aria-label="Menu Tambah Tugas Baru"
+        className={`android-nav-item ${activeTab === 'today' ? 'active' : ''}`}
+        onClick={() => setActiveTab('today')}
+        aria-label="Menu Today 5 Tugas Pilihan"
       >
         <div className="nav-icon-wrapper">
-          <PlusCircle size={22} strokeWidth={activeTab === 'new' ? 2.4 : 2} />
+          <Sun size={21} strokeWidth={activeTab === 'today' ? 2.4 : 2} />
         </div>
-        <span className="android-nav-label">Buat Baru</span>
+        <span className="android-nav-label">Today</span>
+        <span className="android-nav-badge today-badge">
+          {todayTasks.length}/5
+        </span>
       </button>
 
-      {/* Menu 3: Calendar */}
+      {/* Menu 3: Kalender */}
       <button
         type="button"
         className={`android-nav-item ${activeTab === 'calendar' ? 'active' : ''}`}

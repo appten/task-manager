@@ -3,13 +3,14 @@
 import React, { useState } from 'react';
 import { useTask } from '../context/TaskContext';
 import { getFormattedDate } from '../data/seedTasks';
-import { Priority, Category, SubTask } from '../types/task';
-import { Plus, Trash2, Calendar, Clock, Tag, Flag, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
+import { Priority, Category, SubTask, InboxType } from '../types/task';
+import { Plus, Trash2, Calendar, Clock, Tag, Flag, CheckCircle2, Sparkles, Loader2, CheckSquare, Bell } from 'lucide-react';
 import { generateSubTasksWithAI } from '../services/geminiService';
 
 export const TaskForm: React.FC = () => {
   const { addTask, showToast } = useTask();
 
+  const [inboxType, setInboxType] = useState<InboxType>('tugas');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   
@@ -85,6 +86,7 @@ export const TaskForm: React.FC = () => {
     addTask({
       title: title.trim(),
       description: description.trim() || undefined,
+      inboxType,
       dueDate: finalDueDate,
       dueTime: finalDueTime,
       startDate: startDate || finalDueDate,
@@ -103,6 +105,7 @@ export const TaskForm: React.FC = () => {
     });
 
     // Reset form
+    setInboxType('tugas');
     setTitle('');
     setDescription('');
     setStartDate(getFormattedDate(0));
@@ -119,25 +122,78 @@ export const TaskForm: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit} className="form-container">
-      <div style={{ marginBottom: '6px' }}>
+      <div style={{ marginBottom: '8px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1f1f1f' }}>
-          Buat Tugas Baru
+          Tambah Inbox Baru
         </h2>
         <p style={{ fontSize: '13px', color: '#444746', marginTop: '2px' }}>
-          Atur jadwal fleksibel. AI akan mengisi kekosongan jadwal tanpa bentrok.
+          Pilih kategori inbox: Kegiatan / Acara, Tugas, atau Pengingat.
         </p>
       </div>
 
-      {/* Judul Task */}
+      {/* Kategori / Jenis Inbox */}
+      <div className="form-group" style={{ marginBottom: '14px' }}>
+        <label className="form-label" style={{ marginBottom: '6px' }}>
+          Kategori / Jenis Inbox <span style={{ color: '#f43f5e' }}>*</span>
+        </label>
+        <div className="inbox-type-selector">
+          <button
+            type="button"
+            className={`inbox-type-btn kegiatan ${inboxType === 'kegiatan' ? 'active' : ''}`}
+            onClick={() => setInboxType('kegiatan')}
+          >
+            <Calendar size={16} />
+            <div className="inbox-type-btn-content">
+              <span className="inbox-type-title">Kegiatan / Acara</span>
+              <span className="inbox-type-desc">Agenda, rapat, event</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            className={`inbox-type-btn tugas ${inboxType === 'tugas' ? 'active' : ''}`}
+            onClick={() => setInboxType('tugas')}
+          >
+            <CheckSquare size={16} />
+            <div className="inbox-type-btn-content">
+              <span className="inbox-type-title">Tugas</span>
+              <span className="inbox-type-desc">Pekerjaan & to-do</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            className={`inbox-type-btn pengingat ${inboxType === 'pengingat' ? 'active' : ''}`}
+            onClick={() => setInboxType('pengingat')}
+          >
+            <Bell size={16} />
+            <div className="inbox-type-btn-content">
+              <span className="inbox-type-title">Pengingat</span>
+              <span className="inbox-type-desc">Notifikasi & memo</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Judul Task / Inbox */}
       <div className="form-group">
         <label className="form-label" htmlFor="task-title">
-          Judul Task <span style={{ color: '#f43f5e' }}>*</span>
+          {inboxType === 'kegiatan'
+            ? 'Nama Kegiatan / Acara'
+            : inboxType === 'pengingat'
+            ? 'Pengingat Untuk'
+            : 'Judul Tugas'}{' '}
+          <span style={{ color: '#f43f5e' }}>*</span>
         </label>
         <input
           id="task-title"
           type="text"
           className="form-input"
-          placeholder="Contoh: Menyelesaikan laporan kuartal"
+          placeholder={
+            inboxType === 'kegiatan'
+              ? 'Contoh: Rapat evaluasi proyek / Seminar online'
+              : inboxType === 'pengingat'
+              ? 'Contoh: Ingat bayar tagihan listrik / Telepon rekan'
+              : 'Contoh: Menyelesaikan laporan kuartal'
+          }
           value={title}
           onChange={(e) => {
             setTitle(e.target.value);
@@ -414,7 +470,7 @@ export const TaskForm: React.FC = () => {
 
       {/* Tombol Simpan */}
       <button type="submit" className="btn-primary">
-        <Plus size={18} /> Simpan Task Baru
+        <Plus size={18} /> Simpan ke Inbox
       </button>
     </form>
   );

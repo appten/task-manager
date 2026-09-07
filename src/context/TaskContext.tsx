@@ -33,6 +33,17 @@ interface TaskContextType {
   setEditingTask: (task: Task | null) => void;
   toastMessage: string | null;
   showToast: (message: string) => void;
+  // Fitur Menu Today (Maksimal 5 tugas terpilih dari Inbox)
+  todayTasks: Task[];
+  toggleTodayTask: (taskId: string) => boolean;
+  addToToday: (taskId: string) => boolean;
+  removeFromToday: (taskId: string) => void;
+  isTaskFormOpen: boolean;
+  setIsTaskFormOpen: (open: boolean) => void;
+  isHistoryModalOpen: boolean;
+  setIsHistoryModalOpen: (open: boolean) => void;
+  clearAllCompletedTasks: () => void;
+
   addTask: (newTask: Omit<Task, 'id' | 'createdAt'>) => void;
   updateTask: (updatedTask: Task) => void;
   deleteTask: (taskId: string) => void;
@@ -90,13 +101,15 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('tasks');
+  const [activeTab, setActiveTab] = useState<TabType>('inbox');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<string>(getFormattedDate(0));
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   // State Pengaturan Goal Hidup & Personalisasi
   const [userGoal, setUserGoal] = useState<string>(DEFAULT_LIFE_GOAL);
@@ -121,7 +134,18 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (savedTasks) {
         const parsed = JSON.parse(savedTasks);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setTasks(parsed);
+          // Pastikan jika belum ada isToday, isi minimal 3 tugas pertama sebagai Today demo
+          const hasAnyToday = parsed.some((t: Task) => t.isToday);
+          if (!hasAnyToday) {
+            const upgraded = parsed.map((t: Task, idx: number) => ({
+              ...t,
+              isToday: idx < 3,
+              todayOrder: idx < 3 ? idx + 1 : undefined,
+            }));
+            setTasks(upgraded);
+          } else {
+            setTasks(parsed);
+          }
         } else {
           setTasks(INITIAL_TASKS);
         }
@@ -200,6 +224,55 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, 2800);
   }, []);
 
+  // Fitur 5 Tugas Fokus Today
+  const todayTasks = tasks.filter((t) => t.isToday).slice(0, 5);
+
+  const addToToday = useCallback(
+    (taskId: string): boolean => {
+      const currentTodayCount = tasks.filter((t) => t.isToday).length;
+      if (currentTodayCount >= 5) {
+        showToast('Maksimal 5 tugas untuk Today! Keluarkan salah satu tugas terlebih dahulu.');
+        return false;
+      }
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.id === taskId
+            ? { ...t, isToday: true, todayOrder: currentTodayCount + 1 }
+            : t
+        )
+      );
+      showToast('Tugas dipilih ke Today ⭐');
+      return true;
+    },
+    [tasks, showToast]
+  );
+
+  const removeFromToday = useCallback(
+    (taskId: string) => {
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.id === taskId ? { ...t, isToday: false, todayOrder: undefined } : t
+        )
+      );
+      showToast('Tugas dikeluarkan dari Today');
+    },
+    [showToast]
+  );
+
+  const toggleTodayTask = useCallback(
+    (taskId: string): boolean => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return false;
+      if (task.isToday) {
+        removeFromToday(taskId);
+        return false;
+      } else {
+        return addToToday(taskId);
+      }
+    },
+    [tasks, addToToday, removeFromToday]
+  );
+
   const addTask = useCallback((taskData: Omit<Task, 'id' | 'createdAt'>) => {
     const newTask: Task = {
       ...taskData,
@@ -208,7 +281,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setTasks((prev) => [newTask, ...prev]);
     showToast(`Task "${newTask.title.slice(0, 20)}..." berhasil dibuat!`);
-    setActiveTab('tasks');
+    setActiveTab('inbox');
+    setIsTaskFormOpen(false);
   }, [showToast]);
 
   const updateTask = useCallback((updatedTask: Task) => {
@@ -221,7 +295,12 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteTask = useCallback((taskId: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
-    showToast('Task berhasil dihapus');
+    showToast('Tugas berhasil dihapus');
+  }, [showToast]);
+
+  const clearAllCompletedTasks = useCallback(() => {
+    setTasks((prev) => prev.filter((t) => !t.isCompleted));
+    showToast('Semua riwayat tugas selesai telah dibersihkan');
   }, [showToast]);
 
   const toggleTaskStatus = useCallback((taskId: string) => {
@@ -233,16 +312,22 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...st,
             isCompleted: nextStatus,
           }));
+          if (nextStatus) {
+            showToast(`Tugas selesai & dipindahkan ke Riwayat 🎉`);
+          } else {
+            showToast(`Tugas dikembalikan ke Inbox 📥`);
+          }
           return {
             ...task,
             isCompleted: nextStatus,
+            completedAt: nextStatus ? new Date().toISOString() : undefined,
             subTasks: updatedSubTasks,
           };
         }
         return task;
       })
     );
-  }, []);
+  }, [showToast]);
 
   const toggleSubTaskStatus = useCallback((taskId: string, subTaskId: string) => {
     setTasks((prev) =>
@@ -588,6 +673,15 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setEditingTask,
         toastMessage,
         showToast,
+        todayTasks,
+        toggleTodayTask,
+        addToToday,
+        removeFromToday,
+        isTaskFormOpen,
+        setIsTaskFormOpen,
+        isHistoryModalOpen,
+        setIsHistoryModalOpen,
+        clearAllCompletedTasks,
         addTask,
         updateTask,
         deleteTask,

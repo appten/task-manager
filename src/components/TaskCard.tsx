@@ -17,19 +17,22 @@ import {
   Sparkles,
   Loader2,
   MoreVertical,
-  Target,
-  Layers,
-  Shuffle,
+  Star,
+  Bell,
+  CheckSquare,
 } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
+  todayRank?: number;
+  hideTodayToggle?: boolean;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayToggle = false }) => {
   const {
     toggleTaskStatus,
     toggleSubTaskStatus,
+    toggleTodayTask,
     setEditingTask,
     deleteTask,
     addAISubTasksAndEstimate,
@@ -112,7 +115,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     <div
       className={`task-card ${task.isCompleted ? 'completed' : ''} ${
         task.isBreakTask ? 'break-task-card' : ''
-      }`}
+      } ${task.isToday ? 'is-today-selected' : ''}`}
     >
       <div className="task-card-header">
         {/* Checkbox Lingkaran Utama */}
@@ -127,6 +130,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 
         {/* Konten Tugas */}
         <div className="task-main-content">
+          {todayRank && (
+            <div className="task-badges-row">
+              <div className="today-rank-indicator">
+                <Star size={11} fill="#f59e0b" color="#d97706" />
+                <span>Fokus #{todayRank}</span>
+              </div>
+            </div>
+          )}
           <div
             className={`task-title ${task.isCompleted ? 'completed-title' : ''}`}
             onClick={() => {
@@ -145,107 +156,65 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
             </div>
           )}
 
-          {/* Baris Keterangan yang Rapi dan Bersih */}
+          {/* Baris Keterangan yang Rapi, Bersih & Ringkas */}
           <div className="task-meta-row">
-            {/* Badge Jeda Istirahat / Pemulihan Energi */}
-            {task.isBreakTask && (
-              <span className="meta-item meta-break">
-                ☕ Jeda Istirahat
+            {/* 1. Badge Jenis Inbox */}
+            {task.inboxType === 'kegiatan' ? (
+              <span className="meta-item meta-inbox-badge kegiatan" title="Kategori: Kegiatan / Acara">
+                <Calendar size={10} />
+                <span>Acara</span>
+              </span>
+            ) : task.inboxType === 'pengingat' ? (
+              <span className="meta-item meta-inbox-badge pengingat" title="Kategori: Pengingat">
+                <Bell size={10} />
+                <span>Pengingat</span>
+              </span>
+            ) : (
+              <span className="meta-item meta-inbox-badge tugas" title="Kategori: Tugas">
+                <CheckSquare size={10} />
+                <span>Tugas</span>
               </span>
             )}
 
-            {/* Prioritas Tinggi */}
+            {/* 2. Prioritas Tinggi (Halus & Rapi) */}
             {task.priority === 'high' && !task.isBreakTask && (
-              <span className="meta-urgent">
+              <span className="meta-urgent-clean" title="Prioritas Tinggi">
                 <AlertCircle size={10} />
-                Penting
+                <span>Penting</span>
               </span>
             )}
 
-            {/* Tanggal */}
-            <span className="meta-item">
-              <Calendar size={11} />
-              {formatReadableDate(task.dueDate)}
-            </span>
+            {/* 3. Waktu & Tanggal Ringkas */}
+            {(task.dueDate || task.startTime || task.dueTime) && (
+              <span className="meta-item meta-date-item">
+                <Calendar size={10} />
+                <span>{formatReadableDate(task.dueDate)}</span>
+                {task.startTime && task.endTime ? (
+                  <span className="meta-time-text">• {task.startTime}-{task.endTime}</span>
+                ) : task.startTime ? (
+                  <span className="meta-time-text">• {task.startTime}</span>
+                ) : task.dueTime ? (
+                  <span className="meta-time-text">• {task.dueTime}</span>
+                ) : null}
+              </span>
+            )}
 
-            {/* Jam / Rentang Waktu */}
-            {task.startTime && task.endTime ? (
-              <span className="meta-item meta-time-range">
-                <Clock size={11} />
-                {task.startTime} - {task.endTime}
-              </span>
-            ) : task.startTime ? (
-              <span className="meta-item">
-                <Clock size={11} />
-                Mulai {task.startTime}
-              </span>
-            ) : task.dueTime ? (
-              <span className="meta-item">
-                <Clock size={11} />
-                {task.dueTime}
-              </span>
-            ) : null}
-
-            {/* Sesi Terbagi AI (Split Sessions) */}
-            {task.scheduledSessions && task.scheduledSessions.length > 1 && (
-              <span
-                className="meta-item meta-split-sessions"
-                title={task.schedulingNote || `Dibagi menjadi ${task.scheduledSessions.length} sesi`}
+            {/* 4. Sub-task Count */}
+            {totalSubtasksCount > 0 && (
+              <button
+                type="button"
+                className={`meta-subtask-btn ${isSubtasksOpen ? 'active' : ''}`}
+                onClick={() => setIsSubtasksOpen((prev) => !prev)}
+                aria-expanded={isSubtasksOpen}
               >
-                <Layers size={10} />
-                {task.scheduledSessions.length} Sesi
-              </span>
-            )}
-
-            {/* Multitasking Badge */}
-            {task.allowConcurrent && (
-              <span className="meta-item meta-concurrent" title="Bisa dikerjakan bersamaan">
-                <Shuffle size={10} />
-                Multitask
-              </span>
-            )}
-
-            {/* Estimasi Waktu dari AI jika ada */}
-            {task.estimatedTime && (
-              <span className="meta-item meta-estimate">
-                <Clock size={10} />
-                Est: {task.estimatedTime}
-              </span>
-            )}
-
-            {/* Skor Keselarasan Goal AI (-100 s/d 100) */}
-            {task.goalAlignmentScore !== undefined && (
-              <span
-                className={`meta-item meta-goal ${
-                  task.goalAlignmentScore > 0
-                    ? 'positive'
-                    : task.goalAlignmentScore < 0
-                    ? 'negative'
-                    : 'neutral'
-                }`}
-                title={
-                  task.goalAlignmentReason
-                    ? `Goals (${task.goalAlignmentScore > 0 ? '+' : ''}${task.goalAlignmentScore}): ${task.goalAlignmentReason}`
-                    : `Skor keselarasan goal: ${task.goalAlignmentScore}`
-                }
-              >
-                <Target size={11} />
                 <span>
-                  {task.goalAlignmentScore > 0
-                    ? `+${task.goalAlignmentScore}`
-                    : `${task.goalAlignmentScore}`}
+                  {completedSubtasksCount}/{totalSubtasksCount} sub-task
                 </span>
-              </span>
+                {isSubtasksOpen ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+              </button>
             )}
 
-            {/* Kategori */}
-            {task.category && (
-              <span className="meta-item">
-                #{task.category}
-              </span>
-            )}
-
-            {/* Catatan toggle */}
+            {/* 5. Toggle Catatan jika ada deskripsi */}
             {task.description && (
               <button
                 type="button"
@@ -258,18 +227,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
               </button>
             )}
 
-            {/* Dropdown Sub-task jika ada sub-task */}
-            {totalSubtasksCount > 0 && (
+            {/* 6. Tombol Today (Ikon Bintang Ringkas) */}
+            {!hideTodayToggle && (
               <button
                 type="button"
-                className={`meta-subtask-btn ${isSubtasksOpen ? 'active' : ''}`}
-                onClick={() => setIsSubtasksOpen((prev) => !prev)}
-                aria-expanded={isSubtasksOpen}
+                className={`meta-today-btn-clean ${task.isToday ? 'active' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleTodayTask(task.id);
+                }}
+                title={task.isToday ? 'Keluarkan dari Today' : 'Pilih ke Today (Maks 5)'}
               >
-                <span>
-                  {completedSubtasksCount}/{totalSubtasksCount} sub-task
-                </span>
-                {isSubtasksOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                <Star size={10} fill={task.isToday ? '#f59e0b' : 'none'} color={task.isToday ? '#d97706' : '#94a3b8'} />
+                <span>{task.isToday ? 'Today' : '+ Today'}</span>
               </button>
             )}
           </div>
@@ -322,7 +292,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
                   </span>
                 </button>
 
-                {/* 2. Edit Tugas */}
+                {/* 2. Toggle Today */}
+                <button
+                  type="button"
+                  className="more-menu-item"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMenuOpen(false);
+                    toggleTodayTask(task.id);
+                  }}
+                >
+                  <Star size={14} fill={task.isToday ? '#f59e0b' : 'none'} color={task.isToday ? '#d97706' : 'currentColor'} />
+                  <span>{task.isToday ? 'Keluarkan dari Today' : 'Pilih ke Today (Maks 5)'}</span>
+                </button>
+
+                {/* 3. Edit Tugas */}
                 <button
                   type="button"
                   className="more-menu-item"
@@ -332,7 +316,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
                   <span>Edit Tugas</span>
                 </button>
 
-                {/* 3. Hapus Tugas */}
+                {/* 4. Hapus Tugas */}
                 <button
                   type="button"
                   className="more-menu-item delete-item"
