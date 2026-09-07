@@ -73,6 +73,8 @@ export type FilterStatus = 'all' | 'active' | 'completed';
 
 export type AgeFilter = 'all' | 'today' | 'neglected_7' | 'neglected_14';
 
+export type TimeWindowStatus = 'ready_now' | 'locked_until_start' | 'nearing_deadline' | 'flexible';
+
 export interface TaskAnalysisItem {
   taskId: string;
   taskTitle: string;
@@ -83,6 +85,10 @@ export interface TaskAnalysisItem {
   goalAlignmentScore?: number; // Skor -100 s/d 100
   goalImpact?: 'Mendekatkan' | 'Netral' | 'Menjauhkan';
   reason: string;
+  timeWindowStatus?: TimeWindowStatus;
+  timeWindowDescription?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface AIAnalysisResult {

@@ -137,7 +137,7 @@ export const AIView: React.FC = () => {
             <p className="insight-card-body">{aiAnalysis.circadianAdvice}</p>
           </div>
 
-          {/* Card B: Tugas Utama yang Direkomendasikan Dikerjakan Sekarang */}
+              {/* Card B: Tugas Utama yang Direkomendasikan Dikerjakan Sekarang */}
           {topTask && (
             <div className="ai-insight-card top-task-insight">
               <div className="insight-card-header">
@@ -162,11 +162,29 @@ export const AIView: React.FC = () => {
                   )}
                 </span>
               </div>
-              {topTask.dueDate && (
-                <div className="top-task-meta">
-                  <Calendar size={11} /> Tenggat: {topTask.dueDate} {topTask.dueTime || ''}
-                </div>
-              )}
+
+              {/* Status Waktu & Jendela Tugas Utama */}
+              {(() => {
+                const topAnalysisItem = aiAnalysis.tasksAnalysis?.find((x) => x.taskId === topTask.id);
+                return (
+                  <div className="top-task-window-status-box">
+                    <div className="top-task-meta">
+                      <Clock size={12} />
+                      <span>
+                        {topTask.startTime ? `Mulai: ${topTask.startTime}` : 'Bisa dimulai sekarang'}
+                        {topTask.dueTime || topTask.endTime ? ` • Batas: ${topTask.dueTime || topTask.endTime}` : ''}
+                      </span>
+                    </div>
+                    {topAnalysisItem?.timeWindowDescription && (
+                      <span className={`time-window-badge ${topAnalysisItem.timeWindowStatus || 'ready'}`}>
+                        {topAnalysisItem.timeWindowStatus === 'locked_until_start' ? '🔒 ' : topAnalysisItem.timeWindowStatus === 'nearing_deadline' ? '⏰ ' : '🟢 '}
+                        {topAnalysisItem.timeWindowDescription}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="top-task-actions">
                 <button
                   type="button"
@@ -236,23 +254,43 @@ export const AIView: React.FC = () => {
             <div className="breakdown-list">
               {filteredAnalysisList.map((item) => {
                 const originalTask = tasks.find((t) => t.id === item.taskId);
+                const hasTimeWindow = item.startTime || item.endTime || originalTask?.startTime || originalTask?.dueTime;
                 return (
-                  <div key={item.taskId} className="breakdown-card">
+                  <div key={item.taskId} className={`breakdown-card ${item.timeWindowStatus === 'locked_until_start' ? 'card-locked' : ''}`}>
                     <div className="breakdown-card-top">
                       <div className="breakdown-title-wrap">
                         <span className="breakdown-task-title">{item.taskTitle}</span>
                         {originalTask?.isToday && (
                           <span className="breakdown-today-tag">★ Di Today</span>
                         )}
+                        {originalTask?.inboxType && (
+                          <span className={`meta-inbox-badge compact ${originalTask.inboxType}`}>
+                            {originalTask.inboxType === 'kegiatan' ? 'Acara' : originalTask.inboxType === 'pengingat' ? 'Pengingat' : 'Tugas'}
+                          </span>
+                        )}
                       </div>
-                      <span className={`urgency-badge ${item.urgencyLevel.toLowerCase()}`}>
-                        {item.urgencyLevel}
-                      </span>
+                      <div className="breakdown-top-badges">
+                        {item.timeWindowStatus && (
+                          <span className={`time-window-badge ${item.timeWindowStatus}`}>
+                            {item.timeWindowStatus === 'locked_until_start' ? '🔒 ' : item.timeWindowStatus === 'nearing_deadline' ? '⏰ ' : '🟢 '}
+                            {item.timeWindowDescription || (item.timeWindowStatus === 'locked_until_start' ? 'Terkunci' : 'Siap')}
+                          </span>
+                        )}
+                        <span className={`urgency-badge ${item.urgencyLevel.toLowerCase()}`}>
+                          {item.urgencyLevel}
+                        </span>
+                      </div>
                     </div>
 
                     <p className="breakdown-reason">{item.reason}</p>
 
                     <div className="breakdown-meta-row">
+                      {hasTimeWindow && (
+                        <span className="breakdown-meta-pill window">
+                          🕒 {originalTask?.startTime ? `Mulai ${originalTask.startTime}` : 'Bisa mulai kapanpun'}
+                          {originalTask?.dueTime || originalTask?.endTime ? ` → Batas ${originalTask.dueTime || originalTask.endTime}` : ''}
+                        </span>
+                      )}
                       <span className="breakdown-meta-pill fit">
                         ⚡ {item.biologicalFit}
                       </span>

@@ -4368,7 +4368,57 @@ body {
   gap: 4px;
   font-size: 11px;
   color: #64748b;
-  margin-top: 4px;
+}
+
+.top-task-window-status-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.time-window-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.time-window-badge.locked,
+.time-window-badge.locked_until_start {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.time-window-badge.deadline,
+.time-window-badge.nearing_deadline {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.time-window-badge.ready,
+.time-window-badge.ready_now {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.time-window-badge.flexible {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
 .top-task-actions {
@@ -4477,6 +4527,12 @@ body {
   border-radius: 13px;
   padding: 10px 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.breakdown-card.card-locked {
+  background: #fdfefe;
+  border-left: 3.5px solid #f87171;
 }
 
 .breakdown-card-top {
@@ -4484,6 +4540,14 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+}
+
+.breakdown-top-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .breakdown-title-wrap {
@@ -4507,6 +4571,15 @@ body {
   border: 1px solid #fde68a;
   padding: 1px 5px;
   border-radius: 6px;
+}
+
+.meta-inbox-badge.compact {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .urgency-badge {
@@ -4551,6 +4624,12 @@ body {
   font-weight: 600;
   padding: 1.5px 6px;
   border-radius: 5px;
+}
+
+.breakdown-meta-pill.window {
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #e2e8f0;
 }
 
 .breakdown-meta-pill.fit {
