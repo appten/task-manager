@@ -4,6 +4,8 @@ export type Category = 'Pekerjaan' | 'Pribadi' | 'Belajar' | 'Kesehatan' | 'Isti
 
 export type InboxType = 'kegiatan' | 'tugas' | 'pengingat';
 
+export type RecurrenceType = 'none' | 'daily' | 'weekdays' | 'weekly' | 'monthly';
+
 export interface SubTask {
   id: string;
   title: string;
@@ -23,6 +25,7 @@ export interface Task {
   title: string;
   description?: string;
   inboxType?: InboxType; // 'kegiatan' (Kegiatan / Acara) | 'tugas' (Tugas) | 'pengingat' (Pengingat)
+  recurrence?: RecurrenceType; // 'none' | 'daily' | 'weekdays' | 'weekly' | 'monthly'
   dueDate: string; // Format: YYYY-MM-DD (Batas akhir / tanggal utama)
   dueTime?: string; // Format: HH:mm (Batas jam akhir / jam utama)
   
@@ -85,6 +88,7 @@ export interface TaskAnalysisItem {
   goalAlignmentScore?: number; // Skor -100 s/d 100
   goalImpact?: 'Mendekatkan' | 'Netral' | 'Menjauhkan';
   reason: string;
+  recurrence?: RecurrenceType;
   timeWindowStatus?: TimeWindowStatus;
   timeWindowDescription?: string;
   startTime?: string;

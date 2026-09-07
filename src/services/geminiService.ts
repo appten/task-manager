@@ -330,11 +330,16 @@ export const generateLocalCircadianAnalysis = (
       }
     }
 
+    const isRecurring = Boolean(t.recurrence && t.recurrence !== 'none');
+    const recurrenceLabel = t.recurrence === 'daily' ? 'Harian' : t.recurrence === 'weekdays' ? 'Hari Kerja' : t.recurrence === 'weekly' ? 'Mingguan' : t.recurrence === 'monthly' ? 'Bulanan' : '';
+
     const urgencyLevel: 'Segera' | 'Rutin' | 'Nanti' =
       timeWindowStatus === 'nearing_deadline'
         ? 'Segera'
         : t.priority === 'high'
         ? 'Segera'
+        : isRecurring
+        ? 'Rutin'
         : t.isToday
         ? 'Rutin'
         : 'Nanti';
@@ -346,18 +351,21 @@ export const generateLocalCircadianAnalysis = (
     let goalScore = 70;
     if (t.priority === 'high') goalScore += 15;
     if (t.isToday) goalScore += 10;
+    if (isRecurring) goalScore += 8;
     if (t.inboxType === 'kegiatan') goalScore += 5;
     if (timeWindowStatus === 'locked_until_start') goalScore -= 5;
     goalScore = Math.min(100, Math.max(10, goalScore));
 
     const typeLabel = t.inboxType === 'kegiatan' ? 'Kegiatan/Acara' : t.inboxType === 'pengingat' ? 'Pengingat' : 'Tugas';
 
-    // Kalimat alasan yang sadar waktu mulai dan batas selesai
+    // Kalimat alasan yang sadar waktu mulai, batas selesai, dan sifat rutin
     let reason = '';
     if (timeWindowStatus === 'locked_until_start') {
       reason = `Item ini memiliki ketentuan baru bisa dimulai pukul ${t.startTime}. AI menandainya agar Anda tidak membuang fokus sebelum jam tersebut tiba.`;
     } else if (timeWindowStatus === 'nearing_deadline') {
       reason = `Mendekati batas selesai pukul ${t.endTime || t.dueTime}. Sangat disarankan untuk segera dituntaskan agar tidak terlewat.`;
+    } else if (isRecurring) {
+      reason = `[Rutinitas ${recurrenceLabel}] Disarankan untuk diselesaikan secara berkala guna menjaga konsistensi kebiasaan harian Anda.`;
     } else if (t.isToday) {
       reason = `Terpilih dalam 5 fokus Today dan sudah berada dalam jendela waktu pengerjaan. Selaras dengan ritme ${circadianState.split('•')[0].trim()}.`;
     } else if (t.priority === 'high') {
@@ -378,6 +386,7 @@ export const generateLocalCircadianAnalysis = (
       goalAlignmentScore: goalScore,
       goalImpact: 'Mendekatkan' as const,
       reason,
+      recurrence: t.recurrence,
       timeWindowStatus,
       timeWindowDescription,
       startTime: t.startTime,

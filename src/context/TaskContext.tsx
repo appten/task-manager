@@ -8,6 +8,7 @@ import {
   SubTask,
   AIAnalysisResult,
   ScheduleComparisonResult,
+  RecurrenceType,
 } from '../types/task';
 import { INITIAL_TASKS, getFormattedDate } from '../data/seedTasks';
 import { analyzeTasksWithCircadianAI } from '../services/geminiService';
@@ -304,19 +305,62 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [showToast]);
 
   const toggleTaskStatus = useCallback((taskId: string) => {
-    setTasks((prev) =>
-      prev.map((task) => {
+    setTasks((prev) => {
+      let recurringTaskToSpawn: Task | null = null;
+
+      const updated = prev.map((task) => {
         if (task.id === taskId) {
           const nextStatus = !task.isCompleted;
           const updatedSubTasks = task.subTasks.map((st) => ({
             ...st,
             isCompleted: nextStatus,
           }));
+
           if (nextStatus) {
-            showToast(`Tugas selesai & dipindahkan ke Riwayat 🎉`);
+            if (task.recurrence && task.recurrence !== 'none') {
+              // Hitung tanggal berikutnya
+              const calculateNextDate = (currentDateStr: string, recurrence: RecurrenceType): string => {
+                const parts = currentDateStr.split('-');
+                const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+                if (isNaN(d.getTime())) return new Date().toISOString().split('T')[0];
+                if (recurrence === 'daily') {
+                  d.setDate(d.getDate() + 1);
+                } else if (recurrence === 'weekdays') {
+                  const day = d.getDay();
+                  if (day === 5) d.setDate(d.getDate() + 3);
+                  else if (day === 6) d.setDate(d.getDate() + 2);
+                  else d.setDate(d.getDate() + 1);
+                } else if (recurrence === 'weekly') {
+                  d.setDate(d.getDate() + 7);
+                } else if (recurrence === 'monthly') {
+                  d.setMonth(d.getMonth() + 1);
+                }
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const dateNum = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${dateNum}`;
+              };
+
+              const nextDueDate = calculateNextDate(task.dueDate || new Date().toISOString().split('T')[0], task.recurrence);
+              recurringTaskToSpawn = {
+                ...task,
+                id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                dueDate: nextDueDate,
+                startDate: task.startDate ? calculateNextDate(task.startDate, task.recurrence) : nextDueDate,
+                endDate: task.endDate ? calculateNextDate(task.endDate, task.recurrence) : nextDueDate,
+                isCompleted: false,
+                completedAt: undefined,
+                subTasks: task.subTasks.map((st) => ({ ...st, isCompleted: false })),
+                createdAt: new Date().toISOString(),
+              };
+              showToast(`Tugas rutin selesai! Siklus berikutnya aktif untuk tanggal ${nextDueDate} 🔁`);
+            } else {
+              showToast(`Tugas selesai & dipindahkan ke Riwayat 🎉`);
+            }
           } else {
             showToast(`Tugas dikembalikan ke Inbox 📥`);
           }
+
           return {
             ...task,
             isCompleted: nextStatus,
@@ -325,8 +369,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
         }
         return task;
-      })
-    );
+      });
+
+      if (recurringTaskToSpawn) {
+        return [recurringTaskToSpawn, ...updated];
+      }
+      return updated;
+    });
   }, [showToast]);
 
   const toggleSubTaskStatus = useCallback((taskId: string, subTaskId: string) => {

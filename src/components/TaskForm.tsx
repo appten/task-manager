@@ -3,14 +3,15 @@
 import React, { useState } from 'react';
 import { useTask } from '../context/TaskContext';
 import { getFormattedDate } from '../data/seedTasks';
-import { Priority, Category, SubTask, InboxType } from '../types/task';
-import { Plus, Trash2, Calendar, Clock, Tag, Flag, CheckCircle2, Sparkles, Loader2, CheckSquare, Bell } from 'lucide-react';
+import { Priority, Category, SubTask, InboxType, RecurrenceType } from '../types/task';
+import { Plus, Trash2, Calendar, Clock, Tag, Flag, CheckCircle2, Sparkles, Loader2, CheckSquare, Bell, Repeat } from 'lucide-react';
 import { generateSubTasksWithAI } from '../services/geminiService';
 
 export const TaskForm: React.FC = () => {
   const { addTask, showToast } = useTask();
 
   const [inboxType, setInboxType] = useState<InboxType>('tugas');
+  const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   
@@ -87,6 +88,7 @@ export const TaskForm: React.FC = () => {
       title: title.trim(),
       description: description.trim() || undefined,
       inboxType,
+      recurrence,
       dueDate: finalDueDate,
       dueTime: finalDueTime,
       startDate: startDate || finalDueDate,
@@ -106,6 +108,7 @@ export const TaskForm: React.FC = () => {
 
     // Reset form
     setInboxType('tugas');
+    setRecurrence('none');
     setTitle('');
     setDescription('');
     setStartDate(getFormattedDate(0));
@@ -399,6 +402,28 @@ export const TaskForm: React.FC = () => {
           <option value="Istirahat">☕ Istirahat & Recharge</option>
           <option value="Lainnya">✨ Lainnya</option>
         </select>
+      </div>
+
+      {/* Pengulangan / Rutin */}
+      <div className="form-group">
+        <label className="form-label" htmlFor="task-recurrence">
+          <Repeat size={13} /> Pengulangan / Rutin
+        </label>
+        <select
+          id="task-recurrence"
+          className="form-select"
+          value={recurrence}
+          onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
+        >
+          <option value="none">Tidak Berulang (Sekali)</option>
+          <option value="daily">🔁 Setiap Hari (Harian)</option>
+          <option value="weekdays">🔁 Hari Kerja (Senin - Jumat)</option>
+          <option value="weekly">🔁 Setiap Minggu (Mingguan)</option>
+          <option value="monthly">🔁 Setiap Bulan (Bulanan)</option>
+        </select>
+        <span className="form-help">
+          *Tugas rutin otomatis memperbarui jadwal ke periode berikutnya saat diselesaikan.
+        </span>
       </div>
 
       {/* Dynamic Sub-task Builder */}

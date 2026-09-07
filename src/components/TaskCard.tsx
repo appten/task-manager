@@ -20,6 +20,7 @@ import {
   Star,
   Bell,
   CheckSquare,
+  Repeat,
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -173,6 +174,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
               <span className="meta-item meta-inbox-badge tugas" title="Kategori: Tugas">
                 <CheckSquare size={10} />
                 <span>Tugas</span>
+              </span>
+            )}
+
+            {/* Badge Rutin / Berulang */}
+            {task.recurrence && task.recurrence !== 'none' && (
+              <span className="meta-item meta-recurrence-badge" title={`Pola Rutin: ${task.recurrence}`}>
+                <Repeat size={10} />
+                <span>
+                  {task.recurrence === 'daily'
+                    ? 'Harian'
+                    : task.recurrence === 'weekdays'
+                    ? 'Sen-Jum'
+                    : task.recurrence === 'weekly'
+                    ? 'Mingguan'
+                    : 'Bulanan'}
+                </span>
               </span>
             )}
 
