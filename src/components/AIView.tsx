@@ -18,6 +18,7 @@ import {
   Bell,
   Activity,
   ArrowRight,
+  Repeat,
 } from 'lucide-react';
 
 export const AIView: React.FC = () => {
@@ -33,6 +34,21 @@ export const AIView: React.FC = () => {
 
   const [filterType, setFilterType] = useState<'all' | 'today' | 'inbox'>('all');
   const [currentTimeStr, setCurrentTimeStr] = useState('');
+
+  const formatReadableDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length < 3) return dateStr;
+      const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -166,13 +182,15 @@ export const AIView: React.FC = () => {
               {/* Status Waktu & Jendela Tugas Utama */}
               {(() => {
                 const topAnalysisItem = aiAnalysis.tasksAnalysis?.find((x) => x.taskId === topTask.id);
+                const dateLabel = topAnalysisItem?.dateContextLabel || (topTask.dueDate ? formatReadableDate(topTask.dueDate) : 'Hari ini');
                 return (
                   <div className="top-task-window-status-box">
                     <div className="top-task-meta">
                       <Clock size={12} />
                       <span>
-                        {topTask.startTime ? `Mulai: ${topTask.startTime}` : 'Bisa dimulai sekarang'}
-                        {topTask.dueTime || topTask.endTime ? ` • Batas: ${topTask.dueTime || topTask.endTime}` : ''}
+                        <strong>{dateLabel}</strong>
+                        {topTask.startTime ? ` • Mulai ${topTask.startTime}` : ''}
+                        {topTask.dueTime || topTask.endTime ? ` - Batas ${topTask.dueTime || topTask.endTime}` : ''}
                       </span>
                     </div>
                     {topAnalysisItem?.timeWindowDescription && (
@@ -254,43 +272,85 @@ export const AIView: React.FC = () => {
             <div className="breakdown-list">
               {filteredAnalysisList.map((item) => {
                 const originalTask = tasks.find((t) => t.id === item.taskId);
-                const hasTimeWindow = item.startTime || item.endTime || originalTask?.startTime || originalTask?.dueTime;
+                const dateLabel = item.dateContextLabel || (originalTask?.dueDate ? formatReadableDate(originalTask.dueDate) : 'Hari ini');
+                const hasTime = originalTask?.startTime || originalTask?.dueTime || originalTask?.endTime;
+
                 return (
-                  <div key={item.taskId} className={`breakdown-card ${item.timeWindowStatus === 'locked_until_start' ? 'card-locked' : ''}`}>
-                    <div className="breakdown-card-top">
-                      <div className="breakdown-title-wrap">
-                        <span className="breakdown-task-title">{item.taskTitle}</span>
+                  <div
+                    key={item.taskId}
+                    className={`breakdown-card ${item.timeWindowStatus === 'locked_until_start' ? 'card-locked' : ''}`}
+                  >
+                    {/* Baris 1: Header Kategori & Urgensi */}
+                    <div className="breakdown-tag-header">
+                      <div className="breakdown-type-tags">
+                        {originalTask?.inboxType && (
+                          <span className={`meta-inbox-badge compact ${originalTask.inboxType}`}>
+                            {originalTask.inboxType === 'kegiatan' ? (
+                              <>
+                                <Calendar size={10} /> Acara
+                              </>
+                            ) : originalTask.inboxType === 'pengingat' ? (
+                              <>
+                                <Bell size={10} /> Pengingat
+                              </>
+                            ) : (
+                              <>
+                                <CheckSquare size={10} /> Tugas
+                              </>
+                            )}
+                          </span>
+                        )}
                         {originalTask?.isToday && (
                           <span className="breakdown-today-tag">★ Di Today</span>
                         )}
-                        {originalTask?.inboxType && (
-                          <span className={`meta-inbox-badge compact ${originalTask.inboxType}`}>
-                            {originalTask.inboxType === 'kegiatan' ? 'Acara' : originalTask.inboxType === 'pengingat' ? 'Pengingat' : 'Tugas'}
+                        {originalTask?.recurrence && originalTask.recurrence !== 'none' && (
+                          <span className="meta-recurrence-badge compact">
+                            <Repeat size={10} />{' '}
+                            {originalTask.recurrence === 'daily'
+                              ? 'Harian'
+                              : originalTask.recurrence === 'weekdays'
+                              ? 'Sen-Jum'
+                              : originalTask.recurrence === 'weekly'
+                              ? 'Mingguan'
+                              : 'Bulanan'}
                           </span>
                         )}
                       </div>
-                      <div className="breakdown-top-badges">
-                        {item.timeWindowStatus && (
-                          <span className={`time-window-badge ${item.timeWindowStatus}`}>
-                            {item.timeWindowStatus === 'locked_until_start' ? '🔒 ' : item.timeWindowStatus === 'nearing_deadline' ? '⏰ ' : '🟢 '}
-                            {item.timeWindowDescription || (item.timeWindowStatus === 'locked_until_start' ? 'Terkunci' : 'Siap')}
-                          </span>
-                        )}
-                        <span className={`urgency-badge ${item.urgencyLevel.toLowerCase()}`}>
-                          {item.urgencyLevel}
-                        </span>
-                      </div>
+                      <span className={`urgency-badge ${item.urgencyLevel.toLowerCase()}`}>
+                        {item.urgencyLevel}
+                      </span>
                     </div>
 
-                    <p className="breakdown-reason">{item.reason}</p>
+                    {/* Baris 2: Judul Item Bersih */}
+                    <h4 className="breakdown-task-title">{item.taskTitle}</h4>
 
-                    <div className="breakdown-meta-row">
-                      {hasTimeWindow && (
-                        <span className="breakdown-meta-pill window">
-                          🕒 {originalTask?.startTime ? `Mulai ${originalTask.startTime}` : 'Bisa mulai kapanpun'}
-                          {originalTask?.dueTime || originalTask?.endTime ? ` → Batas ${originalTask.dueTime || originalTask.endTime}` : ''}
+                    {/* Baris 3: Strip Waktu Terstruktur */}
+                    <div className="breakdown-time-strip">
+                      <div className="breakdown-time-info">
+                        <Calendar size={11} />
+                        <span className="time-date-text">{dateLabel}</span>
+                        {hasTime && (
+                          <span className="time-clock-text">
+                            • {originalTask?.startTime ? originalTask.startTime : 'Bebas'}
+                            {originalTask?.dueTime || originalTask?.endTime
+                              ? ` - ${originalTask?.dueTime || originalTask?.endTime}`
+                              : ''}
+                          </span>
+                        )}
+                      </div>
+                      {item.timeWindowStatus && (
+                        <span className={`time-window-badge ${item.timeWindowStatus}`}>
+                          {item.timeWindowStatus === 'locked_until_start' ? '🔒 ' : item.timeWindowStatus === 'nearing_deadline' ? '⏰ ' : '🟢 '}
+                          {item.timeWindowDescription || 'Siap'}
                         </span>
                       )}
+                    </div>
+
+                    {/* Baris 4: Penjelasan AI */}
+                    <p className="breakdown-reason">{item.reason}</p>
+
+                    {/* Baris 5: Meta Footer */}
+                    <div className="breakdown-meta-row">
                       <span className="breakdown-meta-pill fit">
                         ⚡ {item.biologicalFit}
                       </span>

@@ -242,6 +242,23 @@ export const generateLocalCircadianAnalysis = (
   const nowTotalMinutes = hours * 60 + minutes;
   const currentTimeFormatted = `Pukul ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} WIB`;
 
+  const currentYear = now.getFullYear();
+  const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+  const currentDate = String(now.getDate()).padStart(2, '0');
+  const todayDateStr = `${currentYear}-${currentMonth}-${currentDate}`;
+
+  // Helper formatting date to Indonesian short e.g. "08 Sep"
+  const formatShortDate = (dateStr: string): string => {
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length < 3) return dateStr;
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    } catch {
+      return dateStr;
+    }
+  };
+
   // Helper parsing "HH:mm" to minutes from midnight
   const parseTimeToMinutes = (timeStr?: string): number | null => {
     if (!timeStr || !timeStr.includes(':')) return null;
@@ -288,45 +305,91 @@ export const generateLocalCircadianAnalysis = (
   const activeTasks = tasks.filter((t) => !t.isCompleted);
   const tasksToAnalyze = activeTasks.length > 0 ? activeTasks : tasks;
 
-  // Analisis jendela waktu pengerjaan untuk setiap item
+  // Analisis jendela waktu dan TANGGAL pengerjaan untuk setiap item
   const tasksAnalysis = tasksToAnalyze.map((t) => {
+    const taskStartDateStr = t.startDate || t.dueDate || todayDateStr;
+    const taskDueDateStr = t.dueDate || t.endDate || taskStartDateStr;
+
+    // Evaluasi relasi tanggal terhadap tanggal hari ini
+    const isFutureTask = taskStartDateStr > todayDateStr;
+    const isPastOverdueTask = taskDueDateStr < todayDateStr;
+    const isTodayTask = !isFutureTask && !isPastOverdueTask;
+
+    // Hitung label konteks tanggal yang ramah manusia
+    let dateContextLabel = 'Hari ini';
+    if (isFutureTask) {
+      const todayD = new Date(Number(todayDateStr.split('-')[0]), Number(todayDateStr.split('-')[1]) - 1, Number(todayDateStr.split('-')[2]));
+      const startD = new Date(Number(taskStartDateStr.split('-')[0]), Number(taskStartDateStr.split('-')[1]) - 1, Number(taskStartDateStr.split('-')[2]));
+      const diffDays = Math.round((startD.getTime() - todayD.getTime()) / (1000 * 3600 * 24));
+      if (diffDays === 1) {
+        dateContextLabel = `Besok (${formatShortDate(taskStartDateStr)})`;
+      } else if (diffDays === 2) {
+        dateContextLabel = `Lusa (${formatShortDate(taskStartDateStr)})`;
+      } else {
+        dateContextLabel = `${diffDays} hari lagi (${formatShortDate(taskStartDateStr)})`;
+      }
+    } else if (isPastOverdueTask) {
+      dateContextLabel = `Terlewat (${formatShortDate(taskDueDateStr)})`;
+    } else {
+      dateContextLabel = `Hari ini (${formatShortDate(todayDateStr)})`;
+    }
+
     const startMin = parseTimeToMinutes(t.startTime);
     const endMin = parseTimeToMinutes(t.endTime || t.dueTime);
 
     let timeWindowStatus: 'ready_now' | 'locked_until_start' | 'nearing_deadline' | 'flexible' = 'flexible';
-    let timeWindowDescription = 'Waktu pengerjaan fleksibel';
+    let timeWindowDescription = 'Waktu fleksibel';
     let isLockedNow = false;
 
-    if (startMin !== null) {
-      if (nowTotalMinutes < startMin) {
-        timeWindowStatus = 'locked_until_start';
-        timeWindowDescription = `Baru bisa dimulai pukul ${t.startTime}`;
-        isLockedNow = true;
+    if (isFutureTask) {
+      // Tugas di hari mendatang: BELUM BISA DIMULAI HARI INI
+      timeWindowStatus = 'locked_until_start';
+      isLockedNow = true;
+      if (t.startTime) {
+        timeWindowDescription = `${dateContextLabel}, mulai ${t.startTime}`;
+      } else {
+        timeWindowDescription = `${dateContextLabel}`;
+      }
+    } else if (isPastOverdueTask) {
+      // Tugas yang sudah lewat tanggal tenggat
+      timeWindowStatus = 'nearing_deadline';
+      timeWindowDescription = `Tenggat terlewat sejak ${formatShortDate(taskDueDateStr)}`;
+    } else {
+      // Tugas untuk HARI INI: Evaluasi jam
+      if (startMin !== null) {
+        if (nowTotalMinutes < startMin) {
+          timeWindowStatus = 'locked_until_start';
+          timeWindowDescription = `Hari ini, baru bisa mulai ${t.startTime}`;
+          isLockedNow = true;
+        } else if (endMin !== null) {
+          if (nowTotalMinutes > endMin) {
+            timeWindowStatus = 'nearing_deadline';
+            timeWindowDescription = `Hari ini, lewat batas (${t.endTime || t.dueTime})`;
+          } else if (endMin - nowTotalMinutes <= 120) {
+            timeWindowStatus = 'nearing_deadline';
+            timeWindowDescription = `Hari ini, mendekati batas (${t.endTime || t.dueTime})`;
+          } else {
+            timeWindowStatus = 'ready_now';
+            timeWindowDescription = `Hari ini, aktif (${t.startTime} - ${t.endTime || t.dueTime})`;
+          }
+        } else {
+          timeWindowStatus = 'ready_now';
+          timeWindowDescription = `Hari ini, siap (mulai ${t.startTime})`;
+        }
       } else if (endMin !== null) {
         if (nowTotalMinutes > endMin) {
           timeWindowStatus = 'nearing_deadline';
-          timeWindowDescription = `Melewati batas akhir (${t.endTime || t.dueTime})`;
+          timeWindowDescription = `Hari ini, lewat batas (${t.endTime || t.dueTime})`;
         } else if (endMin - nowTotalMinutes <= 120) {
           timeWindowStatus = 'nearing_deadline';
-          timeWindowDescription = `Mendekati batas selesai (${t.endTime || t.dueTime})`;
+          timeWindowDescription = `Hari ini, mendekati deadline (${t.endTime || t.dueTime})`;
         } else {
           timeWindowStatus = 'ready_now';
-          timeWindowDescription = `Jendela aktif (${t.startTime} - ${t.endTime || t.dueTime})`;
+          timeWindowDescription = `Hari ini, batas ${t.endTime || t.dueTime}`;
         }
       } else {
         timeWindowStatus = 'ready_now';
-        timeWindowDescription = `Sudah bisa dimulai (Sejak ${t.startTime})`;
-      }
-    } else if (endMin !== null) {
-      if (nowTotalMinutes > endMin) {
-        timeWindowStatus = 'nearing_deadline';
-        timeWindowDescription = `Melewati batas akhir (${t.endTime || t.dueTime})`;
-      } else if (endMin - nowTotalMinutes <= 120) {
-        timeWindowStatus = 'nearing_deadline';
-        timeWindowDescription = `Mendekati deadline (${t.endTime || t.dueTime})`;
-      } else {
-        timeWindowStatus = 'ready_now';
-        timeWindowDescription = `Batas selesai pukul ${t.endTime || t.dueTime}`;
+        timeWindowDescription = `Hari ini, siap kapanpun`;
       }
     }
 
@@ -334,7 +397,11 @@ export const generateLocalCircadianAnalysis = (
     const recurrenceLabel = t.recurrence === 'daily' ? 'Harian' : t.recurrence === 'weekdays' ? 'Hari Kerja' : t.recurrence === 'weekly' ? 'Mingguan' : t.recurrence === 'monthly' ? 'Bulanan' : '';
 
     const urgencyLevel: 'Segera' | 'Rutin' | 'Nanti' =
-      timeWindowStatus === 'nearing_deadline'
+      isPastOverdueTask
+        ? 'Segera'
+        : isFutureTask
+        ? 'Nanti'
+        : timeWindowStatus === 'nearing_deadline'
         ? 'Segera'
         : t.priority === 'high'
         ? 'Segera'
@@ -353,15 +420,20 @@ export const generateLocalCircadianAnalysis = (
     if (t.isToday) goalScore += 10;
     if (isRecurring) goalScore += 8;
     if (t.inboxType === 'kegiatan') goalScore += 5;
+    if (isFutureTask) goalScore -= 15;
     if (timeWindowStatus === 'locked_until_start') goalScore -= 5;
     goalScore = Math.min(100, Math.max(10, goalScore));
 
     const typeLabel = t.inboxType === 'kegiatan' ? 'Kegiatan/Acara' : t.inboxType === 'pengingat' ? 'Pengingat' : 'Tugas';
 
-    // Kalimat alasan yang sadar waktu mulai, batas selesai, dan sifat rutin
+    // Kalimat alasan yang sadar TANGGAL, jam mulai, dan batas selesai
     let reason = '';
-    if (timeWindowStatus === 'locked_until_start') {
-      reason = `Item ini memiliki ketentuan baru bisa dimulai pukul ${t.startTime}. AI menandainya agar Anda tidak membuang fokus sebelum jam tersebut tiba.`;
+    if (isFutureTask) {
+      reason = `Item ini dijadwalkan untuk ${dateContextLabel}${t.startTime ? ` pukul ${t.startTime}` : ''}. Belum waktunya dieksekusi hari ini; AI mencatatnya agar Anda tetap fokus pada agenda hari ini.`;
+    } else if (isPastOverdueTask) {
+      reason = `Tenggat item ini telah terlewat sejak tanggal ${formatShortDate(taskDueDateStr)}. Sangat disarankan untuk segera dituntaskan hari ini.`;
+    } else if (timeWindowStatus === 'locked_until_start') {
+      reason = `Item hari ini memiliki ketentuan baru bisa dimulai pukul ${t.startTime}. Tunggu hingga jam tersebut tiba agar fokus tidak terpecah.`;
     } else if (timeWindowStatus === 'nearing_deadline') {
       reason = `Mendekati batas selesai pukul ${t.endTime || t.dueTime}. Sangat disarankan untuk segera dituntaskan agar tidak terlewat.`;
     } else if (isRecurring) {
@@ -380,13 +452,16 @@ export const generateLocalCircadianAnalysis = (
       urgencyLevel,
       effortLevel,
       estimatedDuration,
-      biologicalFit: isLockedNow
+      biologicalFit: isFutureTask
+        ? `Dijadwalkan untuk ${dateContextLabel}. Simpan energi untuk tugas hari ini.`
+        : isLockedNow
         ? `Terkunci hingga ${t.startTime}. Alokasikan energi untuk tugas lain saat ini.`
         : `${timeSuitabilityNote} Cocok dengan ritme energi saat ini.`,
       goalAlignmentScore: goalScore,
       goalImpact: 'Mendekatkan' as const,
       reason,
       recurrence: t.recurrence,
+      dateContextLabel,
       timeWindowStatus,
       timeWindowDescription,
       startTime: t.startTime,
@@ -394,9 +469,15 @@ export const generateLocalCircadianAnalysis = (
     };
   });
 
-  // Pilih Top Priority: HANYA dari tugas yang SUDAH BISA DIMULAI saat ini
-  const readyToWorkTasks = tasksAnalysis.filter((item) => item.timeWindowStatus !== 'locked_until_start');
-  const poolForTop = readyToWorkTasks.length > 0 ? readyToWorkTasks : tasksAnalysis;
+  // Pilih Top Priority: HANYA dari tugas HARI INI yang SUDAH BISA DIMULAI
+  const readyTodayTasks = tasksAnalysis.filter((item) => {
+    const orig = tasksToAnalyze.find((t) => t.id === item.taskId);
+    const startStr = orig?.startDate || orig?.dueDate || todayDateStr;
+    const isFuture = startStr > todayDateStr;
+    return !isFuture && item.timeWindowStatus !== 'locked_until_start';
+  });
+
+  const poolForTop = readyTodayTasks.length > 0 ? readyTodayTasks : tasksAnalysis;
 
   // Prioritas sortir: Segera > Today > Skor Goal tertinggi
   const sortedForTop = [...poolForTop].sort((a, b) => {
@@ -457,20 +538,33 @@ export const analyzeTasksWithCircadianAI = async (
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const currentTimeFormatted = `Pukul ${hours}:${minutes} WIB`;
+  const currentYear = now.getFullYear();
+  const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+  const currentDate = String(now.getDate()).padStart(2, '0');
+  const todayDateStr = `${currentYear}-${currentMonth}-${currentDate}`;
 
   const tasksDescription = tasksToAnalyze
-    .map(
-      (t, idx) =>
-        `${idx + 1}. [ID: ${t.id}] "${t.title}" (Kategori: ${t.inboxType || 'tugas'}, Di Today: ${t.isToday ? 'YA' : 'TIDAK'}, Prioritas: ${t.priority}${
-          t.startTime ? `, WAKTU BARU BISA DIMULAI: ${t.startTime} (PENTING: Dilarang dikerjakan sebelum jam ini)` : ''
-        }${
-          t.endTime || t.dueTime ? `, WAKTU BATAS/DEADLINE: ${t.endTime || t.dueTime} (PENTING: Harus selesai sebelum jam ini)` : ''
-        }${t.dueDate ? `, Tanggal: ${t.dueDate}` : ''}${t.description ? `, Catatan: ${t.description}` : ''}${
-          t.subTasks && t.subTasks.length > 0
-            ? `, Sub-tugas: [${t.subTasks.map((s) => s.title).join(', ')}]`
-            : ''
-        })`
-    )
+    .map((t, idx) => {
+      const taskDate = t.startDate || t.dueDate || todayDateStr;
+      const dateTag =
+        taskDate > todayDateStr
+          ? `[JADWAL MASA DEPAN: ${taskDate}]`
+          : taskDate < todayDateStr
+          ? `[TERLEWAT/OVERDUE: ${taskDate}]`
+          : `[HARI INI: ${todayDateStr}]`;
+
+      return `${idx + 1}. [ID: ${t.id}] "${t.title}" (Kategori: ${t.inboxType || 'tugas'}, ${dateTag}${
+        t.isToday ? ', Di Today: YA' : ', Di Today: TIDAK'
+      }, Prioritas: ${t.priority}${
+        t.recurrence && t.recurrence !== 'none' ? `, Rutin: ${t.recurrence}` : ''
+      }${
+        t.startTime ? `, WAKTU BARU BISA DIMULAI: ${t.startTime} (Dilarang dikerjakan sebelum jam ini)` : ''
+      }${
+        t.endTime || t.dueTime ? `, WAKTU BATAS/DEADLINE: ${t.endTime || t.dueTime}` : ''
+      }${t.description ? `, Catatan: ${t.description}` : ''}${
+        t.subTasks && t.subTasks.length > 0 ? `, Sub-tugas: [${t.subTasks.map((s) => s.title).join(', ')}]` : ''
+      })`;
+    })
     .join('\n');
 
   const goalPromptSection = userGoal
@@ -479,36 +573,40 @@ export const analyzeTasksWithCircadianAI = async (
 
   const prompt = `Sebagai pakar produktivitas tingkat tinggi, manajemen waktu cerdas, dan chronobiology:
 
-Waktu saat ini: ${currentTimeFormatted}.
+Waktu saat ini: Tanggal ${todayDateStr}, ${currentTimeFormatted}.
 ${goalPromptSection}
 Daftar Tugas Pengguna (mencakup Inbox dan Today):
 ${tasksDescription}
 
-ATURAN KRUSIAL PENJADWALAN & WAKTU:
-1. "WAKTU BARU BISA DIMULAI" (startTime): Tugas/acara ini BARU BISA DIMULAI pada jam tersebut. JIKA waktu saat ini (${currentTimeFormatted}) lebih awal dari jam mulai, tugas tersebut BERSTATUS "locked_until_start" (belum boleh dimulai sekarang) dan DILARANG dipilih sebagai topPriorityTaskId!
-2. "WAKTU BATAS/DEADLINE" (endTime / dueTime): Tugas HARUS SELESAI sebelum jam ini. Jika waktu saat ini mendekati batas ini, tugas berstatus "nearing_deadline" dengan urgensi "Segera".
-3. "topPriorityTaskId": HANYA BOLEH dipilih dari tugas yang SUDAH BISA DIMULAI pada jam saat ini (${currentTimeFormatted}).
+ATURAN KRUSIAL PENJADWALAN, TANGGAL & WAKTU:
+1. "TANGGAL MASA DEPAN": Jika suatu tugas memiliki tanggal di masa mendatang (setelah ${todayDateStr}), tugas tersebut BERSTATUS "locked_until_start" (Dijadwalkan untuk tanggal mendatang), urgensi "Nanti", dan DILARANG KERAS dipilih sebagai topPriorityTaskId hari ini!
+2. "WAKTU BARU BISA DIMULAI" (startTime): Untuk tugas HARI INI, jika waktu saat ini (${currentTimeFormatted}) lebih awal dari jam mulai, tugas tersebut BERSTATUS "locked_until_start" dan DILARANG dipilih sebagai topPriorityTaskId!
+3. "WAKTU BATAS/DEADLINE" (endTime / dueTime): Jika mendekati batas atau terlewat, berstatus "nearing_deadline" dengan urgensi "Segera".
+4. "topPriorityTaskId": HANYA BOLEH dipilih dari tugas HARI INI yang SUDAH BISA DIMULAI pada jam saat ini (${currentTimeFormatted}).
 
 WAJIB hasilkan output HANYA dalam format JSON murni:
 {
   "circadianState": "Nama dan fase jam biologis saat ini beserta waktu",
   "circadianAdvice": "Saran pemanfaatan energi dan fokus biologis tubuh saat ini",
-  "topPriorityTaskId": "ID tugas yang paling prioritas untuk dikerjakan SAAT INI (yang sudah bisa dimulai)",
-  "overallSummary": "Ringkasan strategi produktivitas (sebutkan jika ada tugas yang masih menunggu jam mulai)",
+  "topPriorityTaskId": "ID tugas yang paling prioritas untuk dikerjakan HARI INI SAAT INI (yang sudah bisa dimulai)",
+  "overallSummary": "Ringkasan strategi produktivitas (sebutkan item hari ini vs item masa depan jika ada)",
   "userGoalContext": "${userGoal || ''}",
   "tasksAnalysis": [
     {
-      "taskId": "ID tugas",
+      "taskId": "ID tugas persis dari daftar di atas",
       "taskTitle": "Judul tugas",
       "urgencyLevel": "Segera" | "Rutin" | "Nanti",
       "effortLevel": "Ringan" | "Sedang" | "Tinggi",
-      "estimatedDuration": "30 - 45 menit",
-      "biologicalFit": "Penjelasan kesesuaian dengan ritme saat ini",
+      "estimatedDuration": "misal 30 menit",
+      "biologicalFit": "Kesesuaian jam biologis",
       "goalAlignmentScore": 85,
-      "goalImpact": "Mendekatkan" | "Netral" | "Menjauhkan",
-      "reason": "Alasan singkat rekomendasi mempertimbangkan waktu mulai dan batas selesai",
+      "goalImpact": "Mendekatkan",
+      "reason": "Alasan rekomendasi yang sadar tanggal dan jam mulai/selesai",
+      "dateContextLabel": "misal Hari ini (08 Sep) / Besok (09 Sep) / Terlewat",
       "timeWindowStatus": "ready_now" | "locked_until_start" | "nearing_deadline" | "flexible",
-      "timeWindowDescription": "Deskripsi jendela waktu (misal: 'Baru bisa dimulai pukul 14:00' atau 'Batas selesai 17:30')"
+      "timeWindowDescription": "Deskripsi jendela waktu dan tanggalnya",
+      "startTime": "HH:mm opsional",
+      "endTime": "HH:mm opsional"
     }
   ]
 }`;

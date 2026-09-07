@@ -89,6 +89,7 @@ export interface TaskAnalysisItem {
   goalImpact?: 'Mendekatkan' | 'Netral' | 'Menjauhkan';
   reason: string;
   recurrence?: RecurrenceType;
+  dateContextLabel?: string;
   timeWindowStatus?: TimeWindowStatus;
   timeWindowDescription?: string;
   startTime?: string;
