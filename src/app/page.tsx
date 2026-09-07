@@ -7,6 +7,8 @@ import { BottomNav } from '../components/BottomNav';
 import { InboxView } from '../components/InboxView';
 import { TodayView } from '../components/TodayView';
 import { CalendarView } from '../components/CalendarView';
+import { AIView } from '../components/AIView';
+import { AccountView } from '../components/AccountView';
 import { EditTaskModal } from '../components/EditTaskModal';
 import { GoalSettingsModal } from '../components/GoalSettingsModal';
 import { CompletedHistoryModal } from '../components/CompletedHistoryModal';
@@ -27,8 +29,10 @@ const MainScreen: React.FC = () => {
       <main className="app-screen">
         <div className="scrollable-content">
           {activeTab === 'inbox' && <InboxView />}
-          {activeTab === 'today' && <TodayView />}
           {activeTab === 'calendar' && <CalendarView />}
+          {activeTab === 'today' && <TodayView />}
+          {activeTab === 'ai' && <AIView />}
+          {activeTab === 'account' && <AccountView />}
         </div>
       </main>
 

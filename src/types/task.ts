@@ -67,7 +67,7 @@ export interface Task {
   createdAt: string;
 }
 
-export type TabType = 'inbox' | 'today' | 'calendar';
+export type TabType = 'inbox' | 'calendar' | 'today' | 'ai' | 'account';
 
 export type FilterStatus = 'all' | 'active' | 'completed';
 
