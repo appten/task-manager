@@ -15,6 +15,7 @@ import {
   Lock,
   Eye,
   AlertTriangle,
+  Trash2,
   X,
   Smartphone,
   Check,
@@ -38,11 +39,38 @@ export const AccountView: React.FC = () => {
     logoutUser,
     triggerCloudSync,
     toggleAutoSync,
+    clearAllTasksAndStartFresh,
+    showToast,
   } = useTask();
 
   // Auth modal state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+
+  // Danger Zone Reset state (2-step confirmation with phrase)
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetStep, setResetStep] = useState<1 | 2>(1);
+  const [confirmText, setConfirmText] = useState('');
+  const CONFIRMATION_PHRASE = 'HAPUS SEMUA DATA';
+
+  const handleOpenResetModal = () => {
+    setResetStep(1);
+    setConfirmText('');
+    setIsResetModalOpen(true);
+  };
+
+  const handleCloseResetModal = () => {
+    setIsResetModalOpen(false);
+    setResetStep(1);
+    setConfirmText('');
+  };
+
+  const handleExecuteResetAll = () => {
+    if (confirmText.trim() !== CONFIRMATION_PHRASE) return;
+    clearAllTasksAndStartFresh();
+    handleCloseResetModal();
+    showToast('Seluruh data aplikasi berhasil direset bersih.');
+  };
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [nameInput, setNameInput] = useState('');
   const [emailInput, setEmailInput] = useState('');
@@ -280,6 +308,30 @@ export const AccountView: React.FC = () => {
         </button>
       </div>
 
+      {/* 5. Zona Bahaya: Reset Seluruh Data */}
+      <div className="account-danger-card">
+        <div className="danger-card-top">
+          <div className="danger-card-icon-wrap">
+            <AlertTriangle size={16} />
+          </div>
+          <div className="danger-card-info">
+            <h4 className="danger-card-title">Zona Bahaya</h4>
+            <p className="danger-card-desc">
+              Hapus seluruh data tugas, riwayat, sasaran, dan hasil AI dari perangkat ini secara permanen.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="btn-danger-reset-trigger"
+          onClick={handleOpenResetModal}
+        >
+          <Trash2 size={13} />
+          <span>Reset Semua Data</span>
+        </button>
+      </div>
+
       {/* 6. Modal Masuk / Daftar Akun */}
       {isAuthModalOpen && (
         <div className="modal-overlay" onClick={() => setIsAuthModalOpen(false)}>
@@ -451,6 +503,112 @@ export const AccountView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Bahaya Reset Data (2 Tahap) */}
+      {isResetModalOpen && (
+        <div className="modal-overlay danger-modal-overlay" onClick={handleCloseResetModal}>
+          <div className="modal-container danger-reset-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header danger-header">
+              <div className="danger-modal-title-group">
+                <div className="danger-badge-icon">
+                  <AlertTriangle size={18} />
+                </div>
+                <div>
+                  <h3 className="danger-modal-title">
+                    {resetStep === 1
+                      ? 'Peringatan Reset Data (Langkah 1/2)'
+                      : 'Konfirmasi Terakhir (Langkah 2/2)'}
+                  </h3>
+                  <span className="danger-step-subtitle">
+                    {resetStep === 1
+                      ? 'Tindakan ini permanen & tidak dapat dibatalkan'
+                      : `Ketik "${CONFIRMATION_PHRASE}" untuk menyetujui`}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={handleCloseResetModal}
+                aria-label="Tutup dialog"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {resetStep === 1 ? (
+              <div className="danger-modal-body">
+                <div className="danger-alert-callout">
+                  <p className="danger-callout-main">
+                    Apakah Anda benar-benar yakin ingin menghapus seluruh data?
+                  </p>
+                  <p className="danger-callout-sub">
+                    Semua daftar tugas di Inbox & Today, seluruh riwayat penyelesaian, sasaran hidup tahunan, serta cache hasil analisis AI akan dihapus bersih seketika dari browser ini.
+                  </p>
+                </div>
+
+                <div className="danger-modal-footer">
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={handleCloseResetModal}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-proceed-danger"
+                    onClick={() => setResetStep(2)}
+                  >
+                    <span>Lanjut ke Konfirmasi Akhir</span>
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="danger-modal-body">
+                <p className="danger-confirm-instruction">
+                  Sebagai langkah pengamanan ganda, silakan ketik kalimat konfirmasi berikut dengan huruf kapital persis:
+                </p>
+
+                <div className="danger-target-phrase-box">
+                  <code>{CONFIRMATION_PHRASE}</code>
+                </div>
+
+                <div className="danger-input-wrap">
+                  <input
+                    type="text"
+                    className="danger-confirm-input"
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder={`Ketik "${CONFIRMATION_PHRASE}" di sini...`}
+                    autoFocus
+                  />
+                </div>
+
+                <div className="danger-modal-footer">
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={() => setResetStep(1)}
+                  >
+                    Kembali
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-execute-danger"
+                    disabled={confirmText.trim() !== CONFIRMATION_PHRASE}
+                    onClick={handleExecuteResetAll}
+                  >
+                    <Trash2 size={14} />
+                    <span>Hapus Permanen Sekarang</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

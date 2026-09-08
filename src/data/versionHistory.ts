@@ -11,13 +11,35 @@ export interface VersionRelease {
   groupedChanges: VersionCategoryGroup[];
 }
 
-export const APP_CURRENT_VERSION = 'v1.2.0';
+export const APP_CURRENT_VERSION = 'v1.3.0';
 
 export const VERSION_HISTORY: VersionRelease[] = [
   {
-    version: 'v1.2.0',
+    version: 'v1.3.0',
     releaseDate: '9 September 2026',
     isLatest: true,
+    tagline: 'Zona Bahaya Reset Total Data & Deteksi Pengguna Lama',
+    groupedChanges: [
+      {
+        category: 'Fitur Baru',
+        items: [
+          'Zona Bahaya Reset Total Data: Menu Akun kini dilengkapi fitur reset seluruh data aplikasi secara permanen dengan pengamanan ganda (konfirmasi 2 tahap & pengetikan kalimat konfirmasi).',
+          'Deteksi Otomatis Pengguna Lama: Notifikasi demo perdana secara cerdas tidak akan pernah dimunculkan pada pengguna lama yang telah memiliki data tersimpan di perangkat.',
+        ],
+      },
+      {
+        category: 'Penyempurnaan',
+        items: [
+          'Pembersihan Data Menyeluruh: Fitur reset membersihkan seluruh tugas, riwayat Today, sasaran hidup, dan cache analisis AI secara instan dan aman.',
+          'Dialog Keamanan Berlapis: Modal konfirmasi bahaya dengan tema merah tegas untuk memastikan tidak terjadi penghapusan data secara tidak sengaja.',
+        ],
+      },
+    ],
+  },
+  {
+    version: 'v1.2.0',
+    releaseDate: '9 September 2026',
+    isLatest: false,
     tagline: 'Pembaruan Asisten AI, Status Bar, Quick Acara & Halaman Sasaran',
     groupedChanges: [
       {

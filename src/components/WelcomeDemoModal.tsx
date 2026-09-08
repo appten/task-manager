@@ -9,9 +9,41 @@ export const WelcomeDemoModal: React.FC = () => {
   const [selectedMinutes, setSelectedMinutes] = useState<number>(1);
 
   useEffect(() => {
-    // Periksa apakah pengunjung sudah pernah mengonfirmasi data bersih
+    // 1. Periksa apakah pengunjung sudah pernah mengonfirmasi data bersih
     const isDismissed = localStorage.getItem('ten_tasks_demo_dismissed') === 'true';
     if (isDismissed) return;
+
+    // 2. Periksa apakah pengguna lama yang sudah memiliki data pribadi:
+    // a. Sudah memiliki akun profil pengguna
+    const hasUserAccount = Boolean(localStorage.getItem('ten_my_id_user_v01'));
+    // b. Memiliki sasaran hidup yang tersimpan
+    const hasSavedGoal = Boolean(localStorage.getItem('ten_my_id_user_goal_v01'));
+    // c. Memiliki riwayat penyelesaian tugas harian
+    const hasTodayLogs = Boolean(localStorage.getItem('today_daily_completion_logs_v1'));
+    // d. Memiliki tugas kustom buatan sendiri atau aktivitas pengerjaan tugas
+    let hasCustomTasks = false;
+    const savedTasksStr = localStorage.getItem('ten_my_id_tasks_v01');
+    if (savedTasksStr) {
+      try {
+        const parsed = JSON.parse(savedTasksStr);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const hasUserCreatedTask = parsed.some(
+            (t: any) => (!t.id?.startsWith('task-')) || (t.timeSpent && t.timeSpent > 0)
+          );
+          if (hasUserCreatedTask) {
+            hasCustomTasks = true;
+          }
+        }
+      } catch {}
+    }
+
+    if (hasUserAccount || hasSavedGoal || hasTodayLogs || hasCustomTasks) {
+      // Pengguna lama yang sudah ada data penggunanya -> jangan pernah munculkan popup
+      try {
+        localStorage.setItem('ten_tasks_demo_dismissed', 'true');
+      } catch {}
+      return;
+    }
 
     let delayMs = 5000; // Standar: 5 detik setelah kunjungan perdana
     const snoozeUntilStr = localStorage.getItem('ten_tasks_demo_snooze_until');
@@ -75,10 +107,18 @@ export const WelcomeDemoModal: React.FC = () => {
         {/* Body Description */}
         <div className="welcome-demo-body">
           <p className="welcome-demo-intro">
-            Aplikasi saat ini memuat data tugas & analisis demo untuk eksplorasi. Anda dapat langsung memulai dari awal secara bersih atau melanjutkan eksplorasi demo.
+            Aplikasi pengelola tugas harian dan jadwal cerdas yang dirancang untuk membantu Anda fokus menyelesaikan hal terpenting setiap hari dengan panduan ritme energi AI.
           </p>
-          <p className="welcome-demo-notice-compact">
-            * Pilihan data bersih hanya muncul satu kali. Jika lanjut demo, popup ini akan muncul lagi sesuai durasi yang dipilih.
+
+          <div className="welcome-demo-mode-note">
+            <span className="mode-note-dot" />
+            <span className="mode-note-text">
+              Saat ini aplikasi berjalan dalam <strong>mode demo</strong> dengan data contoh (dummy) agar Anda dapat menjelajahi seluruh fitur dengan mudah.
+            </span>
+          </div>
+
+          <p className="welcome-demo-guide-text">
+            Jika sudah yakin ingin menggunakan aplikasi ini, Anda dapat langsung memulai dengan data yang bersih. Jika masih ingin melihat-lihat, silakan lanjutkan mode demo.
           </p>
         </div>
 
@@ -91,13 +131,13 @@ export const WelcomeDemoModal: React.FC = () => {
             id="btn-start-clean-data"
           >
             <span className="btn-icon">🚀</span>
-            <span>Mulai Gunakan (Data Bersih)</span>
+            <span>Mulai Pakai Aplikasi (Data Bersih)</span>
           </button>
 
           {/* Section: Masih Ingin Melihat Demo */}
           <div className="welcome-demo-snooze-section">
             <div className="snooze-title-bar">
-              <span className="snooze-label">Masih ingin melihat demo? Pilih durasi:</span>
+              <span className="snooze-label">Masih mau lihat-lihat demo? Pilih durasi:</span>
             </div>
 
             <div className="snooze-options-grid">
@@ -122,6 +162,10 @@ export const WelcomeDemoModal: React.FC = () => {
             >
               Lanjutkan Demo ({selectedMinutes} Menit)
             </button>
+
+            <span className="welcome-demo-footnote">
+              * Popup tidak akan muncul lagi setelah konfirmasi data bersih, namun akan muncul kembali jika Anda memilih melanjutkan demo.
+            </span>
           </div>
         </div>
       </div>

@@ -9166,11 +9166,11 @@ body {
 
 .welcome-demo-card {
   width: 100%;
-  max-width: 380px;
+  max-width: 400px;
   background: #ffffff;
   border-radius: 18px;
   box-shadow: 0 16px 36px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.8);
-  padding: 18px 16px;
+  padding: 20px 18px;
   display: flex;
   flex-direction: column;
   gap: 13px;
@@ -9233,15 +9233,44 @@ body {
   margin: 0;
 }
 
-.welcome-demo-notice-compact {
-  font-size: 11px;
-  color: #64748b;
-  line-height: 1.4;
-  margin: 0;
+.welcome-demo-mode-note {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 6px 9px;
+  border-radius: 9px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.mode-note-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3b82f6;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.mode-note-text {
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.welcome-demo-guide-text {
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.welcome-demo-footnote {
+  font-size: 10.5px;
+  color: #94a3b8;
+  line-height: 1.35;
+  text-align: center;
+  margin-top: 2px;
 }
 
 .welcome-demo-actions {
@@ -9351,6 +9380,263 @@ body {
   background: #f1f5f9;
   color: #1e293b;
   border-color: #cbd5e1;
+}
+
+/* ==========================================================================
+   Account Danger Zone & 2-Step Reset Modal
+   ========================================================================== */
+
+.account-danger-card {
+  margin-top: 14px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 14px;
+  padding: 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.danger-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.danger-card-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #ffe4e6;
+  color: #e11d48;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.danger-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.danger-card-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #9f1239;
+  margin: 0;
+}
+
+.danger-card-desc {
+  font-size: 11.5px;
+  color: #be123c;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.btn-danger-reset-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-danger-reset-trigger:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+/* Danger Modal Styling */
+.danger-modal-overlay {
+  z-index: 100000;
+}
+
+.danger-reset-modal {
+  max-width: 400px;
+  border: 1px solid #fecdd3;
+  box-shadow: 0 20px 45px -10px rgba(225, 29, 72, 0.25), 0 0 0 1px rgba(254, 205, 211, 0.8);
+}
+
+.danger-header {
+  border-bottom: 1px solid #ffe4e6;
+  padding-bottom: 12px;
+}
+
+.danger-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.danger-badge-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.danger-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #991b1b;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.danger-step-subtitle {
+  font-size: 11px;
+  color: #b91c1c;
+  display: block;
+  margin-top: 2px;
+}
+
+.danger-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 14px;
+}
+
+.danger-alert-callout {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 3px solid #dc2626;
+  border-radius: 10px;
+  padding: 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.danger-callout-main {
+  font-size: 13px;
+  font-weight: 700;
+  color: #991b1b;
+  margin: 0;
+}
+
+.danger-callout-sub {
+  font-size: 11.5px;
+  color: #7f1d1d;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.danger-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.btn-proceed-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-proceed-danger:hover {
+  background: #b91c1c;
+}
+
+.danger-confirm-instruction {
+  font-size: 12.5px;
+  color: #334155;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.danger-target-phrase-box {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+
+.danger-target-phrase-box code {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #dc2626;
+  letter-spacing: 0.05em;
+  user-select: all;
+}
+
+.danger-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.danger-confirm-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.danger-confirm-input:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.btn-execute-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-execute-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.btn-execute-danger:disabled {
+  background: #cbd5e1;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 
