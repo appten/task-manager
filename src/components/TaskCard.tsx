@@ -51,6 +51,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
   const [isSubtasksOpen, setIsSubtasksOpen] = useState(false);
   const [showDesc, setShowDesc] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   // Live Stopwatch State untuk Kartu Aktif
@@ -192,7 +194,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
         task.isBreakTask ? 'break-task-card' : ''
       } ${task.isToday ? 'is-today-selected' : ''} ${
         task.isTimerRunning ? 'timer-active' : ''
-      }`}
+      } ${isMenuOpen ? 'is-menu-open' : ''}`}
     >
       <div className="task-card-header">
         {/* Checkbox Lingkaran Utama */}
@@ -456,10 +458,29 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
         {/* Menu Titik Tiga (MoreVertical) Menggabungkan AI, Edit & Hapus */}
         <div className="more-menu-container">
           <button
+            ref={buttonRef}
             type="button"
             className="card-action-btn"
             onClick={(e) => {
               e.stopPropagation();
+              if (!isMenuOpen && buttonRef.current) {
+                const rect = buttonRef.current.getBoundingClientRect();
+                const navEl = document.querySelector('.android-bottom-nav-container');
+                const scrollContainer = buttonRef.current.closest('.scrollable-content');
+                const wrapper = buttonRef.current.closest('.mobile-viewport-wrapper');
+
+                let bottomBoundary = window.innerHeight;
+                if (navEl) {
+                  bottomBoundary = navEl.getBoundingClientRect().top;
+                } else if (scrollContainer) {
+                  bottomBoundary = scrollContainer.getBoundingClientRect().bottom;
+                } else if (wrapper) {
+                  bottomBoundary = wrapper.getBoundingClientRect().bottom - 68;
+                }
+
+                const spaceBelow = bottomBoundary - rect.bottom;
+                setOpenUpward(spaceBelow < 225);
+              }
               setIsMenuOpen((prev) => !prev);
             }}
             title="Menu opsi tugas"
@@ -478,7 +499,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
                 }}
               />
               <div
-                className="more-menu-popover"
+                className={`more-menu-popover ${openUpward ? 'open-upward' : ''}`}
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Fitur Perekam Waktu (Play / Pause) */}
@@ -498,17 +519,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
                   {task.isTimerRunning ? (
                     <>
                       <Pause size={14} className="text-amber" />
-                      <span>⏸️ Jeda Rekam Waktu</span>
+                      <span>Jeda Timer</span>
                     </>
                   ) : (
                     <>
                       <Play size={14} className="text-emerald fill-emerald" />
-                      <span>▶️ Mulai Pengerjaan (Rekam Waktu)</span>
+                      <span>Mulai Timer</span>
                     </>
                   )}
                 </button>
 
-                {/* 1. Fitur 1x Klik AI: Sub-tugas & Estimasi Waktu */}
+                {/* 1. Fitur 1x Klik AI: Sub-tugas */}
                 <button
                   type="button"
                   className="more-menu-item ai-item"
@@ -520,11 +541,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
                   ) : (
                     <Sparkles size={14} />
                   )}
-                  <span>
-                    {isGeneratingAI
-                      ? 'AI menganalisis...'
-                      : '✨ Buat Sub-tugas & Estimasi (AI)'}
-                  </span>
+                  <span>{isGeneratingAI ? 'Menganalisis...' : 'AI Sub-tugas'}</span>
                 </button>
 
                 {/* 2. Toggle Today */}
@@ -538,7 +555,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
                   }}
                 >
                   <Star size={14} fill={task.isToday ? '#f59e0b' : 'none'} color={task.isToday ? '#d97706' : 'currentColor'} />
-                  <span>{task.isToday ? 'Keluarkan dari Today' : 'Pilih ke Today (Maks 5)'}</span>
+                  <span>{task.isToday ? 'Hapus Today' : 'Ke Today'}</span>
                 </button>
 
                 {/* 3. Edit Tugas */}
@@ -548,7 +565,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
                   onClick={handleEdit}
                 >
                   <Pencil size={14} />
-                  <span>Edit Tugas</span>
+                  <span>Edit</span>
                 </button>
 
                 {/* 4. Hapus Tugas */}
@@ -558,7 +575,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
                   onClick={handleDelete}
                 >
                   <Trash2 size={14} />
-                  <span>Hapus Tugas</span>
+                  <span>Hapus</span>
                 </button>
               </div>
             </>

@@ -50,6 +50,7 @@ interface TaskContextType {
   toggleTodayTask: (taskId: string) => boolean;
   addToToday: (taskId: string) => boolean;
   removeFromToday: (taskId: string) => void;
+  simulateMidnightRollover: () => void;
   isTaskFormOpen: boolean;
   setIsTaskFormOpen: (open: boolean) => void;
   isHistoryModalOpen: boolean;
@@ -139,7 +140,43 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('inbox');
+  const [activeTab, setActiveTabState] = useState<TabType>('inbox');
+
+  const setActiveTab = useCallback((tab: TabType) => {
+    setActiveTabState(tab);
+    if (typeof window !== 'undefined') {
+      const targetPath = tab === 'inbox' ? '/inbox' : `/${tab}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState(null, '', targetPath);
+      }
+    }
+  }, []);
+
+  // Sinkronisasi tab dengan path URL browser (/inbox, /today, /calendar, /ai, /account)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const syncTabWithUrl = () => {
+      const rawPath = window.location.pathname.replace(/^\//, '').split('/')[0];
+      const validTabs: TabType[] = ['inbox', 'calendar', 'today', 'ai', 'account'];
+      if (validTabs.includes(rawPath as TabType)) {
+        setActiveTabState(rawPath as TabType);
+      } else if (!rawPath || rawPath === '') {
+        setActiveTabState('inbox');
+        window.history.replaceState(null, '', '/inbox');
+      }
+    };
+
+    syncTabWithUrl();
+
+    const handlePopState = () => {
+      syncTabWithUrl();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -353,7 +390,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setTasks((prevTasks) =>
         prevTasks.map((t) =>
           t.id === taskId
-            ? { ...t, isToday: true, todayOrder: currentTodayCount + 1 }
+            ? { ...t, isToday: true, todayOrder: currentTodayCount + 1, todayDaysCount: t.todayDaysCount || 1 }
             : t
         )
       );
@@ -367,7 +404,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (taskId: string) => {
       setTasks((prevTasks) =>
         prevTasks.map((t) =>
-          t.id === taskId ? { ...t, isToday: false, todayOrder: undefined } : t
+          t.id === taskId ? { ...t, isToday: false, todayOrder: undefined, todayDaysCount: undefined } : t
         )
       );
       showToast('Tugas dikeluarkan dari Today');
@@ -388,6 +425,104 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     },
     [tasks, addToToday, removeFromToday]
   );
+
+  // Logika Rollover Tengah Malam (Melewati Jam 12 Malam)
+  const applyMidnightRollover = useCallback((targetNewDateStr?: string) => {
+    const todayStr = targetNewDateStr || getTodayDateString();
+
+    setTasks((prevTasks) => {
+      const currentTodayList = prevTasks.filter((t) => t.isToday).slice(0, 5);
+
+      // 1. Simpan riwayat kemarin ke localStorage ('today_daily_completion_logs_v1')
+      try {
+        const STORAGE_HISTORY = 'today_daily_completion_logs_v1';
+        const saved = localStorage.getItem(STORAGE_HISTORY);
+        const logs: any[] = saved ? JSON.parse(saved) : [];
+
+        const lastActiveDate = localStorage.getItem('ten_my_id_last_today_active_date') || getFormattedDate(-1);
+        const [y, m, d] = lastActiveDate.split('-');
+        const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
+
+        const completedCount = currentTodayList.filter((t) => t.isCompleted).length;
+        const taskDetails = currentTodayList.map((t) => ({
+          id: t.id,
+          title: t.title,
+          isCompleted: t.isCompleted,
+          todayDaysCount: t.todayDaysCount || 1,
+        }));
+
+        const logEntry = {
+          date: lastActiveDate,
+          dayName: dateObj.toLocaleDateString('id-ID', { weekday: 'long' }),
+          formattedDate: dateObj.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          }),
+          totalSlots: 5,
+          completedCount,
+          tasks: taskDetails,
+        };
+
+        const existingIdx = logs.findIndex((l) => l.date === lastActiveDate);
+        if (existingIdx >= 0) {
+          logs[existingIdx] = logEntry;
+        } else {
+          logs.unshift(logEntry);
+        }
+        logs.sort((a, b) => b.date.localeCompare(a.date));
+        localStorage.setItem(STORAGE_HISTORY, JSON.stringify(logs));
+      } catch (e) {
+        console.error('Gagal mencatat riwayat rollover:', e);
+      }
+
+      // 2. Bersihkan tugas selesai dari Today (isToday: false)
+      //    Tugas yang belum selesai tetap di Today, dan count hari berada di Today bertambah (+1)
+      return prevTasks.map((t) => {
+        if (!t.isToday) return t;
+        if (t.isCompleted) {
+          return {
+            ...t,
+            isToday: false,
+            todayOrder: undefined,
+          };
+        }
+        return {
+          ...t,
+          todayDaysCount: (t.todayDaysCount || 1) + 1,
+        };
+      });
+    });
+
+    try {
+      localStorage.setItem('ten_my_id_last_today_active_date', todayStr);
+    } catch {}
+  }, []);
+
+  // Periksa rollover otomatis pada load & setiap 60 detik
+  useEffect(() => {
+    if (!isHydrated) return;
+    const checkDate = () => {
+      const todayStr = getTodayDateString();
+      const lastActiveDate = localStorage.getItem('ten_my_id_last_today_active_date');
+      if (lastActiveDate && lastActiveDate !== todayStr) {
+        applyMidnightRollover(todayStr);
+        showToast('Hari baru dimulai! Tugas Today yang selesai diarsipkan, tugas berlanjut diperbarui 🌅');
+      } else if (!lastActiveDate) {
+        localStorage.setItem('ten_my_id_last_today_active_date', todayStr);
+      }
+    };
+
+    checkDate();
+    const interval = setInterval(checkDate, 60000);
+    return () => clearInterval(interval);
+  }, [isHydrated, applyMidnightRollover, showToast]);
+
+  // Fungsi Simulasi untuk mempermudah testing user
+  const simulateMidnightRollover = useCallback(() => {
+    applyMidnightRollover();
+    showToast('⚡ Simulasi ganti hari berhasil! Tugas selesai diarsipkan, tugas belum selesai berlanjut ke hari berikutnya.');
+  }, [applyMidnightRollover, showToast]);
 
   // Fitur Perekaman Waktu Pengerjaan / Stopwatch Aktivitas
   const startTaskTimer = useCallback((taskId: string) => {
@@ -1032,7 +1167,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           localStorage.setItem('ten_my_id_last_sync_v01', nowStr);
         } catch {}
-        showToast('Data berhasil disinkronkan ke Task_KV Cloudflare');
+        showToast('Data berhasil dicadangkan dan disinkronkan');
         return true;
       } else {
         showToast(res.error || 'Gagal sinkronisasi');
@@ -1089,6 +1224,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleTodayTask,
         addToToday,
         removeFromToday,
+        simulateMidnightRollover,
         isTaskFormOpen,
         setIsTaskFormOpen,
         isHistoryModalOpen,

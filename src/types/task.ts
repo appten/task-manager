@@ -61,6 +61,7 @@ export interface Task {
   // Fitur Pilihan Today (Maksimal 5 tugas fokus)
   isToday?: boolean;
   todayOrder?: number;
+  todayDaysCount?: number; // Menghitung sudah berapa hari/kali tugas ini berada di Today
 
   // Fitur Perekaman Waktu Pengerjaan / Stopwatch Aktivitas
   timeSpentSeconds?: number; // Total waktu pengerjaan terakumulasi dalam detik

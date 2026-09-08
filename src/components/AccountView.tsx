@@ -19,8 +19,11 @@ import {
   Smartphone,
   Check,
   Info,
+  ChevronRight,
 } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
+import { VersionHistoryView } from './VersionHistoryView';
+import { APP_CURRENT_VERSION } from '../data/versionHistory';
 
 export const AccountView: React.FC = () => {
   const {
@@ -39,6 +42,7 @@ export const AccountView: React.FC = () => {
 
   // Auth modal state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [nameInput, setNameInput] = useState('');
   const [emailInput, setEmailInput] = useState('');
@@ -111,98 +115,118 @@ export const AccountView: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    if (window.confirm('Keluar dari akun ini? Data tugas di perangkat ini tetap aman tersimpan.')) {
+      logoutUser();
+    }
+  };
+
+  if (showVersionHistory) {
+    return <VersionHistoryView onBack={() => setShowVersionHistory(false)} />;
+  }
+
   return (
     <div className="account-view-container">
-      {/* 1. Header Profil & Status Akun */}
-      <div className="account-header">
+      {/* 1. Profil Pengguna Ringkas & Bersih */}
+      <div className="account-clean-header">
         <div className={`account-avatar-circle ${currentUser ? 'logged-in' : 'guest'}`}>
           {currentUser ? (
             <span className="avatar-initial">{currentUser.name.charAt(0).toUpperCase()}</span>
           ) : (
-            <User size={34} />
+            <User size={30} />
           )}
         </div>
-        <h2 className="account-user-name">{currentUser ? currentUser.name : 'Tamu (Guest)'}</h2>
-        <span className="account-email">
-          {currentUser ? currentUser.email : 'Mode Offline — Data tersimpan di perangkat ini'}
-        </span>
 
-        <div className="account-badges-row">
-          <div className={`account-status-badge ${currentUser ? 'cloud-active' : 'guest'}`}>
-            <span className={`status-dot ${currentUser ? 'pulsing-green' : 'green'}`}></span>
-            <span>{currentUser ? 'Sinkronisasi Cloud Aktif' : 'Tersimpan di Perangkat (Lokal)'}</span>
+        <div className="account-profile-info">
+          <h2 className="account-user-name">{currentUser ? currentUser.name : 'Pengguna Tamu'}</h2>
+          <span className="account-email">
+            {currentUser ? currentUser.email : 'Mode Offline • Data tersimpan di perangkat ini'}
+          </span>
+          <div className="account-badges-row">
+            <div className={`account-status-badge ${currentUser ? 'cloud-active' : 'guest'}`}>
+              <span className={`status-dot ${currentUser ? 'pulsing-green' : 'gray'}`}></span>
+              <span>{currentUser ? 'Akun Tersambung' : 'Lokal (Offline)'}</span>
+            </div>
           </div>
         </div>
 
-        {/* Tombol Aksi Masuk / Keluar (Keluar dinonaktifkan sementara demi keamanan) */}
-        <div className="account-header-actions">
+        {/* Tombol Aksi Masuk / Daftar / Keluar */}
+        <div className="account-clean-actions">
           {currentUser ? (
-            <div className="account-logout-locked-box">
-              <button
-                className="account-btn-secondary disabled-locked"
-                disabled
-                title="Fitur keluar akun dinonaktifkan sementara demi menjaga keamanan data"
-              >
-                <Lock size={13} />
-                <span>Sesi Akun Aktif (Terkunci Aman)</span>
-              </button>
-              <p className="account-locked-hint">
-                Fitur keluar akun dinonaktifkan sementara agar datamu tidak hilang karena fitur pemulihan akun (lupa sandi) masih dalam pengembangan.
-              </p>
-            </div>
+            <button
+              type="button"
+              className="btn-account-logout"
+              onClick={handleLogout}
+              title="Keluar dari akun"
+            >
+              <LogOut size={13} />
+              <span>Keluar</span>
+            </button>
           ) : (
             <div className="guest-action-buttons">
               <button
+                type="button"
                 className="account-btn-primary"
                 onClick={() => handleOpenAuth('login')}
               >
-                <LogIn size={14} />
-                <span>Masuk Akun</span>
+                <LogIn size={13} />
+                <span>Masuk</span>
               </button>
               <button
+                type="button"
                 className="account-btn-outline"
                 onClick={() => handleOpenAuth('register')}
               >
-                <UserPlus size={14} />
-                <span>Daftar Akun Baru</span>
+                <UserPlus size={13} />
+                <span>Daftar</span>
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* 2. Kartu Pencadangan & Sinkronisasi Data (Cloud Backup) */}
+      {/* 2. Ringkasan Produktivitas (3 Angka Fungsional) */}
+      <div className="account-stats-grid">
+        <div className="account-stat-box">
+          <span className="stat-number">{totalTasks}</span>
+          <span className="stat-label">Total Tugas</span>
+        </div>
+        <div className="account-stat-box">
+          <span className="stat-number">{todayTasks.length}</span>
+          <span className="stat-label">Fokus Today</span>
+        </div>
+        <div className="account-stat-box">
+          <span className="stat-number">{completedTasks}</span>
+          <span className="stat-label">Selesai</span>
+        </div>
+      </div>
+
+      {/* 3. Kartu Pencadangan & Sinkronisasi Ringkas */}
       <div className="account-sync-card">
         <div className="sync-card-header">
           <div className="sync-icon-box">
-            <Cloud size={20} className={currentUser ? 'text-primary' : 'text-muted'} />
+            <Cloud size={18} className={currentUser ? 'text-primary' : 'text-muted'} />
           </div>
           <div className="sync-header-content">
             <div className="sync-title-row">
-              <h3 className="sync-title">Pencadangan & Sinkronisasi</h3>
+              <h3 className="sync-title">Pencadangan Cloud</h3>
               <span className={`sync-pill ${currentUser ? 'active' : 'optional'}`}>
-                {currentUser ? 'Aktif' : 'Opsional'}
+                {currentUser ? 'Aktif' : 'Tersedia'}
               </span>
             </div>
-            <p className="sync-desc">
+            <div className="sync-status-text">
               {currentUser
-                ? 'Catatan tugasmu dicadangkan secara aman. Kamu bisa membukanya dari HP, tablet, atau browser lain tanpa khawatir hilang.'
-                : 'Aplikasi ini 100% bebas dipakai tanpa akun. Ingin tugasmu aman saat berganti perangkat? Kamu bisa mengaktifkan pencadangan kapan saja.'}
-            </p>
+                ? `Terakhir disinkronkan: ${formatLastSync(lastCloudSyncedAt)}`
+                : 'Cadangkan tugas Anda agar tetap aman dan dapat diakses saat berganti perangkat.'}
+            </div>
           </div>
         </div>
 
         <div className="sync-card-body">
-          <div className="sync-status-row">
-            <span className="sync-status-label">Status Sinkronisasi:</span>
-            <span className="sync-status-val">
-              {currentUser ? `Terakhir: ${formatLastSync(lastCloudSyncedAt)}` : 'Hanya di perangkat ini (Offline)'}
-            </span>
-          </div>
-
           {currentUser ? (
             <div className="sync-controls-row">
               <button
+                type="button"
                 className="btn-sync-now"
                 onClick={() => triggerCloudSync()}
                 disabled={isSyncingCloud}
@@ -222,87 +246,38 @@ export const AccountView: React.FC = () => {
               </label>
             </div>
           ) : (
-            <div className="guest-sync-promo">
-              <div className="promo-text">
-                <strong>Simpan tugasmu agar selalu aman</strong>
-                <p>Saat mendaftar, {totalTasks} tugas lokal yang ada saat ini bisa otomatis disatukan ke akun barumu.</p>
-              </div>
-              <button
-                className="btn-promo-register"
-                onClick={() => handleOpenAuth('register')}
-              >
-                <UserPlus size={14} />
-                <span>Aktifkan Cadangan Cloud</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              className="btn-enable-cloud"
+              onClick={() => handleOpenAuth('register')}
+            >
+              <Cloud size={14} />
+              <span>Aktifkan Pencadangan Cloud</span>
+            </button>
           )}
         </div>
       </div>
 
-      {/* 3. Kartu Privasi & Fitur Cerdas (AI Transparency) */}
-      <div className="account-transparency-card">
-        <div className="transparency-icon-circle">
-          <Sparkles size={20} className="text-ai-purple" />
-        </div>
-        <div className="transparency-content">
-          <div className="transparency-header">
-            <h3 className="transparency-title">Privasi & Fitur Cerdas</h3>
-            <span className="ai-provider-badge">Google Gemini</span>
-          </div>
-          <p className="transparency-desc">
-            Aplikasi ini menjaga privasimu dengan prinsip keterbukaan:
-          </p>
-          <div className="transparency-bullets">
-            <div className="transparency-bullet-item">
-              <Shield size={14} className="text-ai-purple flex-shrink-0" />
-              <span>
-                <strong>Pemrosesan AI:</strong> Fitur saran jadwal dan pembongkaran tugas diproses melalui <strong>Google Gemini</strong> hanya saat kamu menekan tombol analisis.
-              </span>
-            </div>
-            <div className="transparency-bullet-item">
-              <Eye size={14} className="text-ai-purple flex-shrink-0" />
-              <span>
-                <strong>Tanpa Pelacakan Pribadi:</strong> Data tidak dikirim diam-diam di latar belakang. Privasi dan kendali tetap ada di tanganmu.
-              </span>
-            </div>
-            <div className="transparency-bullet-item">
-              <Smartphone size={14} className="text-ai-purple flex-shrink-0" />
-              <span>
-                <strong>Bebas Dipakai Offline:</strong> Seluruh pencatat tugas, timer hitung mundur, dan kalender tetap berfungsi penuh 100% tanpa perlu menyentuh AI.
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Ringkasan Aktivitasmu */}
-      <div className="account-stats-grid">
-        <div className="account-stat-box">
-          <span className="stat-number">{totalTasks}</span>
-          <span className="stat-label">Total Tugas</span>
-        </div>
-        <div className="account-stat-box">
-          <span className="stat-number">{todayTasks.length}</span>
-          <span className="stat-label">Fokus Hari Ini</span>
-        </div>
-        <div className="account-stat-box">
-          <span className="stat-number">{completedTasks}</span>
-          <span className="stat-label">Selesai</span>
-        </div>
-      </div>
-
-      {/* 5. Informasi Aplikasi Ringkas */}
+      {/* 4. Informasi & Versi Aplikasi */}
       <div className="account-info-box">
         <div className="info-box-row">
-          <span className="info-box-label">Status Penyimpanan</span>
+          <span className="info-box-label">Status Data</span>
           <span className="info-box-val text-green">
-            <CheckCircle2 size={12} /> {currentUser ? 'Tersinkron Cloud' : 'Lokal Perangkat (Offline)'}
+            <CheckCircle2 size={13} /> {currentUser ? 'Tersinkron Cloud' : 'Tersimpan di Perangkat Ini'}
           </span>
         </div>
-        <div className="info-box-row">
+        <button
+          type="button"
+          className="info-box-row info-box-row-clickable"
+          onClick={() => setShowVersionHistory(true)}
+          aria-label="Buka riwayat versi aplikasi"
+        >
           <span className="info-box-label">Versi Aplikasi</span>
-          <span className="info-box-val font-semibold text-primary">v1.1.0</span>
-        </div>
+          <span className="info-box-val font-semibold text-primary clickable-version">
+            {APP_CURRENT_VERSION}
+            <ChevronRight size={14} className="version-chevron" />
+          </span>
+        </button>
       </div>
 
       {/* 6. Modal Masuk / Daftar Akun */}

@@ -79,7 +79,7 @@ export const INITIAL_TASKS: Task[] = [
     subTasks: [
       { id: 'sub-2-1', title: 'Uji responsivitas navigasi tab mobile', isCompleted: true },
       { id: 'sub-2-2', title: 'Verifikasi fungsi tambah task & sub-task dinamis', isCompleted: true },
-      { id: 'sub-2-3', title: 'Uji Cloudflare Wrangler local preview', isCompleted: false },
+      { id: 'sub-2-3', title: 'Periksa tampilan di perangkat mobile', isCompleted: false },
     ],
     createdAt: new Date().toISOString(),
   },
@@ -117,8 +117,8 @@ export const INITIAL_TASKS: Task[] = [
   },
   {
     id: 'task-5',
-    title: 'Selesaikan modul Next.js & Serverless Cloudflare',
-    description: 'Pelajari arsitektur edge functions dan static generation.',
+    title: 'Selesaikan modul kursus produktivitas digital',
+    description: 'Pelajari manajemen waktu dan perencanaan jadwal harian.',
     inboxType: 'tugas',
     dueDate: getFormattedDate(-1), // Kemarin
     dueTime: '20:00',
@@ -126,8 +126,8 @@ export const INITIAL_TASKS: Task[] = [
     category: 'Belajar',
     isCompleted: true,
     subTasks: [
-      { id: 'sub-5-1', title: 'Baca dokumentasi Cloudflare Pages', isCompleted: true },
-      { id: 'sub-5-2', title: 'Eksperimen routing lokal', isCompleted: true },
+      { id: 'sub-5-1', title: 'Baca panduan ringkas produktivitas', isCompleted: true },
+      { id: 'sub-5-2', title: 'Praktikkan penyusunan jadwal harian', isCompleted: true },
     ],
     createdAt: getPastIsoDate(1),
   },

@@ -1,31 +1,17 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useTask } from '../context/TaskContext';
-import { CheckCheck, History, Target, Wifi, BatteryMedium, Signal } from 'lucide-react';
+import { StatusBar } from './StatusBar';
+import { CheckCheck, History, Target } from 'lucide-react';
 
 export const Header: React.FC = () => {
+  const router = useRouter();
   const {
     tasks,
     todayTasks,
     activeTab,
     currentUser,
-    setIsGoalModalOpen,
-    setIsHistoryModalOpen,
   } = useTask();
-  const [currentTime, setCurrentTime] = useState('10:00');
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      setCurrentTime(`${hours}:${minutes}`);
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   const pendingCount = tasks.filter((t) => !t.isCompleted).length;
   const todayCompleted = todayTasks.filter((t) => t.isCompleted).length;
@@ -66,16 +52,8 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      {/* Android System Status Bar */}
-      <div className="android-status-bar">
-        <span>{currentTime}</span>
-        <div className="android-punch-hole" />
-        <div className="android-system-icons">
-          <Signal size={13} />
-          <Wifi size={14} />
-          <BatteryMedium size={16} />
-        </div>
-      </div>
+      {/* Android System Status Bar (Hari, Tanggal & Jam, Tanpa Punch Hole) */}
+      <StatusBar />
 
       {/* Android Material 3 Top App Bar */}
       <header className="android-app-bar">
@@ -90,19 +68,20 @@ export const Header: React.FC = () => {
         </div>
 
         <div className="app-bar-actions">
+          {/* Tombol Halaman Goals */}
           <button
             className="android-icon-btn goal-btn-highlight"
-            onClick={() => setIsGoalModalOpen(true)}
-            title="Pengaturan Goals Tahun Ini & Personalisasi AI"
-            aria-label="Pengaturan Goals"
+            onClick={() => router.push('/goal')}
+            title="Tujuan & Sasaran Hidup (Goals 2026)"
+            aria-label="Tujuan & Sasaran Hidup"
           >
             <Target size={19} />
           </button>
-          {/* Tombol Riwayat Tugas Selesai */}
+          {/* Tombol Halaman Riwayat Tugas Selesai */}
           <button
             className="android-icon-btn history-btn-action"
-            onClick={() => setIsHistoryModalOpen(true)}
-            title="Riwayat Tugas Selesai"
+            onClick={() => router.push('/history')}
+            title="Halaman Riwayat Tugas Selesai"
             aria-label="Riwayat Tugas Selesai"
           >
             <History size={19} />

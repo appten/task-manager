@@ -1,22 +1,25 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTask } from '../context/TaskContext';
-import { TaskCard } from './TaskCard';
+import { TodayTaskRow } from './TodayTaskRow';
+import { TodayHistoryView } from './TodayHistoryView';
 import {
   Sun,
   PlusCircle,
   CheckCircle2,
-  Sparkles,
   Inbox,
   ArrowRight,
-  Target,
   Flame,
   Clock,
+  History,
 } from 'lucide-react';
 
 export const TodayView: React.FC = () => {
-  const { todayTasks, setActiveTab, tasks } = useTask();
+  const { todayTasks, setActiveTab } = useTask();
+
+  // State untuk membuka view Riwayat Today
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const maxSlots = 5;
   const completedTodayCount = todayTasks.filter((t) => t.isCompleted).length;
@@ -37,6 +40,11 @@ export const TodayView: React.FC = () => {
     year: 'numeric',
   });
 
+  // Jika tampilan Riwayat Today dibuka
+  if (isHistoryOpen) {
+    return <TodayHistoryView onBack={() => setIsHistoryOpen(false)} />;
+  }
+
   return (
     <div className="today-view-container">
       {/* Banner Header Today */}
@@ -46,7 +54,19 @@ export const TodayView: React.FC = () => {
             <Sun size={14} className="today-sun-icon" />
             <span>Fokus Harian (Rule of 5)</span>
           </div>
-          <span className="today-date-text">{todayFormatted}</span>
+
+          <div className="today-header-right-actions">
+            <span className="today-date-text">{todayFormatted}</span>
+            <button
+              type="button"
+              className="btn-today-history-icon"
+              onClick={() => setIsHistoryOpen(true)}
+              title="Lihat Log Riwayat Today"
+            >
+              <History size={14} />
+              <span>Riwayat</span>
+            </button>
+          </div>
         </div>
 
         <h2 className="today-hero-title">Prioritas Utama Hari Ini</h2>
@@ -97,14 +117,14 @@ export const TodayView: React.FC = () => {
             className="btn-select-from-inbox"
             onClick={() => setActiveTab('inbox')}
           >
-            <Inbox size={14} />
+            <Inbox size={13} />
             <span>Kelola di Inbox</span>
-            <ArrowRight size={12} />
+            <ArrowRight size={11} />
           </button>
         </div>
 
         {todayTasks.length === 0 ? (
-          /* Empty State jika belum ada tugas di Today */
+          /* Empty State jika belum ada tugas sama sekali di Today */
           <div className="empty-state today-empty-state">
             <div className="empty-icon-circle today-empty-icon">
               <Sun size={32} />
@@ -112,7 +132,7 @@ export const TodayView: React.FC = () => {
             <div className="empty-title">Belum Ada Tugas di Today</div>
             <p className="empty-desc">
               Pilih hingga 5 tugas dari Inbox yang ingin kamu selesaikan hari ini dengan menekan tombol{' '}
-              <strong>⭐ + Today</strong> pada setiap kartu tugas.
+              <strong>⭐ + Today</strong> pada setiap item di Inbox.
             </p>
             <button
               type="button"
@@ -125,39 +145,36 @@ export const TodayView: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="today-slots-list">
+          /* Unboxed Flat Slots List */
+          <div className="today-clean-list">
             {slots.map(({ slotNumber, task }) => {
               if (task) {
                 return (
-                  <div key={task.id} className="today-slot-item filled">
-                    <TaskCard
-                      task={task}
-                      todayRank={slotNumber}
-                      hideTodayToggle={false}
-                    />
-                  </div>
+                  <TodayTaskRow
+                    key={task.id}
+                    task={task}
+                    slotNumber={slotNumber}
+                  />
                 );
               }
 
-              // Slot Kosong
+              // Slot Kosong Bersih & Rapi
               return (
                 <div
                   key={`empty-slot-${slotNumber}`}
-                  className="today-empty-slot"
+                  className="today-empty-slot-clean"
                   onClick={() => setActiveTab('inbox')}
                   role="button"
                   tabIndex={0}
                   title="Klik untuk memilih tugas dari Inbox"
                 >
-                  <div className="empty-slot-number">#{slotNumber}</div>
-                  <div className="empty-slot-content">
-                    <div className="empty-slot-title">Slot Kosong #{slotNumber}</div>
-                    <div className="empty-slot-subtitle">
-                      Pilih 1 tugas dari Inbox untuk mengisi fokus ini
-                    </div>
+                  <div className="empty-slot-number-pill">#{slotNumber}</div>
+                  <div className="empty-slot-text">
+                    <span className="empty-slot-label">Slot #{slotNumber} Kosong</span>
+                    <span className="empty-slot-hint">Ketuk untuk memilih tugas dari Inbox</span>
                   </div>
-                  <button type="button" className="btn-empty-slot-add">
-                    <PlusCircle size={16} />
+                  <button type="button" className="btn-add-to-slot">
+                    <PlusCircle size={13} />
                     <span>Pilih</span>
                   </button>
                 </div>

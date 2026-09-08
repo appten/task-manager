@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AppProviders } from "../components/AppProviders";
 
 export const metadata: Metadata = {
   title: "TEN Tasks - Pengelola Task Mobile",
-  description: "Aplikasi pengelola task modern khusus mobile dengan Next.js dan Cloudflare Wrangler",
+  description: "Aplikasi pengelola tugas mobile modern, cerdas, dan terfokus untuk produktivitas harian Anda",
 };
 
 export const viewport: Viewport = {
@@ -22,7 +23,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body>{children}</body>
+      <body>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }
