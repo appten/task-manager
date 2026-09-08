@@ -62,6 +62,11 @@ export interface Task {
   isToday?: boolean;
   todayOrder?: number;
 
+  // Fitur Perekaman Waktu Pengerjaan / Stopwatch Aktivitas
+  timeSpentSeconds?: number; // Total waktu pengerjaan terakumulasi dalam detik
+  isTimerRunning?: boolean; // Penanda stopwatch sedang aktif berjalan
+  timerStartedAt?: string; // Timestamp ISO saat timer sesi aktif dimulai
+
   priority: Priority;
   category: Category;
   isCompleted: boolean;

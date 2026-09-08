@@ -9,6 +9,7 @@ export const Header: React.FC = () => {
     tasks,
     todayTasks,
     activeTab,
+    currentUser,
     setIsGoalModalOpen,
     setIsHistoryModalOpen,
   } = useTask();
@@ -41,6 +42,16 @@ export const Header: React.FC = () => {
         return {
           title: 'Kalender & Jadwal',
           subtitle: 'Alokasi waktu & agenda harian',
+        };
+      case 'ai':
+        return {
+          title: 'AI Productivity Suite',
+          subtitle: 'Analisis beban & ritme sirkadian',
+        };
+      case 'account':
+        return {
+          title: 'Akun & Sinkronisasi',
+          subtitle: currentUser ? `Terhubung: ${currentUser.name}` : 'Mode Tamu & Cadangan Cloud',
         };
       case 'inbox':
       default:

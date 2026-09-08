@@ -4,6 +4,12 @@
   "compatibility_date": "2024-11-01",
   "assets": {
     "directory": "./out"
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "Task_KV",
+      "id": "03bbba17a9a6465089a0949908f8539b"
+    }
+  ]
 }
 

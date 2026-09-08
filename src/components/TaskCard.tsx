@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Task } from '../types/task';
 import { useTask } from '../context/TaskContext';
 import { generateSubTasksAndEstimateWithAI } from '../services/geminiService';
@@ -21,6 +21,9 @@ import {
   Bell,
   CheckSquare,
   Repeat,
+  Play,
+  Pause,
+  Square,
 } from 'lucide-react';
 
 interface TaskCardProps {
@@ -34,6 +37,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
     toggleTaskStatus,
     toggleSubTaskStatus,
     toggleTodayTask,
+    startTaskTimer,
+    pauseTaskTimer,
+    stopTaskTimer,
+    resetTaskTimer,
     setEditingTask,
     deleteTask,
     addAISubTasksAndEstimate,
@@ -45,6 +52,59 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
   const [showDesc, setShowDesc] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
+  // Live Stopwatch State untuk Kartu Aktif
+  const [liveElapsedSeconds, setLiveElapsedSeconds] = useState<number>(() => {
+    const base = task.timeSpentSeconds || 0;
+    if (task.isTimerRunning && task.timerStartedAt) {
+      const currentSession = Math.max(
+        0,
+        Math.floor((Date.now() - new Date(task.timerStartedAt).getTime()) / 1000)
+      );
+      return base + currentSession;
+    }
+    return base;
+  });
+
+  useEffect(() => {
+    if (!task.isTimerRunning || !task.timerStartedAt) {
+      setLiveElapsedSeconds(task.timeSpentSeconds || 0);
+      return;
+    }
+
+    const updateTimer = () => {
+      const base = task.timeSpentSeconds || 0;
+      const currentSession = Math.max(
+        0,
+        Math.floor((Date.now() - new Date(task.timerStartedAt!).getTime()) / 1000)
+      );
+      setLiveElapsedSeconds(base + currentSession);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [task.isTimerRunning, task.timerStartedAt, task.timeSpentSeconds]);
+
+  const formatStopwatchDigits = (totalSec: number) => {
+    const hours = Math.floor(totalSec / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+    const seconds = totalSec % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    if (hours > 0) {
+      return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    }
+    return `${pad(minutes)}:${pad(seconds)}`;
+  };
+
+  const formatRecordedDuration = (totalSec: number) => {
+    const hours = Math.floor(totalSec / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+    const seconds = totalSec % 60;
+    if (hours > 0) return `${hours}j ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  };
 
   const completedSubtasksCount = task.subTasks.filter((st) => st.isCompleted).length;
   const totalSubtasksCount = task.subTasks.length;
@@ -130,7 +190,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
     <div
       className={`task-card ${task.isCompleted ? 'completed' : ''} ${
         task.isBreakTask ? 'break-task-card' : ''
-      } ${task.isToday ? 'is-today-selected' : ''}`}
+      } ${task.isToday ? 'is-today-selected' : ''} ${
+        task.isTimerRunning ? 'timer-active' : ''
+      }`}
     >
       <div className="task-card-header">
         {/* Checkbox Lingkaran Utama */}
@@ -171,8 +233,99 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
             </div>
           )}
 
+          {/* Live Stopwatch Banner saat aktivitas sedang berjalan */}
+          {task.isTimerRunning && (
+            <div className="card-live-stopwatch-strip">
+              <div className="stopwatch-left">
+                <div className="stopwatch-pulse-row">
+                  <span className="live-pulse-dot" />
+                  <span className="stopwatch-status-label">
+                    {task.inboxType === 'kegiatan'
+                      ? 'Sedang Berlangsung'
+                      : task.inboxType === 'pengingat'
+                      ? 'Sedang Diproses'
+                      : 'Sedang Dikerjakan'}
+                  </span>
+                </div>
+                <div className="stopwatch-timer-display">
+                  <Clock size={16} className="stopwatch-clock-spin" />
+                  <span className="stopwatch-time-text">
+                    {formatStopwatchDigits(liveElapsedSeconds)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="stopwatch-actions">
+                <button
+                  type="button"
+                  className="btn-timer-action pause"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    pauseTaskTimer(task.id);
+                  }}
+                  title="Jeda hitungan waktu"
+                >
+                  <Pause size={13} />
+                  <span>Jeda</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-timer-action stop"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    stopTaskTimer(task.id);
+                  }}
+                  title="Berhenti & simpan waktu"
+                >
+                  <Square size={12} />
+                  <span>Berhenti</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-timer-action done"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleTaskStatus(task.id);
+                  }}
+                  title="Selesaikan tugas & simpan waktu"
+                >
+                  <Check size={13} strokeWidth={3} />
+                  <span>Selesai</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Baris Keterangan yang Rapi, Bersih & Ringkas */}
           <div className="task-meta-row">
+            {/* Badge Waktu Terekam Saat Dijeda */}
+            {!task.isTimerRunning && (task.timeSpentSeconds || 0) > 0 && !task.isCompleted && (
+              <span className="meta-item meta-timer-badge paused" title="Waktu pengerjaan terakumulasi">
+                <Clock size={10} />
+                <span>{formatRecordedDuration(task.timeSpentSeconds!)}</span>
+                <button
+                  type="button"
+                  className="btn-mini-resume-timer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    startTaskTimer(task.id);
+                  }}
+                  title="Lanjutkan pengerjaan (Rekam waktu)"
+                >
+                  <Play size={9} className="fill-current" />
+                  <span>Lanjut</span>
+                </button>
+              </span>
+            )}
+
+            {/* Badge Waktu Selesai Jika Sudah Dituntaskan */}
+            {task.isCompleted && (task.timeSpentSeconds || 0) > 0 && (
+              <span className="meta-item meta-timer-badge completed" title="Total durasi pengerjaan">
+                <Clock size={10} />
+                <span>Selesai dlm {formatRecordedDuration(task.timeSpentSeconds!)}</span>
+              </span>
+            )}
+
             {/* 1. Badge Jenis Inbox */}
             {task.inboxType === 'kegiatan' ? (
               <span className="meta-item meta-inbox-badge kegiatan" title="Kategori: Kegiatan / Acara">
@@ -328,6 +481,33 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
                 className="more-menu-popover"
                 onClick={(e) => e.stopPropagation()}
               >
+                {/* Fitur Perekam Waktu (Play / Pause) */}
+                <button
+                  type="button"
+                  className={`more-menu-item ${task.isTimerRunning ? 'timer-active-item' : 'timer-play-item'}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMenuOpen(false);
+                    if (task.isTimerRunning) {
+                      pauseTaskTimer(task.id);
+                    } else {
+                      startTaskTimer(task.id);
+                    }
+                  }}
+                >
+                  {task.isTimerRunning ? (
+                    <>
+                      <Pause size={14} className="text-amber" />
+                      <span>⏸️ Jeda Rekam Waktu</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play size={14} className="text-emerald fill-emerald" />
+                      <span>▶️ Mulai Pengerjaan (Rekam Waktu)</span>
+                    </>
+                  )}
+                </button>
+
                 {/* 1. Fitur 1x Klik AI: Sub-tugas & Estimasi Waktu */}
                 <button
                   type="button"

@@ -17,8 +17,19 @@ import {
   createSmartBreakTask,
   compareSchedules,
 } from '../services/smartScheduler';
+import { cloudSyncService, UserProfile } from '../services/cloudSyncService';
 
 interface TaskContextType {
+  // Cloudflare KV Sync & User Account (Opsional)
+  currentUser: UserProfile | null;
+  isSyncingCloud: boolean;
+  lastCloudSyncedAt: string | null;
+  isAutoSyncEnabled: boolean;
+  loginUser: (email: string, password: string, mergeLocalData?: boolean) => Promise<{ success: boolean; error?: string }>;
+  registerUser: (name: string, email: string, password: string, mergeLocalData?: boolean) => Promise<{ success: boolean; error?: string }>;
+  logoutUser: () => void;
+  triggerCloudSync: () => Promise<boolean>;
+  toggleAutoSync: () => void;
   tasks: Task[];
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
@@ -44,6 +55,12 @@ interface TaskContextType {
   isHistoryModalOpen: boolean;
   setIsHistoryModalOpen: (open: boolean) => void;
   clearAllCompletedTasks: () => void;
+
+  // Fitur Perekaman Waktu Pengerjaan / Stopwatch Aktivitas
+  startTaskTimer: (taskId: string) => void;
+  pauseTaskTimer: (taskId: string) => void;
+  stopTaskTimer: (taskId: string) => void;
+  resetTaskTimer: (taskId: string) => void;
 
   addTask: (newTask: Omit<Task, 'id' | 'createdAt'>) => void;
   updateTask: (updatedTask: Task) => void;
@@ -140,6 +157,12 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
   const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
 
+  // State Cloudflare KV Sync & Akun Pengguna
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
+  const [lastCloudSyncedAt, setLastCloudSyncedAt] = useState<string | null>(null);
+  const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState<boolean>(true);
+
   // State Jadwal Asli & Proposal AI untuk Komparasi Sebelum/Sesudah
   const [originalSchedules, setOriginalSchedules] = useState<Record<string, Task[]>>({});
   const [aiProposals, setAiProposals] = useState<Record<string, Task[]>>({});
@@ -219,6 +242,20 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (savedVersion === 'ai' || savedVersion === 'ori') {
         setActiveScheduleVersion(savedVersion);
       }
+
+      // Load saved User Profile (Cloudflare KV Sync)
+      const savedUser = cloudSyncService.getCurrentUser();
+      if (savedUser) {
+        setCurrentUser(savedUser);
+      }
+      const savedSyncTime = localStorage.getItem('ten_my_id_last_sync_v01');
+      if (savedSyncTime) {
+        setLastCloudSyncedAt(savedSyncTime);
+      }
+      const savedAutoSync = localStorage.getItem('ten_my_id_autosync_v01');
+      if (savedAutoSync !== null) {
+        setIsAutoSyncEnabled(savedAutoSync === 'true');
+      }
     } catch (e) {
       console.warn('Gagal membaca localStorage, menggunakan data seed:', e);
       setTasks(INITIAL_TASKS);
@@ -226,6 +263,24 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsHydrated(true);
     }
   }, []);
+
+  // Auto-sync debounced ke Task_KV ketika tasks berubah jika currentUser & isAutoSyncEnabled aktif
+  useEffect(() => {
+    if (!isHydrated || !currentUser || !isAutoSyncEnabled) return;
+
+    const timer = setTimeout(() => {
+      cloudSyncService.pushTasks(currentUser.email, tasks, userGoal).then((res) => {
+        if (res.success && res.updatedAt) {
+          setLastCloudSyncedAt(res.updatedAt);
+          try {
+            localStorage.setItem('ten_my_id_last_sync_v01', res.updatedAt);
+          } catch {}
+        }
+      });
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [tasks, userGoal, currentUser, isAutoSyncEnabled, isHydrated]);
 
   // Sync tasks to localStorage
   useEffect(() => {
@@ -334,6 +389,89 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [tasks, addToToday, removeFromToday]
   );
 
+  // Fitur Perekaman Waktu Pengerjaan / Stopwatch Aktivitas
+  const startTaskTimer = useCallback((taskId: string) => {
+    const nowIso = new Date().toISOString();
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          return {
+            ...t,
+            isTimerRunning: true,
+            timerStartedAt: nowIso,
+          };
+        }
+        // Jeda tugas lain jika ada yang sedang berjalan (single focused activity)
+        if (t.isTimerRunning && t.timerStartedAt) {
+          const elapsed = Math.max(0, Math.floor((Date.now() - new Date(t.timerStartedAt).getTime()) / 1000));
+          return {
+            ...t,
+            isTimerRunning: false,
+            timerStartedAt: undefined,
+            timeSpentSeconds: (t.timeSpentSeconds || 0) + elapsed,
+          };
+        }
+        return t;
+      })
+    );
+    showToast('Aktivitas dimulai! Stopwatch pengerjaan sedang berjalan ⏱️▶️');
+  }, [showToast]);
+
+  const pauseTaskTimer = useCallback((taskId: string) => {
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId && t.isTimerRunning && t.timerStartedAt) {
+          const elapsed = Math.max(0, Math.floor((Date.now() - new Date(t.timerStartedAt).getTime()) / 1000));
+          return {
+            ...t,
+            isTimerRunning: false,
+            timerStartedAt: undefined,
+            timeSpentSeconds: (t.timeSpentSeconds || 0) + elapsed,
+          };
+        }
+        return t;
+      })
+    );
+    showToast('Waktu pengerjaan dijeda ⏸️');
+  }, [showToast]);
+
+  const stopTaskTimer = useCallback((taskId: string) => {
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          let extra = 0;
+          if (t.isTimerRunning && t.timerStartedAt) {
+            extra = Math.max(0, Math.floor((Date.now() - new Date(t.timerStartedAt).getTime()) / 1000));
+          }
+          return {
+            ...t,
+            isTimerRunning: false,
+            timerStartedAt: undefined,
+            timeSpentSeconds: (t.timeSpentSeconds || 0) + extra,
+          };
+        }
+        return t;
+      })
+    );
+    showToast('Perekaman waktu dihentikan & tersimpan ⏹️');
+  }, [showToast]);
+
+  const resetTaskTimer = useCallback((taskId: string) => {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              isTimerRunning: false,
+              timerStartedAt: undefined,
+              timeSpentSeconds: 0,
+            }
+          : t
+      )
+    );
+    showToast('Hitungan waktu aktivitas di-reset ke 0');
+  }, [showToast]);
+
   const addTask = useCallback((taskData: Omit<Task, 'id' | 'createdAt'>) => {
     const newTask: Task = {
       ...taskData,
@@ -376,7 +514,29 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isCompleted: nextStatus,
           }));
 
+          // Hentikan timer jika sedang berjalan dan akumulasikan waktu
+          let finalTimeSpent = task.timeSpentSeconds || 0;
+          if (task.isTimerRunning && task.timerStartedAt) {
+            const extra = Math.max(
+              0,
+              Math.floor((Date.now() - new Date(task.timerStartedAt).getTime()) / 1000)
+            );
+            finalTimeSpent += extra;
+          }
+
           if (nextStatus) {
+            const formatDurationText = (sec: number): string => {
+              const h = Math.floor(sec / 3600);
+              const m = Math.floor((sec % 3600) / 60);
+              const s = sec % 60;
+              if (h > 0) return `${h} jam ${m} mnt`;
+              if (m > 0) return `${m} mnt ${s} dtk`;
+              return `${s} dtk`;
+            };
+
+            const durationNotice =
+              finalTimeSpent > 0 ? ` (Waktu: ${formatDurationText(finalTimeSpent)})` : '';
+
             if (task.recurrence && task.recurrence !== 'none') {
               // Hitung tanggal berikutnya
               const calculateNextDate = (currentDateStr: string, recurrence: RecurrenceType): string => {
@@ -413,9 +573,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 subTasks: task.subTasks.map((st) => ({ ...st, isCompleted: false })),
                 createdAt: new Date().toISOString(),
               };
-              showToast(`Tugas rutin selesai! Siklus berikutnya aktif untuk tanggal ${nextDueDate} 🔁`);
+              showToast(`Tugas rutin selesai! Siklus berikutnya aktif untuk tanggal ${nextDueDate}${durationNotice} 🔁`);
             } else {
-              showToast(`Tugas selesai & dipindahkan ke Riwayat 🎉`);
+              showToast(`Tugas selesai & dipindahkan ke Riwayat${durationNotice} 🎉`);
             }
           } else {
             showToast(`Tugas dikembalikan ke Inbox 📥`);
@@ -425,6 +585,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...task,
             isCompleted: nextStatus,
             completedAt: nextStatus ? new Date().toISOString() : undefined,
+            isTimerRunning: false,
+            timerStartedAt: undefined,
+            timeSpentSeconds: finalTimeSpent,
             subTasks: updatedSubTasks,
           };
         }
@@ -764,9 +927,149 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast('Data direset ke data contoh');
   }, [showToast]);
 
+  // 1. Register User ke Task_KV
+  const registerUser = useCallback(
+    async (name: string, email: string, password: string, mergeLocalData = true) => {
+      setIsSyncingCloud(true);
+      try {
+        const result = await cloudSyncService.register(
+          name,
+          email,
+          password,
+          mergeLocalData ? tasks : undefined,
+          mergeLocalData ? userGoal : undefined
+        );
+
+        if (result.success && result.user) {
+          setCurrentUser(result.user);
+          const nowStr = new Date().toISOString();
+          setLastCloudSyncedAt(nowStr);
+          try {
+            localStorage.setItem('ten_my_id_last_sync_v01', nowStr);
+          } catch {}
+          showToast(`Selamat datang ${result.user.name}! Akun terhubung ke Task_KV.`);
+          return { success: true };
+        } else {
+          showToast(result.error || 'Gagal mendaftar');
+          return { success: false, error: result.error };
+        }
+      } catch (err: any) {
+        showToast(err.message || 'Terjadi kesalahan');
+        return { success: false, error: err.message };
+      } finally {
+        setIsSyncingCloud(false);
+      }
+    },
+    [tasks, userGoal, showToast]
+  );
+
+  // 2. Login User ke Task_KV
+  const loginUser = useCallback(
+    async (email: string, password: string, mergeLocalData = true) => {
+      setIsSyncingCloud(true);
+      try {
+        const result = await cloudSyncService.login(email, password);
+        if (result.success && result.user) {
+          setCurrentUser(result.user);
+          const nowStr = new Date().toISOString();
+          setLastCloudSyncedAt(nowStr);
+          try {
+            localStorage.setItem('ten_my_id_last_sync_v01', nowStr);
+          } catch {}
+
+          if (result.cloudData && result.cloudData.tasks && result.cloudData.tasks.length > 0) {
+            if (mergeLocalData) {
+              const cloudTaskIds = new Set(result.cloudData.tasks.map((t: Task) => t.id));
+              const uniqueLocalTasks = tasks.filter((t) => !cloudTaskIds.has(t.id));
+              const merged = [...result.cloudData.tasks, ...uniqueLocalTasks];
+              setTasks(merged);
+              await cloudSyncService.pushTasks(result.user.email, merged, result.cloudData.userGoal || userGoal);
+            } else {
+              setTasks(result.cloudData.tasks);
+              if (result.cloudData.userGoal) {
+                setUserGoal(result.cloudData.userGoal);
+              }
+            }
+          } else if (mergeLocalData && tasks.length > 0) {
+            await cloudSyncService.pushTasks(result.user.email, tasks, userGoal);
+          }
+
+          showToast(`Berhasil masuk sebagai ${result.user.name}. Data tersinkron ke Task_KV.`);
+          return { success: true };
+        } else {
+          showToast(result.error || 'Gagal masuk akun');
+          return { success: false, error: result.error };
+        }
+      } catch (err: any) {
+        showToast(err.message || 'Terjadi kesalahan');
+        return { success: false, error: err.message };
+      } finally {
+        setIsSyncingCloud(false);
+      }
+    },
+    [tasks, userGoal, showToast]
+  );
+
+  // 3. Logout
+  const logoutUser = useCallback(() => {
+    cloudSyncService.logout();
+    setCurrentUser(null);
+    showToast('Telah keluar dari akun. Beroperasi dalam mode Guest lokal.');
+  }, [showToast]);
+
+  // 4. Trigger Cloud Sync
+  const triggerCloudSync = useCallback(async (): Promise<boolean> => {
+    if (!currentUser) {
+      showToast('Silakan masuk akun terlebih dahulu untuk sinkronisasi cloud');
+      return false;
+    }
+    setIsSyncingCloud(true);
+    try {
+      const res = await cloudSyncService.pushTasks(currentUser.email, tasks, userGoal);
+      if (res.success) {
+        const nowStr = res.updatedAt || new Date().toISOString();
+        setLastCloudSyncedAt(nowStr);
+        try {
+          localStorage.setItem('ten_my_id_last_sync_v01', nowStr);
+        } catch {}
+        showToast('Data berhasil disinkronkan ke Task_KV Cloudflare');
+        return true;
+      } else {
+        showToast(res.error || 'Gagal sinkronisasi');
+        return false;
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Gagal sinkronisasi cloud');
+      return false;
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  }, [currentUser, tasks, userGoal, showToast]);
+
+  // 5. Toggle Auto Sync
+  const toggleAutoSync = useCallback(() => {
+    setIsAutoSyncEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('ten_my_id_autosync_v01', String(next));
+      } catch {}
+      showToast(`Auto-sync cloud ${next ? 'diaktifkan' : 'dinonaktifkan'}`);
+      return next;
+    });
+  }, [showToast]);
+
   return (
     <TaskContext.Provider
       value={{
+        currentUser,
+        isSyncingCloud,
+        lastCloudSyncedAt,
+        isAutoSyncEnabled,
+        loginUser,
+        registerUser,
+        logoutUser,
+        triggerCloudSync,
+        toggleAutoSync,
         tasks,
         activeTab,
         setActiveTab,
@@ -791,6 +1094,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isHistoryModalOpen,
         setIsHistoryModalOpen,
         clearAllCompletedTasks,
+        startTaskTimer,
+        pauseTaskTimer,
+        stopTaskTimer,
+        resetTaskTimer,
         addTask,
         updateTask,
         deleteTask,
