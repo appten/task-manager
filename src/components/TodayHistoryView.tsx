@@ -60,9 +60,13 @@ export const TodayHistoryView: React.FC<TodayHistoryViewProps> = ({ onBack }) =>
   const [logs, setLogs] = useState<DailyTodayLog[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
+      const isCleanMode = localStorage.getItem('ten_tasks_demo_dismissed') === 'true';
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         return JSON.parse(saved);
+      }
+      if (isCleanMode) {
+        return [];
       }
     } catch (e) {
       console.error(e);
@@ -115,10 +119,40 @@ export const TodayHistoryView: React.FC<TodayHistoryViewProps> = ({ onBack }) =>
     return initialPastLogs;
   });
 
+  // Listener perubahan storage (misal saat reset data bersih dilakukan)
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const isCleanMode = localStorage.getItem('ten_tasks_demo_dismissed') === 'true';
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          setLogs(JSON.parse(saved));
+        } else if (isCleanMode) {
+          setLogs([]);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   // Sync log dengan hari ini secara dinamis & real-time
   useEffect(() => {
     setLogs((prevLogs) => {
+      const isCleanMode = typeof window !== 'undefined' && localStorage.getItem('ten_tasks_demo_dismissed') === 'true';
+
+      // Jika dalam mode bersih dan belum ada tugas Today, jangan otomatis membuat entri log kosong
+      if (isCleanMode && todayTasks.length === 0 && prevLogs.length === 0) {
+        return [];
+      }
+
       const existingTodayIndex = prevLogs.findIndex((log) => log.date === todayDateStr);
+
+      if (isCleanMode && todayTasks.length === 0 && existingTodayIndex < 0) {
+        return prevLogs;
+      }
 
       const currentLiveTasks: TodayHistoryTaskItem[] = todayTasks.map((t) => ({
         id: t.id,
@@ -227,7 +261,29 @@ export const TodayHistoryView: React.FC<TodayHistoryViewProps> = ({ onBack }) =>
         </div>
 
         <div className="history-log-items">
-          {logs.map((log) => {
+          {logs.length === 0 ? (
+            <div
+              style={{
+                padding: '32px 16px',
+                textAlign: 'center',
+                color: '#64748b',
+                fontSize: '13px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span style={{ fontSize: '24px' }}>🌱</span>
+              <p style={{ margin: 0, fontWeight: 500, color: '#334155' }}>
+                Belum ada riwayat penyelesaian tugas
+              </p>
+              <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                Pilih tugas ke menu Today dan selesaikan untuk mulai mencatat log harian Anda.
+              </span>
+            </div>
+          ) : (
+            logs.map((log) => {
             const isCurrentToday = log.date === todayDateStr;
             const isAllCompleted = log.completedCount === 5;
             const isExpanded = expandedDate === log.date;
@@ -355,8 +411,9 @@ export const TodayHistoryView: React.FC<TodayHistoryViewProps> = ({ onBack }) =>
                 )}
               </div>
             );
-          })}
-        </div>
+          })
+        )}
+      </div>
       </div>
     </div>
   );

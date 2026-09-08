@@ -271,6 +271,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const savedGoal = localStorage.getItem(STORAGE_GOAL_KEY);
       if (savedGoal && savedGoal.trim()) {
         setUserGoal(savedGoal);
+      } else if (isDemoDismissed) {
+        setUserGoal('');
       }
 
       // Load saved Original Schedules
@@ -1070,6 +1072,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearAllTasksAndStartFresh = useCallback(() => {
     setTasks([]);
     setAiAnalysis(null);
+    setUserGoal('');
     setOriginalSchedules({});
     setAiProposals({});
     setActiveScheduleModes({});
@@ -1077,14 +1080,18 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
       localStorage.removeItem(STORAGE_ANALYSIS_KEY);
+      localStorage.removeItem(STORAGE_GOAL_KEY);
       localStorage.removeItem(STORAGE_ORIGINAL_KEY);
       localStorage.removeItem(STORAGE_VERSION_KEY);
+      localStorage.setItem('today_daily_completion_logs_v1', JSON.stringify([]));
       localStorage.setItem('ten_tasks_demo_dismissed', 'true');
       localStorage.removeItem('ten_tasks_demo_snooze_until');
+      // Kirim event agar komponen yang mengamati storage (seperti riwayat) langsung sinkron
+      window.dispatchEvent(new Event('storage'));
     } catch (e) {
       console.error('Gagal membersihkan data tugas:', e);
     }
-    showToast('Data demo dan hasil AI dibersihkan. Aplikasi siap digunakan secara bersih! ✨');
+    showToast('Semua data tugas, riwayat, dan analisis AI telah dibersihkan! ✨');
   }, [showToast]);
 
   // 1. Register User ke Task_KV
