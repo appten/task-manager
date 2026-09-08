@@ -29,6 +29,7 @@ export const VERSION_HISTORY: VersionRelease[] = [
           'Halaman Riwayat Selesai Baru: tampilan riwayat tugas tuntas diperbarui menjadi daftar baris datar (flat rows) yang bersih dan minimalis (/history).',
           'Penanda Waktu Update AI: menu Asisten Cerdas kini dilengkapi keterangan waktu terakhir kali analisis diperbarui.',
           'Pencatatan Tanggal Rilis Resmi: tanggal pembaruan ditampilkan lengkap dengan ikon kalender pada setiap riwayat versi.',
+          'Panduan Data Demo Pengunjung: popup sambutan otomatis setelah 5 detik untuk pengunjung perdana dengan pilihan mulai bersih (menghapus data tugas & hasil AI dengan 1x konfirmasi) atau melanjutkan demo (pilihan 1, 5, atau 10 menit).',
         ],
       },
       {

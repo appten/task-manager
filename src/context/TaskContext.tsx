@@ -88,6 +88,7 @@ interface TaskContextType {
   autoScheduleDay: (dateStr: string) => void;
   addRecoveryBreak: (dateStr: string, type: 'lunch' | 'hydration' | 'afternoon' | 'dinner', startTime?: string) => void;
   resetToSampleData: () => void;
+  clearAllTasksAndStartFresh: () => void;
 
   // Fitur Jadwal Paralel: Versi Ori vs Versi AI (1x Klik Berpindah)
   activeScheduleVersion: 'ori' | 'ai';
@@ -214,6 +215,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const savedTasks = localStorage.getItem(STORAGE_KEY);
       const todayStr = getTodayDateString();
 
+      const isDemoDismissed = localStorage.getItem('ten_tasks_demo_dismissed') === 'true';
+
       if (savedTasks) {
         const parsed = JSON.parse(savedTasks);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -249,11 +252,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             setTasks(sanitized);
           }
+        } else if (Array.isArray(parsed) && parsed.length === 0) {
+          setTasks(isDemoDismissed ? [] : INITIAL_TASKS);
         } else {
-          setTasks(INITIAL_TASKS);
+          setTasks(isDemoDismissed ? [] : INITIAL_TASKS);
         }
       } else {
-        setTasks(INITIAL_TASKS);
+        setTasks(isDemoDismissed ? [] : INITIAL_TASKS);
       }
 
       // Load saved AI Analysis
@@ -1062,6 +1067,26 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast('Data direset ke data contoh');
   }, [showToast]);
 
+  const clearAllTasksAndStartFresh = useCallback(() => {
+    setTasks([]);
+    setAiAnalysis(null);
+    setOriginalSchedules({});
+    setAiProposals({});
+    setActiveScheduleModes({});
+    setActiveScheduleVersion('ori');
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+      localStorage.removeItem(STORAGE_ANALYSIS_KEY);
+      localStorage.removeItem(STORAGE_ORIGINAL_KEY);
+      localStorage.removeItem(STORAGE_VERSION_KEY);
+      localStorage.setItem('ten_tasks_demo_dismissed', 'true');
+      localStorage.removeItem('ten_tasks_demo_snooze_until');
+    } catch (e) {
+      console.error('Gagal membersihkan data tugas:', e);
+    }
+    showToast('Data demo dan hasil AI dibersihkan. Aplikasi siap digunakan secara bersih! ✨');
+  }, [showToast]);
+
   // 1. Register User ke Task_KV
   const registerUser = useCallback(
     async (name: string, email: string, password: string, mergeLocalData = true) => {
@@ -1253,6 +1278,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         autoScheduleDay,
         addRecoveryBreak,
         resetToSampleData,
+        clearAllTasksAndStartFresh,
         previewAiSchedule,
         applyAiSchedule,
         revertToOriginal,

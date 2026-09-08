@@ -10,6 +10,7 @@ import { CalendarView } from './CalendarView';
 import { AIView } from './AIView';
 import { AccountView } from './AccountView';
 import { EditTaskModal } from './EditTaskModal';
+import { WelcomeDemoModal } from './WelcomeDemoModal';
 import { Toast } from './Toast';
 import { TabType } from '../types/task';
 
@@ -50,6 +51,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({ initialTab }) => {
 
       {/* Edit Task Modal / Sheet */}
       <EditTaskModal />
+
+      {/* Welcome Demo Notification Modal */}
+      <WelcomeDemoModal />
     </div>
   );
 };
