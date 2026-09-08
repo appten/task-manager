@@ -21,9 +21,11 @@ import {
   Check,
   Info,
   ChevronRight,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
 import { VersionHistoryView } from './VersionHistoryView';
+import { FeedbackModal } from './FeedbackModal';
 import { APP_CURRENT_VERSION } from '../data/versionHistory';
 
 export const AccountView: React.FC = () => {
@@ -46,6 +48,7 @@ export const AccountView: React.FC = () => {
   // Auth modal state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   // Danger Zone Reset state (2-step confirmation with phrase)
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -306,6 +309,18 @@ export const AccountView: React.FC = () => {
             <ChevronRight size={14} className="version-chevron" />
           </span>
         </button>
+        <button
+          type="button"
+          className="info-box-row info-box-row-clickable"
+          onClick={() => setIsFeedbackModalOpen(true)}
+          aria-label="Kirim masukan atau saran aplikasi"
+        >
+          <span className="info-box-label">Kirim Masukan (Feedback)</span>
+          <span className="info-box-val font-semibold text-primary clickable-version">
+            Beri Saran & Lapor Bug
+            <ChevronRight size={14} className="version-chevron" />
+          </span>
+        </button>
       </div>
 
       {/* 5. Zona Bahaya: Reset Seluruh Data */}
@@ -509,9 +524,9 @@ export const AccountView: React.FC = () => {
 
       {/* Modal Konfirmasi Bahaya Reset Data (2 Tahap) */}
       {isResetModalOpen && (
-        <div className="modal-overlay danger-modal-overlay" onClick={handleCloseResetModal}>
-          <div className="modal-container danger-reset-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header danger-header">
+        <div className="danger-modal-overlay" onClick={handleCloseResetModal}>
+          <div className="danger-reset-card" onClick={(e) => e.stopPropagation()}>
+            <div className="danger-modal-header">
               <div className="danger-modal-title-group">
                 <div className="danger-badge-icon">
                   <AlertTriangle size={18} />
@@ -519,8 +534,8 @@ export const AccountView: React.FC = () => {
                 <div>
                   <h3 className="danger-modal-title">
                     {resetStep === 1
-                      ? 'Peringatan Reset Data (Langkah 1/2)'
-                      : 'Konfirmasi Terakhir (Langkah 2/2)'}
+                      ? 'Peringatan Reset Data (1/2)'
+                      : 'Konfirmasi Terakhir (2/2)'}
                   </h3>
                   <span className="danger-step-subtitle">
                     {resetStep === 1
@@ -531,11 +546,11 @@ export const AccountView: React.FC = () => {
               </div>
               <button
                 type="button"
-                className="modal-close-btn"
+                className="danger-close-btn"
                 onClick={handleCloseResetModal}
                 aria-label="Tutup dialog"
               >
-                <X size={18} />
+                <X size={17} />
               </button>
             </div>
 
@@ -553,7 +568,7 @@ export const AccountView: React.FC = () => {
                 <div className="danger-modal-footer">
                   <button
                     type="button"
-                    className="btn-cancel"
+                    className="btn-danger-cancel"
                     onClick={handleCloseResetModal}
                   >
                     Batal
@@ -592,7 +607,7 @@ export const AccountView: React.FC = () => {
                 <div className="danger-modal-footer">
                   <button
                     type="button"
-                    className="btn-cancel"
+                    className="btn-danger-cancel"
                     onClick={() => setResetStep(1)}
                   >
                     Kembali
@@ -612,6 +627,12 @@ export const AccountView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Kirim Masukan (Feedback) */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
+      />
     </div>
   );
 };

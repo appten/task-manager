@@ -18,20 +18,21 @@ export const VERSION_HISTORY: VersionRelease[] = [
     version: 'v1.3.0',
     releaseDate: '9 September 2026',
     isLatest: true,
-    tagline: 'Zona Bahaya Reset Total Data & Deteksi Pengguna Lama',
+    tagline: 'Fitur Kirim Masukan, Desain Modal Reset Elegan & Pengamanan Data',
     groupedChanges: [
       {
         category: 'Fitur Baru',
         items: [
-          'Zona Bahaya Reset Total Data: Menu Akun kini dilengkapi fitur reset seluruh data aplikasi secara permanen dengan pengamanan ganda (konfirmasi 2 tahap & pengetikan kalimat konfirmasi).',
+          'Formulir Kirim Masukan (Feedback): Pengguna kini dapat langsung menyampaikan saran fitur, laporan bug, atau kritik melalui menu Akun dengan pilihan kategori yang intuitif.',
+          'Zona Bahaya Reset Total Data: Menu Akun dilengkapi perlindungan reset seluruh data aplikasi secara permanen dengan pengamanan ganda (konfirmasi 2 tahap & pengetikan kalimat konfirmasi).',
           'Deteksi Otomatis Pengguna Lama: Notifikasi demo perdana secara cerdas tidak akan pernah dimunculkan pada pengguna lama yang telah memiliki data tersimpan di perangkat.',
         ],
       },
       {
         category: 'Penyempurnaan',
         items: [
+          'Desain Ulang Dialog Reset Data: Tampilan modal konfirmasi reset data diperbarui sepenuhnya dengan tema modern, pop-up terpusat, tata letak proporsional, dan penegasan visual yang jelas.',
           'Pembersihan Data Menyeluruh: Fitur reset membersihkan seluruh tugas, riwayat Today, sasaran hidup, dan cache analisis AI secara instan dan aman.',
-          'Dialog Keamanan Berlapis: Modal konfirmasi bahaya dengan tema merah tegas untuk memastikan tidak terjadi penghapusan data secara tidak sengaja.',
         ],
       },
     ],
