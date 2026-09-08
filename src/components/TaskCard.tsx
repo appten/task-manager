@@ -112,6 +112,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
     }
   };
 
+  const todayDateStr = (() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  })();
+
+  const taskDate = task.startDate || task.dueDate;
+  const isScheduledEventNotToday =
+    task.inboxType === 'kegiatan' &&
+    Boolean(task.startTime || task.endTime || task.dueTime) &&
+    Boolean(taskDate && taskDate !== todayDateStr);
+
   return (
     <div
       className={`task-card ${task.isCompleted ? 'completed' : ''} ${
@@ -248,15 +262,39 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
             {!hideTodayToggle && (
               <button
                 type="button"
-                className={`meta-today-btn-clean ${task.isToday ? 'active' : ''}`}
+                className={`meta-today-btn-clean ${task.isToday ? 'active' : ''} ${
+                  isScheduledEventNotToday ? 'disabled-event' : ''
+                }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleTodayTask(task.id);
                 }}
-                title={task.isToday ? 'Keluarkan dari Today' : 'Pilih ke Today (Maks 5)'}
+                title={
+                  isScheduledEventNotToday
+                    ? `Acara terjadwal untuk ${formatReadableDate(taskDate)} (hanya acara hari ini yang bisa masuk ke Today)`
+                    : task.isToday
+                    ? 'Keluarkan dari Today'
+                    : 'Pilih ke Today (Maks 5)'
+                }
               >
-                <Star size={10} fill={task.isToday ? '#f59e0b' : 'none'} color={task.isToday ? '#d97706' : '#94a3b8'} />
-                <span>{task.isToday ? 'Today' : '+ Today'}</span>
+                <Star
+                  size={10}
+                  fill={task.isToday ? '#f59e0b' : 'none'}
+                  color={
+                    isScheduledEventNotToday
+                      ? '#94a3b8'
+                      : task.isToday
+                      ? '#d97706'
+                      : '#94a3b8'
+                  }
+                />
+                <span>
+                  {task.isToday
+                    ? 'Today'
+                    : isScheduledEventNotToday
+                    ? 'Terjadwal'
+                    : '+ Today'}
+                </span>
               </button>
             )}
           </div>

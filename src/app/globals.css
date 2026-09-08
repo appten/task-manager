@@ -4071,6 +4071,19 @@ body {
   color: #d97706;
 }
 
+.meta-today-btn-clean.disabled-event {
+  opacity: 0.55;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.meta-today-btn-clean.disabled-event:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
 /* ==========================================================================
    BOTTOM NAVIGATION: 5 TABS DENGAN MENU TODAY LEBIH MENONJOL
    ========================================================================== */
@@ -4469,11 +4482,58 @@ body {
   color: #475569;
 }
 
-/* Breakdown List */
+/* Action Guide Banner (Panduan Aksi Pengguna) */
+.ai-action-guide-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 60%, #eff6ff 100%);
+  border: 1.5px solid #86efac;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
+}
+
+.action-guide-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #059669;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+}
+
+.action-guide-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.action-guide-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #065f46;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.action-guide-desc {
+  font-size: 11.5px;
+  color: #047857;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Breakdown Section Container */
 .ai-item-breakdown-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   margin-top: 4px;
 }
 
@@ -4482,43 +4542,251 @@ body {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
+  gap: 10px;
+}
+
+.breakdown-header-title-wrap {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
 .breakdown-heading {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #1e293b;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.2px;
   margin: 0;
 }
 
-.breakdown-filter-chips {
-  display: flex;
-  gap: 4px;
-}
-
-.breakdown-chip {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 12px;
+.breakdown-total-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  color: #64748b;
+  padding: 2px 7px;
+  border-radius: 12px;
+}
+
+/* Sub-Filter Lokasi (Today vs Inbox) */
+.breakdown-location-filters {
+  display: flex;
+  gap: 5px;
+}
+
+.loc-filter-chip {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   transition: all 0.15s ease;
 }
 
-.breakdown-chip.active {
+.loc-filter-chip:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.loc-filter-chip.active {
   background: #0f172a;
   color: #ffffff;
   border-color: #0f172a;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
 }
 
+/* Urgency Tab Buttons */
+.breakdown-urgency-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.urgency-tab-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.urgency-tab-btn:hover {
+  background: #f1f5f9;
+}
+
+.urgency-tab-btn.active {
+  background: #1e293b;
+  color: #ffffff;
+  border-color: #1e293b;
+  box-shadow: 0 2px 6px rgba(30, 41, 59, 0.2);
+}
+
+.urgency-tab-btn.segera.active {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.urgency-tab-btn.rutin.active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  border-color: #d97706;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+.urgency-tab-btn.nanti.active {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  color: #ffffff;
+  border-color: #475569;
+  box-shadow: 0 2px 8px rgba(71, 85, 105, 0.25);
+}
+
+/* Urgency Group Sections */
+.urgency-group-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.urgency-group-section.group-segera {
+  border-left: 4px solid #ef4444;
+  background: #fffcfc;
+}
+
+.urgency-group-section.group-rutin {
+  border-left: 4px solid #f59e0b;
+  background: #fffdf9;
+}
+
+.urgency-group-section.group-nanti {
+  border-left: 4px solid #64748b;
+  background: #fbfcfe;
+}
+
+.group-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.group-section-header.collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+
+.group-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.group-header-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.group-header-pill.segera {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.group-header-pill.rutin {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.group-header-pill.nanti {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.group-header-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.group-header-subtitle {
+  font-size: 11px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+  line-height: 1.35;
+}
+
+.btn-group-toggle {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-group-toggle:hover {
+  background: #e2e8f0;
+}
+
+.group-empty-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+/* Breakdown List & Cards */
 .breakdown-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 
 .breakdown-card {
@@ -4530,15 +4798,35 @@ body {
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+}
+
+.breakdown-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.breakdown-card.card-segera {
+  border-left: 3.5px solid #ef4444;
+}
+
+.breakdown-card.card-rutin {
+  border-left: 3.5px solid #f59e0b;
+}
+
+.breakdown-card.card-nanti {
+  border-left: 3.5px solid #94a3b8;
 }
 
 .breakdown-card.card-locked {
-  background: #fdfefe;
-  border-left: 4px solid #f87171;
+  background: #fafbfc;
 }
 
-/* Header Jenis & Urgensi */
+.breakdown-card.card-completed {
+  opacity: 0.72;
+  background: #f8fafc;
+}
+
+/* Tag Header & Rank Badge */
 .breakdown-tag-header {
   display: flex;
   align-items: center;
@@ -4554,12 +4842,32 @@ body {
   flex-wrap: wrap;
 }
 
+.breakdown-rank-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  padding: 1.5px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.2px;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.25);
+}
+
+.breakdown-rank-badge.rank-1 {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+}
+
 .breakdown-task-title {
   font-size: 14px;
   font-weight: 700;
   color: #0f172a;
-  margin: 2px 0 6px 0;
+  margin: 2px 0 4px 0;
   line-height: 1.35;
+}
+
+.breakdown-task-title.title-completed {
+  text-decoration: line-through;
+  color: #94a3b8;
 }
 
 /* Strip Waktu & Status Jendela Rapi */
@@ -4573,7 +4881,7 @@ body {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .breakdown-time-info {
@@ -4630,6 +4938,9 @@ body {
   border-radius: 6px;
   text-transform: uppercase;
   letter-spacing: 0.2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .urgency-badge.segera {
@@ -4654,7 +4965,7 @@ body {
   font-size: 11.5px;
   color: #475569;
   line-height: 1.45;
-  margin: 2px 0 8px 0;
+  margin: 2px 0 6px 0;
 }
 
 .breakdown-meta-row {
@@ -4662,6 +4973,7 @@ body {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+  margin-bottom: 6px;
 }
 
 .breakdown-meta-pill {
@@ -4690,6 +5002,98 @@ body {
 .breakdown-meta-pill.goal {
   background: #eff6ff;
   color: #1d4ed8;
+}
+
+/* Tombol Aksi Cepat 1-Klik (Quick Action Bar) */
+.breakdown-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.btn-quick-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid transparent;
+}
+
+.btn-quick-action:hover {
+  transform: translateY(-1px);
+}
+
+.btn-action-done {
+  color: #15803d;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.btn-action-done:hover {
+  background: #bbf7d0;
+  box-shadow: 0 2px 6px rgba(21, 128, 61, 0.15);
+}
+
+.btn-action-done.completed {
+  color: #475569;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.btn-action-done.completed:hover {
+  background: #e2e8f0;
+}
+
+.btn-action-today {
+  color: #b45309;
+  background: #fef3c7;
+  border-color: #fde68a;
+}
+
+.btn-action-today:hover {
+  background: #fde68a;
+  box-shadow: 0 2px 6px rgba(180, 83, 9, 0.15);
+}
+
+.btn-action-today.active {
+  color: #92400e;
+  background: #fef08a;
+  border-color: #facc15;
+}
+
+.btn-action-today.disabled-event {
+  opacity: 0.6;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.btn-action-today.disabled-event:hover {
+  transform: none;
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+.btn-action-open {
+  color: #0369a1;
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  margin-left: auto;
+}
+
+.btn-action-open:hover {
+  background: #e0f2fe;
+  box-shadow: 0 2px 6px rgba(3, 105, 161, 0.15);
 }
 
 /* AI Empty State */

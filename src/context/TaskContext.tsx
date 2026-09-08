@@ -97,6 +97,26 @@ const STORAGE_VERSION_KEY = 'ten_my_id_active_schedule_version_v01';
 
 const DEFAULT_LIFE_GOAL = 'Merilis produk digital berdampak, menjaga kesehatan fisik prima, dan mandiri finansial di tahun 2026';
 
+const getTodayDateString = (): string => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const formatReadableDateShort = (dateStr?: string): string => {
+  if (!dateStr) return '';
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length < 3) return dateStr;
+    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  } catch {
+    return dateStr;
+  }
+};
+
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -132,20 +152,42 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     try {
       const savedTasks = localStorage.getItem(STORAGE_KEY);
+      const todayStr = getTodayDateString();
+
       if (savedTasks) {
         const parsed = JSON.parse(savedTasks);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Pastikan jika belum ada isToday, isi minimal 3 tugas pertama sebagai Today demo
+          // Pastikan jika belum ada isToday, isi minimal 3 tugas pertama sebagai Today demo (selama bukan kegiatan beda hari)
           const hasAnyToday = parsed.some((t: Task) => t.isToday);
           if (!hasAnyToday) {
-            const upgraded = parsed.map((t: Task, idx: number) => ({
-              ...t,
-              isToday: idx < 3,
-              todayOrder: idx < 3 ? idx + 1 : undefined,
-            }));
+            const upgraded = parsed.map((t: Task, idx: number) => {
+              const taskDate = t.startDate || t.dueDate;
+              const isOtherDayEvent =
+                t.inboxType === 'kegiatan' &&
+                Boolean(t.startTime || t.endTime || t.dueTime) &&
+                Boolean(taskDate && taskDate !== todayStr);
+              const shouldBeToday = idx < 3 && !isOtherDayEvent;
+              return {
+                ...t,
+                isToday: shouldBeToday,
+                todayOrder: shouldBeToday ? idx + 1 : undefined,
+              };
+            });
             setTasks(upgraded);
           } else {
-            setTasks(parsed);
+            // Sanitasi: pastikan kegiatan dengan waktu mulai/selesai yang bukan hari ini tidak berstatus isToday
+            const sanitized = parsed.map((t: Task) => {
+              const taskDate = t.startDate || t.dueDate;
+              const isOtherDayEvent =
+                t.inboxType === 'kegiatan' &&
+                Boolean(t.startTime || t.endTime || t.dueTime) &&
+                Boolean(taskDate && taskDate !== todayStr);
+              if (isOtherDayEvent && t.isToday) {
+                return { ...t, isToday: false, todayOrder: undefined };
+              }
+              return t;
+            });
+            setTasks(sanitized);
           }
         } else {
           setTasks(INITIAL_TASKS);
@@ -230,6 +272,24 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addToToday = useCallback(
     (taskId: string): boolean => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return false;
+
+      // Aturan Konsistensi: Inbox berjenis acara/kegiatan yang sudah terjadwal (memiliki waktu mulai/selesai)
+      // dilarang masuk ke Today jika tanggal acaranya bukan hari ini!
+      const todayStr = getTodayDateString();
+      const taskDate = task.startDate || task.dueDate;
+      const isKegiatan = task.inboxType === 'kegiatan';
+      const hasScheduledTime = Boolean(task.startTime || task.endTime || task.dueTime);
+
+      if (isKegiatan && hasScheduledTime && taskDate && taskDate !== todayStr) {
+        const readableDate = formatReadableDateShort(taskDate);
+        showToast(
+          `Acara/kegiatan ini terjadwal pada ${readableDate}. Hanya acara yang berlangsung hari ini yang dapat dimasukkan ke Today.`
+        );
+        return false;
+      }
+
       const currentTodayCount = tasks.filter((t) => t.isToday).length;
       if (currentTodayCount >= 5) {
         showToast('Maksimal 5 tugas untuk Today! Keluarkan salah satu tugas terlebih dahulu.');

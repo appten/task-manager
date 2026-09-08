@@ -1,4 +1,4 @@
-import { Task, AIAnalysisResult } from '../types/task';
+import { Task, AIAnalysisResult, TaskAnalysisItem } from '../types/task';
 
 // Gemini API Service for Sub-tasks, Circadian Productivity, and Life Goal Alignment Analysis
 
@@ -503,6 +503,9 @@ export const generateLocalCircadianAnalysis = (
   }
   overallSummary += `AI merekomendasikan fokus pada "${topPriorityTaskItem?.taskTitle || 'tugas prioritas'}" yang sudah memenuhi jendela waktu pengerjaan dan jam biologis saat ini.`;
 
+  // Urutkan rincian tugas secara terstruktur: Segera > Rutin > Nanti
+  const sortedTasksAnalysis = sortTasksAnalysis(tasksAnalysis, tasksToAnalyze, todayDateStr);
+
   return {
     analyzedAt: now.toISOString(),
     currentTimeFormatted,
@@ -511,8 +514,64 @@ export const generateLocalCircadianAnalysis = (
     topPriorityTaskId,
     overallSummary,
     userGoalContext: userGoal || 'Membangun rutinitas produktif dan seimbang',
-    tasksAnalysis,
+    tasksAnalysis: sortedTasksAnalysis,
   };
+};
+
+export const sortTasksAnalysis = (
+  items: TaskAnalysisItem[],
+  tasks: Task[],
+  todayDateStr?: string
+): TaskAnalysisItem[] => {
+  const today = todayDateStr || new Date().toISOString().slice(0, 10);
+
+  const urgencyWeight: Record<string, number> = {
+    Segera: 1,
+    Rutin: 2,
+    Nanti: 3,
+  };
+
+  return [...items].sort((a, b) => {
+    const weightA = urgencyWeight[a.urgencyLevel] || 2;
+    const weightB = urgencyWeight[b.urgencyLevel] || 2;
+    if (weightA !== weightB) {
+      return weightA - weightB;
+    }
+
+    const taskA = tasks.find((t) => t.id === a.taskId);
+    const taskB = tasks.find((t) => t.id === b.taskId);
+
+    // Kategori Segera: prioritaskan deadline mepet/terlewat > prioritas tinggi > skor goal
+    if (a.urgencyLevel === 'Segera') {
+      const aDeadline = a.timeWindowStatus === 'nearing_deadline' ? 1 : 0;
+      const bDeadline = b.timeWindowStatus === 'nearing_deadline' ? 1 : 0;
+      if (aDeadline !== bDeadline) return bDeadline - aDeadline;
+
+      const aHigh = taskA?.priority === 'high' ? 1 : 0;
+      const bHigh = taskB?.priority === 'high' ? 1 : 0;
+      if (aHigh !== bHigh) return bHigh - aHigh;
+
+      return (b.goalAlignmentScore || 0) - (a.goalAlignmentScore || 0);
+    }
+
+    // Kategori Rutin: prioritaskan yang ada di Today > skor goal
+    if (a.urgencyLevel === 'Rutin') {
+      const aToday = taskA?.isToday ? 1 : 0;
+      const bToday = taskB?.isToday ? 1 : 0;
+      if (aToday !== bToday) return bToday - aToday;
+
+      return (b.goalAlignmentScore || 0) - (a.goalAlignmentScore || 0);
+    }
+
+    // Kategori Nanti: urutkan tanggal terdekat lebih dulu
+    const dateA = taskA?.startDate || taskA?.dueDate || today;
+    const dateB = taskB?.startDate || taskB?.dueDate || today;
+    if (dateA !== dateB) {
+      return dateA.localeCompare(dateB);
+    }
+
+    return (b.goalAlignmentScore || 0) - (a.goalAlignmentScore || 0);
+  });
 };
 
 export const analyzeTasksWithCircadianAI = async (
@@ -645,8 +704,13 @@ WAJIB hasilkan output HANYA dalam format JSON murni:
     }
 
     const parsed = JSON.parse(rawText);
+    const sortedTasksAnalysis = Array.isArray(parsed.tasksAnalysis)
+      ? sortTasksAnalysis(parsed.tasksAnalysis, tasksToAnalyze, todayDateStr)
+      : [];
+
     return {
       ...parsed,
+      tasksAnalysis: sortedTasksAnalysis,
       analyzedAt: now.toISOString(),
       currentTimeFormatted,
       userGoalContext: userGoal || '',
