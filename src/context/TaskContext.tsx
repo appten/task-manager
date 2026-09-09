@@ -33,6 +33,9 @@ interface TaskContextType {
   verifyRecoveryPin: (email: string, recoveryPin: string) => Promise<{ success: boolean; name?: string; error?: string }>;
   resetPasswordUser: (email: string, recoveryPin: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   updateUserProfile: (name?: string, oldPassword?: string, newPassword?: string, recoveryPin?: string) => Promise<{ success: boolean; error?: string }>;
+  // Fitur Pencadangan & Pemulihan Data Manual (File JSON)
+  exportBackupData: () => void;
+  importBackupData: (parsedJson: any, mode: 'merge' | 'replace') => { success: boolean; count: number; error?: string };
   tasks: Task[];
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
@@ -1100,6 +1103,138 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast('Semua data tugas, riwayat, dan analisis AI telah dibersihkan! ✨');
   }, [showToast]);
 
+  // Fitur Pencadangan Data Manual (Ekspor ke File JSON)
+  const exportBackupData = useCallback(() => {
+    try {
+      let logs = [];
+      try {
+        const rawLogs = localStorage.getItem('today_daily_completion_logs_v1');
+        if (rawLogs) logs = JSON.parse(rawLogs);
+      } catch {}
+
+      const backupObject = {
+        appName: 'TEN Tasks Mobile',
+        appVersion: 'v1.4.0',
+        exportedAt: new Date().toISOString(),
+        summary: {
+          totalTasks: tasks.length,
+          completedTasks: tasks.filter((t) => t.isCompleted).length,
+          todayTasks: tasks.filter((t) => t.isToday).length,
+        },
+        data: {
+          tasks,
+          userGoal,
+          completionLogs: logs,
+        },
+      };
+
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(backupObject, null, 2)
+      )}`;
+      const downloadAnchor = document.createElement('a');
+      const dateStr = new Date().toISOString().split('T')[0];
+      downloadAnchor.setAttribute('href', jsonString);
+      downloadAnchor.setAttribute('download', `ten_tasks_backup_${dateStr}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      showToast('Cadangan data berhasil diunduh ke berkas .json');
+    } catch (e: any) {
+      console.error('Gagal mengekspor data cadangan:', e);
+      showToast('Gagal mengunduh berkas cadangan');
+    }
+  }, [tasks, userGoal, showToast]);
+
+  // Fitur Pemulihan Data Manual (Impor dari File JSON)
+  const importBackupData = useCallback(
+    (parsedJson: any, mode: 'merge' | 'replace'): { success: boolean; count: number; error?: string } => {
+      try {
+        let importedTasks: Task[] = [];
+        let importedGoal = '';
+        let importedLogs: any[] = [];
+
+        // Deteksi format payload
+        if (parsedJson && parsedJson.data && Array.isArray(parsedJson.data.tasks)) {
+          importedTasks = parsedJson.data.tasks;
+          importedGoal = parsedJson.data.userGoal || '';
+          importedLogs = Array.isArray(parsedJson.data.completionLogs) ? parsedJson.data.completionLogs : [];
+        } else if (Array.isArray(parsedJson)) {
+          importedTasks = parsedJson;
+        } else if (parsedJson && Array.isArray(parsedJson.tasks)) {
+          importedTasks = parsedJson.tasks;
+          importedGoal = parsedJson.userGoal || '';
+          importedLogs = Array.isArray(parsedJson.completionLogs) ? parsedJson.completionLogs : [];
+        } else {
+          return { success: false, count: 0, error: 'Format berkas tidak dikenali sebagai cadangan TEN Tasks' };
+        }
+
+        if (importedTasks.length === 0) {
+          return { success: false, count: 0, error: 'Tidak ada tugas yang ditemukan dalam berkas cadangan' };
+        }
+
+        let finalTasks: Task[] = [];
+        if (mode === 'replace') {
+          finalTasks = importedTasks;
+          if (importedGoal) {
+            setUserGoal(importedGoal);
+            try {
+              localStorage.setItem(STORAGE_GOAL_KEY, importedGoal);
+            } catch {}
+          }
+          if (importedLogs.length > 0) {
+            try {
+              localStorage.setItem('today_daily_completion_logs_v1', JSON.stringify(importedLogs));
+            } catch {}
+          }
+        } else {
+          // Mode Merge: satukan tugas
+          const existingIds = new Set(tasks.map((t) => t.id));
+          const newTasks = importedTasks.filter((t) => !existingIds.has(t.id));
+          finalTasks = [...tasks, ...newTasks];
+          if (!userGoal && importedGoal) {
+            setUserGoal(importedGoal);
+            try {
+              localStorage.setItem(STORAGE_GOAL_KEY, importedGoal);
+            } catch {}
+          }
+          if (importedLogs.length > 0) {
+            try {
+              let existingLogs: any[] = [];
+              const raw = localStorage.getItem('today_daily_completion_logs_v1');
+              if (raw) existingLogs = JSON.parse(raw);
+              const logIds = new Set(existingLogs.map((l: any) => l.id || l.taskId));
+              const mergedLogs = [...existingLogs, ...importedLogs.filter((l: any) => !logIds.has(l.id || l.taskId))];
+              localStorage.setItem('today_daily_completion_logs_v1', JSON.stringify(mergedLogs));
+            } catch {}
+          }
+        }
+
+        setTasks(finalTasks);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(finalTasks));
+          window.dispatchEvent(new Event('storage'));
+        } catch {}
+
+        if (currentUser) {
+          cloudSyncService.pushTasks(currentUser.email, finalTasks, importedGoal || userGoal);
+        }
+
+        showToast(
+          mode === 'replace'
+            ? `Berhasil memulihkan ${importedTasks.length} tugas dari berkas cadangan`
+            : `Berhasil menggabungkan ${importedTasks.length} tugas ke daftar saat ini`
+        );
+
+        return { success: true, count: importedTasks.length };
+      } catch (err: any) {
+        console.error('Gagal mengimpor cadangan:', err);
+        return { success: false, count: 0, error: err.message || 'Gagal memproses berkas cadangan' };
+      }
+    },
+    [tasks, userGoal, currentUser, showToast]
+  );
+
   // 1. Register User ke Task_KV
   // 1. Register User ke Task_KV
   const registerUser = useCallback(
@@ -1324,6 +1459,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         verifyRecoveryPin,
         resetPasswordUser,
         updateUserProfile,
+        exportBackupData,
+        importBackupData,
         tasks,
         activeTab,
         setActiveTab,

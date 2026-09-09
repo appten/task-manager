@@ -28,6 +28,10 @@ import {
   ArrowLeft,
   ShieldCheck,
   HelpCircle,
+  Download,
+  Upload,
+  HardDrive,
+  FileJson,
 } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
 import { VersionHistoryView } from './VersionHistoryView';
@@ -51,6 +55,8 @@ export const AccountView: React.FC = () => {
     resetPasswordUser,
     updateUserProfile,
     clearAllTasksAndStartFresh,
+    exportBackupData,
+    importBackupData,
     showToast,
   } = useTask();
 
@@ -67,6 +73,15 @@ export const AccountView: React.FC = () => {
   const [resetStep, setResetStep] = useState<1 | 2>(1);
   const [confirmText, setConfirmText] = useState('');
   const CONFIRMATION_PHRASE = 'HAPUS SEMUA DATA';
+
+  // Manual Backup & Restore states
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [restoreFilePayload, setRestoreFilePayload] = useState<any>(null);
+  const [restoreFileName, setRestoreFileName] = useState('');
+  const [restoreMode, setRestoreMode] = useState<'merge' | 'replace'>('merge');
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   // Auth form states
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
@@ -307,6 +322,82 @@ export const AccountView: React.FC = () => {
     showToast('Seluruh data aplikasi berhasil direset bersih.');
   };
 
+  // Manual Backup Handlers
+  const handleExportBackup = () => {
+    try {
+      const fileName = exportBackupData();
+      showToast(`Berkas cadangan berhasil diunduh: ${fileName}`);
+    } catch (err: any) {
+      showToast(err.message || 'Gagal membuat berkas cadangan.');
+    }
+  };
+
+  const handleTriggerFileSelect = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+
+        // Check if valid backup payload
+        const tasksArray = Array.isArray(parsed)
+          ? parsed
+          : Array.isArray(parsed?.tasks)
+          ? parsed.tasks
+          : null;
+
+        if (!tasksArray) {
+          showToast('Berkas tidak valid: format tugas tidak dikenali.');
+          return;
+        }
+
+        setRestoreFilePayload(parsed);
+        setRestoreFileName(file.name);
+        setRestoreMode('merge');
+        setRestoreError(null);
+        setIsRestoreModalOpen(true);
+      } catch (err: any) {
+        showToast('Gagal membaca berkas JSON. Pastikan berkas berformat .json yang benar.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleExecuteRestore = () => {
+    if (!restoreFilePayload) return;
+    setIsRestoring(true);
+    setRestoreError(null);
+
+    try {
+      const result = importBackupData(restoreFilePayload, restoreMode);
+      if (result.success) {
+        setIsRestoreModalOpen(false);
+        setRestoreFilePayload(null);
+        showToast(
+          `Berhasil memulihkan ${result.count} tugas (${
+            restoreMode === 'merge' ? 'Digabungkan dengan tugas saat ini' : 'Menimpa seluruh data'
+          }).`
+        );
+      } else {
+        setRestoreError(result.error || 'Gagal memulihkan berkas cadangan.');
+      }
+    } catch (err: any) {
+      setRestoreError(err.message || 'Terjadi kesalahan saat memproses pemulihan data.');
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   if (showVersionHistory) {
     return <VersionHistoryView onBack={() => setShowVersionHistory(false)} />;
   }
@@ -511,6 +602,57 @@ export const AccountView: React.FC = () => {
               <span>Aktifkan Akun & Pencadangan Cloud</span>
             </button>
           )}
+        </div>
+      </div>
+
+      {/* 4b. Kartu Pencadangan & Pemulihan Berkas Manual (Offline / File Lokal) */}
+      <div className="account-sync-card manual-backup-card">
+        <div className="sync-card-header">
+          <div className="sync-icon-box manual-backup-icon-box">
+            <HardDrive size={18} className="text-primary" />
+          </div>
+          <div className="sync-header-content">
+            <div className="sync-title-row">
+              <h3 className="sync-title">Pencadangan Manual (File Lokal)</h3>
+              <span className="sync-pill manual-pill">Format .JSON</span>
+            </div>
+            <div className="sync-status-text">
+              Cadangkan & pulihkan tugas secara mandiri langsung ke file di perangkat Anda tanpa perlu login akun atau koneksi internet.
+            </div>
+          </div>
+        </div>
+
+        <div className="sync-card-body manual-backup-body">
+          <div className="manual-backup-actions-grid">
+            <button
+              type="button"
+              className="btn-manual-backup-export"
+              onClick={handleExportBackup}
+              title="Unduh seluruh data tugas dan sasaran ke berkas .json"
+            >
+              <Download size={14} />
+              <span>Unduh Cadangan (.json)</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-manual-backup-import"
+              onClick={handleTriggerFileSelect}
+              title="Pilih berkas .json dari perangkat untuk memulihkan tugas"
+            >
+              <Upload size={14} />
+              <span>Pulihkan dari Berkas</span>
+            </button>
+          </div>
+
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept=".json,application/json"
+            onChange={handleFileSelected}
+          />
         </div>
       </div>
 
@@ -1301,6 +1443,184 @@ export const AccountView: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 4B: RESTORE CADANGAN BERKAS MANUAL (OFFLINE)
+          ========================================================================= */}
+      {isRestoreModalOpen && (
+        <div
+          className="restore-modal-overlay"
+          onClick={() => {
+            if (!isRestoring) {
+              setIsRestoreModalOpen(false);
+              setRestoreFilePayload(null);
+            }
+          }}
+        >
+          <div className="restore-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="restore-modal-header">
+              <div className="restore-modal-title-group">
+                <div className="restore-badge-icon">
+                  <HardDrive size={18} />
+                </div>
+                <div>
+                  <h3 className="restore-modal-title">Pulihkan Data dari Berkas</h3>
+                  <span className="restore-modal-subtitle">
+                    Cadangan mandiri tanpa internet (.json)
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="restore-close-btn"
+                disabled={isRestoring}
+                onClick={() => {
+                  setIsRestoreModalOpen(false);
+                  setRestoreFilePayload(null);
+                }}
+                aria-label="Tutup dialog"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className="restore-modal-body">
+              {/* Ringkasan file */}
+              <div className="restore-file-summary-box">
+                <div className="summary-file-header">
+                  <FileJson size={16} className="text-primary flex-shrink-0" />
+                  <span className="summary-file-name" title={restoreFileName}>
+                    {restoreFileName}
+                  </span>
+                </div>
+                <div className="summary-file-grid">
+                  <div className="summary-pill">
+                    <span className="summary-pill-label">Waktu Ekspor:</span>
+                    <span className="summary-pill-val">
+                      {restoreFilePayload?.exportedAt
+                        ? new Date(restoreFilePayload.exportedAt).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Format Standar'}
+                    </span>
+                  </div>
+                  <div className="summary-pill">
+                    <span className="summary-pill-label">Jumlah Tugas:</span>
+                    <span className="summary-pill-val font-bold">
+                      {Array.isArray(restoreFilePayload)
+                        ? restoreFilePayload.length
+                        : restoreFilePayload?.tasks?.length || 0}{' '}
+                      Tugas
+                    </span>
+                  </div>
+                  <div className="summary-pill full-width">
+                    <span className="summary-pill-label">Sasaran Hidup:</span>
+                    <span className="summary-pill-val">
+                      {restoreFilePayload?.userGoal?.text
+                        ? `"${restoreFilePayload.userGoal.text}"`
+                        : (restoreFilePayload?.userGoal ? 'Ada data sasaran' : 'Tidak ada data sasaran')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pilihan Metode Pemulihan */}
+              <div className="restore-mode-section">
+                <label className="restore-section-label">Pilih Mode Pemulihan:</label>
+                <div className="restore-mode-options">
+                  <div
+                    className={`restore-mode-option ${restoreMode === 'merge' ? 'selected' : ''}`}
+                    onClick={() => setRestoreMode('merge')}
+                  >
+                    <div className="restore-mode-radio">
+                      <div className={`radio-circle ${restoreMode === 'merge' ? 'checked' : ''}`} />
+                    </div>
+                    <div className="restore-mode-content">
+                      <div className="restore-mode-top">
+                        <span className="restore-mode-title">Gabungkan Data (Merge)</span>
+                        <span className="mode-badge-recommended">Direkomendasikan</span>
+                      </div>
+                      <p className="restore-mode-desc">
+                        Tugas dari berkas akan ditambahkan ke daftar tugas saat ini. Tugas lama tidak hilang, dan tugas dengan ID sama akan diperbarui.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`restore-mode-option ${restoreMode === 'replace' ? 'selected' : ''}`}
+                    onClick={() => setRestoreMode('replace')}
+                  >
+                    <div className="restore-mode-radio">
+                      <div className={`radio-circle ${restoreMode === 'replace' ? 'checked' : ''}`} />
+                    </div>
+                    <div className="restore-mode-content">
+                      <div className="restore-mode-top">
+                        <span className="restore-mode-title">Timpa Seluruh Data (Replace)</span>
+                        <span className="mode-badge-replace">Timpa Penuh</span>
+                      </div>
+                      <p className="restore-mode-desc">
+                        Menghapus seluruh tugas yang ada saat ini dan menggantikannya secara total dengan isi dari berkas cadangan ini.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {restoreMode === 'replace' && (
+                <div className="restore-alert-callout warning">
+                  <AlertTriangle size={14} className="flex-shrink-0" />
+                  <span>
+                    Perhatian: Seluruh tugas saat ini yang tidak terdapat dalam berkas ini akan terhapus.
+                  </span>
+                </div>
+              )}
+
+              {restoreError && (
+                <div className="restore-alert-callout error">
+                  <AlertTriangle size={14} className="flex-shrink-0" />
+                  <span>{restoreError}</span>
+                </div>
+              )}
+
+              <div className="restore-modal-footer">
+                <button
+                  type="button"
+                  className="btn-restore-cancel"
+                  disabled={isRestoring}
+                  onClick={() => {
+                    setIsRestoreModalOpen(false);
+                    setRestoreFilePayload(null);
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  className="btn-restore-confirm"
+                  disabled={isRestoring}
+                  onClick={handleExecuteRestore}
+                >
+                  {isRestoring ? (
+                    <>
+                      <RefreshCw size={14} className="spin-animation" />
+                      <span>Memproses...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={14} />
+                      <span>Pulihkan Data Sekarang</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
