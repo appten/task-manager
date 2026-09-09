@@ -443,11 +443,16 @@ export const cloudSyncService = {
 
   // 6. Mengambil Seluruh Akun (Halaman Pengelola)
   async getAllUsers(): Promise<UserProfile[]> {
+    const current = this.getCurrentUser();
+    if (!current || current.role !== 'admin') {
+      return [];
+    }
+
     try {
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get-users' }),
+        body: JSON.stringify({ action: 'get-users', requesterEmail: current.email }),
       });
 
       if (res.ok) {
@@ -488,6 +493,11 @@ export const cloudSyncService = {
     email: string,
     newRole: UserRole
   ): Promise<{ success: boolean; error?: string }> {
+    const current = this.getCurrentUser();
+    if (!current || current.role !== 'admin') {
+      return { success: false, error: 'Akses ditolak: Hanya pengelola yang dapat mengubah role' };
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
@@ -498,6 +508,7 @@ export const cloudSyncService = {
           action: 'update-role',
           email: normalizedEmail,
           targetRole: newRole,
+          requesterEmail: current.email,
         }),
       });
 

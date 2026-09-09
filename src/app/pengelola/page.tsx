@@ -39,7 +39,16 @@ export default function PengelolaPage() {
   const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'user'>('all');
   const [actionLoadingEmail, setActionLoadingEmail] = useState<string | null>(null);
 
+  // Cek apakah pengguna saat ini adalah admin/pengelola
+  const isAdmin =
+    currentUser?.role === 'admin' ||
+    (typeof window !== 'undefined' && cloudSyncService.getCurrentUser()?.role === 'admin');
+
   const loadData = useCallback(async () => {
+    if (!isAdmin) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const [usersList, appStats] = await Promise.all([
@@ -53,11 +62,15 @@ export default function PengelolaPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [tasks]);
+  }, [isAdmin, tasks]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (isAdmin) {
+      loadData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isAdmin, loadData]);
 
   const handleToggleRole = async (targetUser: UserProfile) => {
     const currentRole = targetUser.role || 'user';
@@ -111,6 +124,49 @@ export default function PengelolaPage() {
       u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
     return matchesRole && matchesQuery;
   });
+
+  if (!isAdmin) {
+    return (
+      <div className="mobile-viewport-wrapper pengelola-viewport-wrapper">
+        <div className="pengelola-container">
+          <header className="page-subnav-header dev-header">
+            <Link href="/account" className="btn-subnav-back" title="Kembali ke Menu Akun">
+              <ArrowLeft size={18} />
+              <span>Akun</span>
+            </Link>
+            <div className="subnav-title-group">
+              <h2 className="subnav-page-title">Panel Pengelola</h2>
+              <span className="subnav-badge-caption">Terkunci 🔒</span>
+            </div>
+          </header>
+
+          <div className="pengelola-content">
+            <div className="pengelola-access-denied-box">
+              <div className="access-denied-icon-circle">
+                <ShieldAlert size={36} />
+              </div>
+              <h3 className="access-denied-title">Akses Ditolak: Khusus Pengelola</h3>
+              <p className="access-denied-desc">
+                Halaman ini dilindungi secara ketat dan hanya dapat diakses oleh akun yang memiliki peran <strong>Pengelola (Admin)</strong>.
+              </p>
+              <div className="access-denied-status-badge">
+                <span>Status Anda: </span>
+                <strong>
+                  {currentUser ? `User Biasa (${currentUser.email})` : 'Tamu / Belum Masuk Akun'}
+                </strong>
+              </div>
+              <div className="access-denied-actions">
+                <Link href="/account" className="btn-access-denied-primary">
+                  <ArrowLeft size={14} />
+                  <span>Kembali ke Menu Akun</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mobile-viewport-wrapper pengelola-viewport-wrapper">

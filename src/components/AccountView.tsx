@@ -727,20 +727,22 @@ export const AccountView: React.FC = () => {
             <ChevronRight size={14} className="version-chevron" />
           </span>
         </button>
-        <Link
-          href="/pengelola"
-          className="info-box-row info-box-row-clickable pengelola-access-row"
-          aria-label="Buka panel pengelola dan statistik aplikasi"
-        >
-          <span className="info-box-label flex-row-align">
-            <Shield size={13} className="text-primary" />
-            <span className="font-semibold text-primary">Panel Pengelola & Statistik</span>
-          </span>
-          <span className="info-box-val font-semibold text-primary clickable-version">
-            {currentUser?.role === 'admin' ? 'Akses Pengelola' : 'Buka Dashboard'}
-            <ChevronRight size={14} className="version-chevron" />
-          </span>
-        </Link>
+        {currentUser?.role === 'admin' && (
+          <Link
+            href="/pengelola"
+            className="info-box-row info-box-row-clickable pengelola-access-row"
+            aria-label="Buka panel pengelola dan statistik aplikasi"
+          >
+            <span className="info-box-label flex-row-align">
+              <Shield size={13} className="text-primary" />
+              <span className="font-semibold text-primary">Panel Pengelola & Statistik</span>
+            </span>
+            <span className="info-box-val font-semibold text-primary clickable-version">
+              Akses Pengelola
+              <ChevronRight size={14} className="version-chevron" />
+            </span>
+          </Link>
+        )}
       </div>
 
       {/* 6. Zona Bahaya: Reset Seluruh Data */}

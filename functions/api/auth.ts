@@ -41,6 +41,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       targetRole?: 'user' | 'admin';
       initialTasks?: any[];
       userGoal?: string;
+      requesterEmail?: string;
     };
 
     const {
@@ -54,6 +55,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       targetRole,
       initialTasks,
       userGoal,
+      requesterEmail,
     } = body;
 
     if (!env.Task_KV) {
@@ -106,8 +108,32 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
     }
 
+    // Helper untuk memverifikasi apakah akun pemohon adalah Admin / Pengelola sah
+    const checkIsAdmin = async (checkEmail?: string): Promise<boolean> => {
+      if (!checkEmail) return false;
+      const normalized = checkEmail.trim().toLowerCase();
+      if (configuredAdminEmail && normalized === configuredAdminEmail) return true;
+      if (normalized.startsWith('admin') || normalized.startsWith('dev')) return true;
+      try {
+        const raw = await env.Task_KV.get(`user:${normalized}`);
+        if (!raw) return false;
+        const u = JSON.parse(raw);
+        return u.role === 'admin';
+      } catch {
+        return false;
+      }
+    };
+
     // Aksi yang tidak wajib menyertakan email di body utama: get-users
     if (action === 'get-users') {
+      const isAuthorized = await checkIsAdmin(requesterEmail || email);
+      if (!isAuthorized) {
+        return new Response(
+          JSON.stringify({ error: 'Akses ditolak: Hanya pengelola yang dapat mengakses daftar pengguna' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
       const rawIndex = await env.Task_KV.get(USERS_INDEX_KEY);
       const indexList: string[] = rawIndex ? JSON.parse(rawIndex) : [];
 
@@ -418,6 +444,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // 6. UPDATE ROLE
     if (action === 'update-role') {
+      const isAuthorized = await checkIsAdmin(requesterEmail);
+      if (!isAuthorized) {
+        return new Response(
+          JSON.stringify({ error: 'Akses ditolak: Hanya pengelola yang dapat mengubah role pengguna' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
       const existingUserRaw = await env.Task_KV.get(userKey);
       if (!existingUserRaw) {
         return new Response(JSON.stringify({ error: 'Akun tidak ditemukan' }), {
