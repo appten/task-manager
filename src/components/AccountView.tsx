@@ -349,14 +349,18 @@ export const AccountView: React.FC = () => {
         const text = event.target?.result as string;
         const parsed = JSON.parse(text);
 
-        // Check if valid backup payload
+        // Check if valid backup payload (mendukung data.tasks, tasks root, atau array langsung)
         const tasksArray = Array.isArray(parsed)
           ? parsed
+          : Array.isArray(parsed?.data?.tasks)
+          ? parsed.data.tasks
           : Array.isArray(parsed?.tasks)
           ? parsed.tasks
           : null;
 
-        if (!tasksArray) {
+        const hasGoal = Boolean(parsed?.data?.userGoal || parsed?.userGoal);
+
+        if (!tasksArray && !hasGoal) {
           showToast('Berkas tidak valid: format tugas tidak dikenali.');
           return;
         }
@@ -372,6 +376,41 @@ export const AccountView: React.FC = () => {
     };
     reader.readAsText(file);
   };
+
+  // Helper memo untuk ekstraksi data pratinjau modal pemulihan
+  const previewTasksCount = React.useMemo(() => {
+    if (!restoreFilePayload) return 0;
+    if (Array.isArray(restoreFilePayload)) return restoreFilePayload.length;
+    if (Array.isArray(restoreFilePayload?.data?.tasks)) return restoreFilePayload.data.tasks.length;
+    if (Array.isArray(restoreFilePayload?.tasks)) return restoreFilePayload.tasks.length;
+    return 0;
+  }, [restoreFilePayload]);
+
+  const previewGoalText = React.useMemo(() => {
+    if (!restoreFilePayload) return '';
+    const raw = restoreFilePayload?.data?.userGoal ?? restoreFilePayload?.userGoal;
+    if (!raw) return '';
+    if (typeof raw === 'string') return raw;
+    if (typeof raw === 'object' && raw.text) return raw.text;
+    return String(raw);
+  }, [restoreFilePayload]);
+
+  const previewExportedDate = React.useMemo(() => {
+    if (!restoreFilePayload) return 'Format Standar';
+    const rawDate = restoreFilePayload?.exportedAt || restoreFilePayload?.createdAt;
+    if (!rawDate) return 'Format Standar';
+    try {
+      return new Date(rawDate).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return 'Format Standar';
+    }
+  }, [restoreFilePayload]);
 
   const handleExecuteRestore = () => {
     if (!restoreFilePayload) return;
@@ -1500,32 +1539,19 @@ export const AccountView: React.FC = () => {
                   <div className="summary-pill">
                     <span className="summary-pill-label">Waktu Ekspor:</span>
                     <span className="summary-pill-val">
-                      {restoreFilePayload?.exportedAt
-                        ? new Date(restoreFilePayload.exportedAt).toLocaleDateString('id-ID', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : 'Format Standar'}
+                      {previewExportedDate}
                     </span>
                   </div>
                   <div className="summary-pill">
                     <span className="summary-pill-label">Jumlah Tugas:</span>
                     <span className="summary-pill-val font-bold">
-                      {Array.isArray(restoreFilePayload)
-                        ? restoreFilePayload.length
-                        : restoreFilePayload?.tasks?.length || 0}{' '}
-                      Tugas
+                      {previewTasksCount} Tugas
                     </span>
                   </div>
                   <div className="summary-pill full-width">
                     <span className="summary-pill-label">Sasaran Hidup:</span>
                     <span className="summary-pill-val">
-                      {restoreFilePayload?.userGoal?.text
-                        ? `"${restoreFilePayload.userGoal.text}"`
-                        : (restoreFilePayload?.userGoal ? 'Ada data sasaran' : 'Tidak ada data sasaran')}
+                      {previewGoalText ? `"${previewGoalText}"` : 'Tidak ada data sasaran'}
                     </span>
                   </div>
                 </div>

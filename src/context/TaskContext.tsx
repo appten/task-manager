@@ -1121,6 +1121,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           completedTasks: tasks.filter((t) => t.isCompleted).length,
           todayTasks: tasks.filter((t) => t.isToday).length,
         },
+        tasks,
+        userGoal,
+        completionLogs: logs,
         data: {
           tasks,
           userGoal,
@@ -1154,23 +1157,27 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let importedGoal = '';
         let importedLogs: any[] = [];
 
-        // Deteksi format payload
+        // Deteksi format payload secara fleksibel (mendukung data.tasks, tasks, atau array)
         if (parsedJson && parsedJson.data && Array.isArray(parsedJson.data.tasks)) {
           importedTasks = parsedJson.data.tasks;
           importedGoal = parsedJson.data.userGoal || '';
           importedLogs = Array.isArray(parsedJson.data.completionLogs) ? parsedJson.data.completionLogs : [];
-        } else if (Array.isArray(parsedJson)) {
-          importedTasks = parsedJson;
         } else if (parsedJson && Array.isArray(parsedJson.tasks)) {
           importedTasks = parsedJson.tasks;
-          importedGoal = parsedJson.userGoal || '';
-          importedLogs = Array.isArray(parsedJson.completionLogs) ? parsedJson.completionLogs : [];
+          importedGoal = parsedJson.userGoal || (parsedJson.data && parsedJson.data.userGoal) || '';
+          importedLogs = Array.isArray(parsedJson.completionLogs)
+            ? parsedJson.completionLogs
+            : (parsedJson.data && Array.isArray(parsedJson.data.completionLogs))
+            ? parsedJson.data.completionLogs
+            : [];
+        } else if (Array.isArray(parsedJson)) {
+          importedTasks = parsedJson;
         } else {
           return { success: false, count: 0, error: 'Format berkas tidak dikenali sebagai cadangan TEN Tasks' };
         }
 
-        if (importedTasks.length === 0) {
-          return { success: false, count: 0, error: 'Tidak ada tugas yang ditemukan dalam berkas cadangan' };
+        if (importedTasks.length === 0 && !importedGoal) {
+          return { success: false, count: 0, error: 'Tidak ada tugas atau sasaran yang ditemukan dalam berkas cadangan' };
         }
 
         let finalTasks: Task[] = [];
