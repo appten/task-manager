@@ -10,6 +10,10 @@
       "binding": "Task_KV",
       "id": "03bbba17a9a6465089a0949908f8539b"
     }
-  ]
+  ],
+  "vars": {
+    "DEV_ADMIN_EMAIL": "admin@ten.my.id",
+    "DEV_ADMIN_NAME": "Pengelola Sistem"
+  }
 }
 

@@ -10365,6 +10365,945 @@ body {
   word-break: break-word;
 }
 
+/* ==========================================================================
+   ACCOUNT VIEW v1.4.0 (CLOUD SYNC, RECOVERY PIN, PROFILE & LOGOUT ENHANCEMENTS)
+   ========================================================================== */
+
+.account-profile-top-line {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.btn-edit-profile-icon {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-edit-profile-icon:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.account-status-badge.recovery-ready {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+/* Edukasi Keuntungan Akun Cloud */
+.cloud-benefits-banner {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cloud-benefits-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cloud-benefits-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #bae6fd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cloud-benefits-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0369a1;
+  margin: 0 0 2px 0;
+}
+
+.cloud-benefits-subtitle {
+  font-size: 11px;
+  color: #0284c7;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.cloud-benefits-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px dashed #bae6fd;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Password Input Wrapper with Toggle Eye */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrapper .form-input {
+  width: 100%;
+  padding-right: 38px;
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.toggle-password-btn:hover {
+  color: #475569;
+}
+
+.label-with-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.btn-forgot-password-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.btn-forgot-password-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.forgot-back-bar {
+  padding: 8px 16px 0 16px;
+}
+
+.forgot-back-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  transition: color 0.15s ease;
+}
+
+.forgot-back-btn:hover {
+  color: #0f172a;
+}
+
+.auth-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.field-hint-text {
+  font-size: 10.5px;
+  color: #64748b;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.profile-section-divider {
+  display: flex;
+  align-items: center;
+  margin: 10px 0 2px 0;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+
+.profile-section-divider span {
+  font-size: 11px;
+  font-weight: 750;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.form-input.input-disabled {
+  background: #f8fafc;
+  color: #64748b;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+}
+
+/* Logout Modal Choices */
+.logout-desc-text {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 10px 0;
+}
+
+.logout-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.logout-choice-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.logout-choice-card:hover {
+  background: #f1f5f9;
+}
+
+.logout-choice-card.selected {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.logout-choice-card input[type="radio"] {
+  margin-top: 3px;
+  accent-color: #2563eb;
+}
+
+.choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.choice-text strong {
+  font-size: 12px;
+  color: #0f172a;
+}
+
+.choice-text span {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.btn-logout-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-logout-confirm:hover {
+  background: #b91c1c;
+}
+
+/* ==========================================================================
+   ROLE BADGES & PENGELOLA DASHBOARD STYLES (/pengelola)
+   ========================================================================== */
+
+.flex-row-align {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.account-status-badge.admin-role-badge {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.account-status-badge.user-role-badge {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
+
+.pengelola-access-row {
+  background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%) !important;
+  border-top: 1px solid #e0f2fe;
+  margin-top: 4px;
+  padding-top: 10px !important;
+}
+
+.pengelola-viewport-wrapper {
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+.pengelola-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.pengelola-content {
+  padding: 14px 14px 28px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Hero Banner Pengelola */
+.pengelola-hero-banner {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-radius: 18px;
+  padding: 16px 14px;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pengelola-hero-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.pengelola-badge-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  color: #60a5fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pengelola-badge-texts {
+  flex: 1;
+}
+
+.pengelola-badge-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.pengelola-badge-title {
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0;
+  color: #ffffff;
+}
+
+.pengelola-role-pill {
+  font-size: 10px;
+  font-weight: 750;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pengelola-badge-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Tabs Switcher Pengelola */
+.pengelola-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 4px;
+}
+
+.pengelola-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pengelola-tab-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Section Container */
+.pengelola-stats-section,
+.pengelola-users-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Metrics Grid */
+.pengelola-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.pengelola-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.metric-icon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.metric-icon-wrap.blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.metric-icon-wrap.green {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.metric-icon-wrap.purple {
+  background: #faf5ff;
+  color: #9333ea;
+}
+
+.metric-icon-wrap.amber {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.metric-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric-number {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.metric-title {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.metric-subtitle {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+.metric-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #d97706;
+  text-decoration: none;
+  margin-top: 2px;
+}
+
+/* Card General Pengelola */
+.pengelola-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.pengelola-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pengelola-card-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+/* Category Progress Bars */
+.category-bars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.category-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cat-bar-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.cat-bar-name {
+  color: #334155;
+  font-weight: 600;
+}
+
+.cat-bar-count {
+  color: #64748b;
+}
+
+.cat-progress-track {
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.cat-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.cat-color-pekerjaan {
+  background: #3b82f6;
+}
+
+.cat-color-pribadi {
+  background: #8b5cf6;
+}
+
+.cat-color-belajar {
+  background: #06b6d4;
+}
+
+.cat-color-kesehatan {
+  background: #10b981;
+}
+
+.cat-color-istirahat {
+  background: #f59e0b;
+}
+
+.cat-color-lainnya {
+  background: #94a3b8;
+}
+
+/* Infra Status List */
+.infra-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.infra-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.infra-status-row:last-child {
+  border-bottom: none;
+}
+
+.infra-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.infra-val {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.infra-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+/* Tab 2: Users Search & Filters */
+.pengelola-search-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pengelola-search-input-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.pengelola-search-input-box .search-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+}
+
+.pengelola-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  font-size: 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.pengelola-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+.pengelola-role-filters {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.role-filter-btn {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.role-filter-btn.active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.users-list-summary {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.pengelola-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* User Account Card */
+.user-account-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease;
+}
+
+.user-account-card.admin-card {
+  border-color: #bfdbfe;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.user-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar-small {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.user-avatar-small.admin {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.user-avatar-small.regular {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.user-card-main-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-card-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-self-pill {
+  font-size: 9.5px;
+  font-weight: 750;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.user-card-email {
+  font-size: 11px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+  word-break: break-all;
+}
+
+.user-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 750;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.user-role-pill.admin {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.user-role-pill.user {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.user-card-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 10.5px;
+  color: #64748b;
+  padding: 6px 0;
+  border-top: 1px solid #f8fafc;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.user-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-card-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.btn-toggle-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-toggle-role.upgrade {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.btn-toggle-role.upgrade:hover:not(:disabled) {
+  background: #dbeafe;
+}
+
+.btn-toggle-role.downgrade {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-toggle-role.downgrade:hover:not(:disabled) {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.pengelola-empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 16px;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px dashed #cbd5e1;
+  gap: 6px;
+}
+
+.pengelola-empty-box h4 {
+  font-size: 13px;
+  font-weight: 750;
+  color: #1e293b;
+  margin: 0;
+}
+
+.pengelola-empty-box p {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+}
+
+
+
 
 
 

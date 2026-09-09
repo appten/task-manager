@@ -26,10 +26,13 @@ interface TaskContextType {
   lastCloudSyncedAt: string | null;
   isAutoSyncEnabled: boolean;
   loginUser: (email: string, password: string, mergeLocalData?: boolean) => Promise<{ success: boolean; error?: string }>;
-  registerUser: (name: string, email: string, password: string, mergeLocalData?: boolean) => Promise<{ success: boolean; error?: string }>;
-  logoutUser: () => void;
+  registerUser: (name: string, email: string, password: string, mergeLocalData?: boolean, recoveryPin?: string) => Promise<{ success: boolean; error?: string }>;
+  logoutUser: (clearLocalTasks?: boolean) => void;
   triggerCloudSync: () => Promise<boolean>;
   toggleAutoSync: () => void;
+  verifyRecoveryPin: (email: string, recoveryPin: string) => Promise<{ success: boolean; name?: string; error?: string }>;
+  resetPasswordUser: (email: string, recoveryPin: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  updateUserProfile: (name?: string, oldPassword?: string, newPassword?: string, recoveryPin?: string) => Promise<{ success: boolean; error?: string }>;
   tasks: Task[];
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
@@ -313,6 +316,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!isHydrated || !currentUser || !isAutoSyncEnabled) return;
 
     const timer = setTimeout(() => {
+      setIsSyncingCloud(true);
       cloudSyncService.pushTasks(currentUser.email, tasks, userGoal).then((res) => {
         if (res.success && res.updatedAt) {
           setLastCloudSyncedAt(res.updatedAt);
@@ -320,8 +324,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('ten_my_id_last_sync_v01', res.updatedAt);
           } catch {}
         }
+      }).finally(() => {
+        setIsSyncingCloud(false);
       });
-    }, 3000);
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [tasks, userGoal, currentUser, isAutoSyncEnabled, isHydrated]);
@@ -1095,8 +1101,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [showToast]);
 
   // 1. Register User ke Task_KV
+  // 1. Register User ke Task_KV
   const registerUser = useCallback(
-    async (name: string, email: string, password: string, mergeLocalData = true) => {
+    async (name: string, email: string, password: string, mergeLocalData = true, recoveryPin?: string) => {
       setIsSyncingCloud(true);
       try {
         const result = await cloudSyncService.register(
@@ -1104,7 +1111,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email,
           password,
           mergeLocalData ? tasks : undefined,
-          mergeLocalData ? userGoal : undefined
+          mergeLocalData ? userGoal : undefined,
+          recoveryPin
         );
 
         if (result.success && result.user) {
@@ -1114,7 +1122,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             localStorage.setItem('ten_my_id_last_sync_v01', nowStr);
           } catch {}
-          showToast(`Selamat datang ${result.user.name}! Akun terhubung ke Task_KV.`);
+          showToast(`Selamat datang ${result.user.name}! Akun terhubung ke Cloud.`);
           return { success: true };
         } else {
           showToast(result.error || 'Gagal mendaftar');
@@ -1161,7 +1169,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await cloudSyncService.pushTasks(result.user.email, tasks, userGoal);
           }
 
-          showToast(`Berhasil masuk sebagai ${result.user.name}. Data tersinkron ke Task_KV.`);
+          showToast(`Berhasil masuk sebagai ${result.user.name}. Data tersinkron ke Cloud.`);
           return { success: true };
         } else {
           showToast(result.error || 'Gagal masuk akun');
@@ -1177,14 +1185,90 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [tasks, userGoal, showToast]
   );
 
-  // 3. Logout
-  const logoutUser = useCallback(() => {
-    cloudSyncService.logout();
-    setCurrentUser(null);
-    showToast('Telah keluar dari akun. Beroperasi dalam mode Guest lokal.');
-  }, [showToast]);
+  // 3. Verifikasi PIN Pemulihan
+  const verifyRecoveryPin = useCallback(
+    async (email: string, recoveryPin: string) => {
+      try {
+        const res = await cloudSyncService.verifyRecoveryPin(email, recoveryPin);
+        return res;
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Gagal memverifikasi PIN' };
+      }
+    },
+    []
+  );
 
-  // 4. Trigger Cloud Sync
+  // 4. Reset Kata Sandi Baru
+  const resetPasswordUser = useCallback(
+    async (email: string, recoveryPin: string, newPassword: string) => {
+      try {
+        const res = await cloudSyncService.resetPassword(email, recoveryPin, newPassword);
+        if (res.success) {
+          showToast('Kata sandi berhasil diperbarui! Silakan masuk akun.');
+        } else {
+          showToast(res.error || 'Gagal mereset kata sandi');
+        }
+        return res;
+      } catch (err: any) {
+        showToast(err.message || 'Terjadi kesalahan');
+        return { success: false, error: err.message };
+      }
+    },
+    [showToast]
+  );
+
+  // 5. Update Profil Pengguna
+  const updateUserProfile = useCallback(
+    async (name?: string, oldPassword?: string, newPassword?: string, recoveryPin?: string) => {
+      if (!currentUser) return { success: false, error: 'Tidak ada sesi akun aktif' };
+      try {
+        const res = await cloudSyncService.updateProfile(
+          currentUser.email,
+          name,
+          oldPassword,
+          newPassword,
+          recoveryPin
+        );
+        if (res.success && res.user) {
+          setCurrentUser(res.user);
+          showToast('Profil akun berhasil diperbarui.');
+          return { success: true };
+        } else {
+          showToast(res.error || 'Gagal memperbarui profil');
+          return { success: false, error: res.error };
+        }
+      } catch (err: any) {
+        showToast(err.message || 'Terjadi kesalahan');
+        return { success: false, error: err.message };
+      }
+    },
+    [currentUser, showToast]
+  );
+
+  // 6. Logout
+  const logoutUser = useCallback(
+    (clearLocalTasks = false) => {
+      cloudSyncService.logout();
+      setCurrentUser(null);
+      setLastCloudSyncedAt(null);
+      try {
+        localStorage.removeItem('ten_my_id_last_sync_v01');
+      } catch {}
+
+      if (clearLocalTasks) {
+        setTasks([]);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+        } catch {}
+        showToast('Telah keluar dari akun dan data lokal dibersihkan.');
+      } else {
+        showToast('Telah keluar dari akun. Beroperasi dalam mode Guest lokal.');
+      }
+    },
+    [showToast]
+  );
+
+  // 7. Trigger Cloud Sync
   const triggerCloudSync = useCallback(async (): Promise<boolean> => {
     if (!currentUser) {
       showToast('Silakan masuk akun terlebih dahulu untuk sinkronisasi cloud');
@@ -1199,7 +1283,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           localStorage.setItem('ten_my_id_last_sync_v01', nowStr);
         } catch {}
-        showToast('Data berhasil dicadangkan dan disinkronkan');
+        showToast('Data berhasil dicadangkan dan disinkronkan ke Cloud');
         return true;
       } else {
         showToast(res.error || 'Gagal sinkronisasi');
@@ -1213,7 +1297,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [currentUser, tasks, userGoal, showToast]);
 
-  // 5. Toggle Auto Sync
+  // 8. Toggle Auto Sync
   const toggleAutoSync = useCallback(() => {
     setIsAutoSyncEnabled((prev) => {
       const next = !prev;
@@ -1237,6 +1321,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logoutUser,
         triggerCloudSync,
         toggleAutoSync,
+        verifyRecoveryPin,
+        resetPasswordUser,
+        updateUserProfile,
         tasks,
         activeTab,
         setActiveTab,

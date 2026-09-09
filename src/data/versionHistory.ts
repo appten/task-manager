@@ -11,13 +11,39 @@ export interface VersionRelease {
   groupedChanges: VersionCategoryGroup[];
 }
 
-export const APP_CURRENT_VERSION = 'v1.3.0';
+export const APP_CURRENT_VERSION = 'v1.4.0';
 
 export const VERSION_HISTORY: VersionRelease[] = [
   {
-    version: 'v1.3.0',
+    version: 'v1.4.0',
     releaseDate: '9 September 2026',
     isLatest: true,
+    tagline: 'Sistem Akun Cloud Penuh, Pemulihan Sandi Mandiri & Sinkronisasi Multi-Device',
+    groupedChanges: [
+      {
+        category: 'Fitur Baru',
+        items: [
+          'Sistem Akun Cloud Terintegrasi: Pengguna kini dapat mendaftar dan masuk akun untuk menyimpan seluruh tugas dan sasaran secara terpusat di cloud, memungkinkan akses dan sinkronisasi lintas perangkat (HP & Laptop).',
+          'Pemulihan Lupa Kata Sandi Mandiri (Self-Service Recovery): Fitur lupa kata sandi 2 tahap menggunakan PIN Keamanan 4-6 angka yang disetel saat pendaftaran, memudahkan reset sandi tanpa perlu email konfirmasi pihak ketiga.',
+          'Pengaturan Profil & Ganti Kata Sandi: Pengguna yang telah masuk dapat memperbarui nama tampilan, mengubah kata sandi lama, serta menyetel ulang PIN pemulihan kapan saja melalui dialog pengaturan akun.',
+          'Dialog Keluar Fleksibel: Opsi konfirmasi saat keluar akun (logout) dengan pilihan tetap menyimpan tugas di perangkat untuk mode tamu atau membersihkan data lokal.',
+          'Edukasi Visual Mode Tamu vs Cloud: Banner informatif yang menjelaskan keunggulan menghubungkan akun cloud tanpa menghilangkan kebebasan menggunakan aplikasi secara offline.',
+        ],
+      },
+      {
+        category: 'Penyempurnaan',
+        items: [
+          'Sinkronisasi Otomatis Lebih Sigap: Auto-sync debounced dioptimalkan menjadi 1.5 detik setelah ada perubahan tugas atau sasaran.',
+          'Tombol Intip Kata Sandi (Eye Toggle): Input kata sandi pada formulir pendaftaran dan masuk kini dilengkapi ikon buka-tutup mata untuk kenyamanan pengetikan.',
+          'Penyatuan Data Otomatis (Smart Merge): Opsi menggabungkan tugas yang sudah ada di perangkat saat mendaftar atau masuk agar tidak ada data yang tercecer.',
+        ],
+      },
+    ],
+  },
+  {
+    version: 'v1.3.0',
+    releaseDate: '9 September 2026',
+    isLatest: false,
     tagline: 'Fitur Kirim Masukan, Desain Modal Reset Elegan & Pengamanan Data',
     groupedChanges: [
       {
