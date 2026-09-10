@@ -1,8 +1,13 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTask } from '../context/TaskContext';
-import { sortTasksAnalysis } from '../services/geminiService';
+import {
+  sortTasksAnalysis,
+  getUniversalAIConfig,
+  UniversalAIConfig,
+} from '../services/geminiService';
+import { AISettingsModal } from './AISettingsModal';
 import {
   Sparkles,
   Clock,
@@ -17,6 +22,7 @@ import {
   TrendingUp,
   TrendingDown,
   MoveRight,
+  Settings,
 } from 'lucide-react';
 
 export const AIView: React.FC = () => {
@@ -28,9 +34,21 @@ export const AIView: React.FC = () => {
     setActiveTab,
     toggleTaskStatus,
     toggleTodayTask,
+    showToast,
   } = useTask();
 
   const [filterLevel, setFilterLevel] = useState<'all' | 'segera' | 'nanti'>('all');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [configInfo, setConfigInfo] = useState<UniversalAIConfig>(getUniversalAIConfig());
+
+  // Perbarui info config saat modal ditutup / disimpan
+  const refreshConfig = () => {
+    setConfigInfo(getUniversalAIConfig());
+  };
+
+  useEffect(() => {
+    refreshConfig();
+  }, []);
 
   const formatReadableDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -132,14 +150,25 @@ export const AIView: React.FC = () => {
 
   return (
     <div className="ai-view-clean-container">
-      {/* 1. Header Minimalis & Bersih */}
+      {/* 1. Header Bersih dengan Icon Setting di Sebelah Judul */}
       <div className="ai-clean-header">
         <div className="ai-header-lead">
           <div className="ai-sparkle-icon-box">
             <Sparkles size={18} />
           </div>
           <div className="ai-header-texts">
-            <h2 className="ai-clean-title">Asisten Cerdas</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h2 className="ai-clean-title">Asisten Cerdas</h2>
+              <button
+                type="button"
+                className="ai-header-setting-icon-btn"
+                onClick={() => setIsSettingsOpen(true)}
+                title="Pengaturan Model AI & Mode Offline"
+                aria-label="Pengaturan Model AI & Mode Offline"
+              >
+                <Settings size={15} />
+              </button>
+            </div>
             <p className="ai-clean-subtitle">
               Saran prioritas dan ritme kerja yang selaras dengan hari Anda.
             </p>
@@ -210,7 +239,7 @@ export const AIView: React.FC = () => {
         </div>
       ) : (
         <div className="ai-content-sections">
-          {/* A. Kartu Ringkasan Ritme Tubuh & Energi (1 Kartu Terpadu & Rapi) */}
+          {/* A. Kartu Ringkasan Ritme Tubuh & Energi */}
           <div className="ai-card-ritme">
             <div className="ritme-card-header">
               <div className="ritme-badge">
@@ -219,7 +248,6 @@ export const AIView: React.FC = () => {
                 </div>
                 <span className="ritme-title-text">Ritme Tubuh & Energi</span>
               </div>
-              {/* Badge fase ritme ditempatkan rapi di bawah judul kartu */}
               <div className="ritme-state-badge">
                 <span className="ritme-state-dot" />
                 <span className="ritme-state-text">{aiAnalysis.circadianState}</span>
@@ -304,7 +332,7 @@ export const AIView: React.FC = () => {
               </div>
             </div>
 
-            {/* Flat Row List (Clean, matching Inbox & Today) */}
+            {/* Flat Row List */}
             <div className="ai-flat-rows-list">
               {displayedItems.map((item) => {
                 const originalTask = tasks.find((t) => t.id === item.taskId);
@@ -388,6 +416,14 @@ export const AIView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Pengaturan Model & Kunci AI */}
+      <AISettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSaved={refreshConfig}
+        showToast={showToast}
+      />
     </div>
   );
 };

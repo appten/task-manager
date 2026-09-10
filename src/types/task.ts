@@ -111,6 +111,11 @@ export interface AIAnalysisResult {
   overallSummary: string;
   userGoalContext?: string;
   tasksAnalysis: TaskAnalysisItem[];
+  engine?: 'gemini' | 'local';
+  engineName?: string;
+  engineStatus?: string;
+  isGeminiActive?: boolean;
+  errorDetail?: string;
 }
 
 export type ScheduleChangeType = 'unchanged' | 'rescheduled' | 'added_break' | 'split';

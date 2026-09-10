@@ -875,10 +875,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
       }
 
-      showToast('Analisis prioritas, jam biologis & keselarasan goals selesai! 🧠🎯');
+      if (result.engine === 'gemini') {
+        showToast('Analisis tugas berhasil diselesaikan! ✨');
+      } else {
+        showToast('Analisis selesai menggunakan Algoritma Sirkadian Lokal ⚡');
+      }
     } catch (err: any) {
       console.error('Error running AI task analysis:', err);
-      showToast(err.message || 'Gagal menganalisis tugas. Periksa koneksi internet.');
+      showToast(err?.message || 'Analisis tugas gagal. Periksa koneksi Anda.');
     } finally {
       setIsAnalyzingAI(false);
     }

@@ -1,55 +1,358 @@
 import { Task, AIAnalysisResult, TaskAnalysisItem } from '../types/task';
 
-// Gemini API Service for Sub-tasks, Circadian Productivity, and Life Goal Alignment Analysis
+// Universal AI Service: Supports Developer Default (Gemini 2.5 Flash) and Custom AI (OpenAI, DeepSeek, Groq, OpenRouter, Ollama, Gemini, etc.)
 
+export type AIMode = 'default' | 'custom' | 'offline';
+export type AIProviderType = 'openai-compatible' | 'gemini';
+
+export interface UniversalAIConfig {
+  mode: AIMode;
+  customProvider: AIProviderType;
+  customBaseUrl: string;
+  customApiKey: string;
+  customModel: string;
+}
+
+export const STORAGE_AI_MODE = 'ten_ai_mode';
+export const STORAGE_CUSTOM_PROVIDER = 'ten_custom_ai_provider';
+export const STORAGE_CUSTOM_BASE_URL = 'ten_custom_ai_base_url';
+export const STORAGE_CUSTOM_KEY = 'ten_custom_ai_key';
+export const STORAGE_CUSTOM_MODEL = 'ten_custom_ai_model';
+
+export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+
+export const getUniversalAIConfig = (): UniversalAIConfig => {
+  if (typeof window === 'undefined') {
+    return {
+      mode: 'default',
+      customProvider: 'openai-compatible',
+      customBaseUrl: 'https://api.openai.com/v1',
+      customApiKey: '',
+      customModel: 'gpt-4o-mini',
+    };
+  }
+
+  const mode = (localStorage.getItem(STORAGE_AI_MODE) as AIMode) || 'default';
+  const customProvider =
+    (localStorage.getItem(STORAGE_CUSTOM_PROVIDER) as AIProviderType) || 'openai-compatible';
+  const customBaseUrl =
+    localStorage.getItem(STORAGE_CUSTOM_BASE_URL) || 'https://api.openai.com/v1';
+  const customApiKey = localStorage.getItem(STORAGE_CUSTOM_KEY) || '';
+  const customModel = localStorage.getItem(STORAGE_CUSTOM_MODEL) || 'gpt-4o-mini';
+
+  return {
+    mode,
+    customProvider,
+    customBaseUrl,
+    customApiKey,
+    customModel,
+  };
+};
+
+export const saveUniversalAIConfig = (config: UniversalAIConfig): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_AI_MODE, config.mode);
+  localStorage.setItem(STORAGE_CUSTOM_PROVIDER, config.customProvider);
+  localStorage.setItem(STORAGE_CUSTOM_BASE_URL, config.customBaseUrl.trim());
+  localStorage.setItem(STORAGE_CUSTOM_KEY, config.customApiKey.trim());
+  localStorage.setItem(STORAGE_CUSTOM_MODEL, config.customModel.trim());
+};
+
+// Helper backward compatibility
 export const getGeminiApiKey = (): string => {
-  if (typeof window !== 'undefined') {
-    const localKey = localStorage.getItem('gemini_api_key');
-    if (localKey && localKey.trim()) return localKey.trim();
+  const cfg = getUniversalAIConfig();
+  if (cfg.mode === 'custom' && cfg.customProvider === 'gemini' && cfg.customApiKey) {
+    return cfg.customApiKey;
   }
   return process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 };
 
-export const setGeminiApiKey = (key: string): void => {
-  if (typeof window !== 'undefined') {
-    if (key.trim()) {
-      localStorage.setItem('gemini_api_key', key.trim());
-    } else {
-      localStorage.removeItem('gemini_api_key');
-    }
-  }
-};
+export interface AITestResult {
+  success: boolean;
+  message: string;
+  latencyMs?: number;
+  engineName: string;
+  mode: AIMode;
+  testedAt: string;
+}
 
-const handleGeminiError = async (response: Response): Promise<never> => {
-  const errText = await response.text();
-  console.error('Gemini API error:', response.status, errText);
-  let errMsg = `Status ${response.status}`;
+// Universal Json Parser Helper
+export const extractJsonFromText = (rawText: string): any => {
+  const trimmed = rawText.trim();
   try {
-    const errJson = JSON.parse(errText);
-    if (errJson.error?.message) {
-      errMsg = errJson.error.message;
-    }
+    return JSON.parse(trimmed);
   } catch {}
 
-  if (response.status === 403) {
-    throw new Error(
-      `Akses ditolak (403): ${errMsg}. Periksa apakah API key aktif atau apakah ada pembatasan referrer/domain di Google Cloud Console.`
-    );
+  // Coba cari pola markdown ```json ... ``` atau ``` ... ```
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (codeBlockMatch && codeBlockMatch[1]) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim());
+    } catch {}
   }
-  throw new Error(`Gagal menghubungi Gemini AI (${response.status}): ${errMsg}`);
+
+  // Coba cari kurung siku [...] atau kurung kurawal {...}
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(trimmed.slice(firstBrace, lastBrace + 1));
+    } catch {}
+  }
+
+  const firstBracket = trimmed.indexOf('[');
+  const lastBracket = trimmed.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
+    try {
+      return JSON.parse(trimmed.slice(firstBracket, lastBracket + 1));
+    } catch {}
+  }
+
+  throw new Error('Tidak dapat mengekstrak JSON dari respon AI');
 };
 
+// Eksekusi Panggilan AI Universal (Gemini default vs Custom AI platform apa pun)
+export const executeUniversalAICall = async (
+  prompt: string,
+  options?: {
+    systemPrompt?: string;
+    expectJson?: boolean;
+    configOverride?: Partial<UniversalAIConfig>;
+  }
+): Promise<{ text: string; engineName: string }> => {
+  const activeConfig = {
+    ...getUniversalAIConfig(),
+    ...(options?.configOverride || {}),
+  };
+
+  const expectJson = options?.expectJson ?? false;
+
+  // 0. MODE OFFLINE (Algoritma Sirkadian Lokal Murni)
+  if (activeConfig.mode === 'offline') {
+    throw new Error('Mode Offline Aktif: Seluruh analisis dijalankan via Algoritma Lokal di perangkat.');
+  }
+
+  const fetchSignal =
+    typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
+      ? AbortSignal.timeout(12000)
+      : undefined;
+
+  // 1. MODE BAWAAN PENGEMBANG (Default Gemini 2.5 Flash)
+  if (activeConfig.mode === 'default') {
+    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
+    if (!apiKey) {
+      throw new Error(
+        'Kunci sistem Gemini belum dikonfigurasi di environment variable NEXT_PUBLIC_GEMINI_API_KEY.'
+      );
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_GEMINI_MODEL}:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: fetchSignal,
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: (options?.systemPrompt ? `${options.systemPrompt}\n\n` : '') + prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 2048,
+          ...(expectJson ? { responseMimeType: 'application/json' } : {}),
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Google Gemini Error (${res.status}): ${errText.slice(0, 150)}`);
+    }
+
+    const data = await res.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) {
+      throw new Error('Respon dari Google Gemini kosong.');
+    }
+
+    return {
+      text: rawText,
+      engineName: `Google Gemini 2.5 Flash (Bawaan)`,
+    };
+  }
+
+  // 2. MODE KUSTOM AI SENDIRI
+  if (activeConfig.customProvider === 'gemini') {
+    const apiKey = activeConfig.customApiKey.trim();
+    if (!apiKey) {
+      throw new Error('API Key Google Gemini kustom belum diisi.');
+    }
+    const model = activeConfig.customModel.trim() || DEFAULT_GEMINI_MODEL;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: fetchSignal,
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: (options?.systemPrompt ? `${options.systemPrompt}\n\n` : '') + prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 2048,
+          ...(expectJson ? { responseMimeType: 'application/json' } : {}),
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Gemini Kustom (${res.status}): ${errText.slice(0, 150)}`);
+    }
+
+    const data = await res.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) {
+      throw new Error('Respon dari Gemini kustom kosong.');
+    }
+
+    return {
+      text: rawText,
+      engineName: `Gemini Kustom (${model})`,
+    };
+  }
+
+  // 3. MODE KUSTOM: OPENAI-COMPATIBLE (OpenAI, Groq, DeepSeek, OpenRouter, Mistral, Ollama, dll)
+  let baseUrl = activeConfig.customBaseUrl.trim().replace(/\/+$/, '');
+  if (!baseUrl) {
+    baseUrl = 'https://api.openai.com/v1';
+  }
+
+  // Normalisasi endpoint /chat/completions
+  const endpointUrl = baseUrl.endsWith('/chat/completions')
+    ? baseUrl
+    : `${baseUrl}/chat/completions`;
+
+  const model = activeConfig.customModel.trim() || 'gpt-4o-mini';
+  const apiKey = activeConfig.customApiKey.trim();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
+
+  const messages: any[] = [];
+  if (options?.systemPrompt) {
+    messages.push({ role: 'system', content: options.systemPrompt });
+  }
+  messages.push({ role: 'user', content: prompt });
+
+  const payload: any = {
+    model,
+    messages,
+    temperature: 0.2,
+    max_tokens: 2048,
+  };
+
+  const res = await fetch(endpointUrl, {
+    method: 'POST',
+    headers,
+    signal: fetchSignal,
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    let detail = `Status ${res.status}`;
+    try {
+      const errJson = JSON.parse(errText);
+      if (errJson.error?.message) detail = errJson.error.message;
+    } catch {
+      if (errText) detail = errText.slice(0, 120);
+    }
+    throw new Error(`Custom AI (${res.status}): ${detail}`);
+  }
+
+  const data = await res.json();
+  const rawText = data?.choices?.[0]?.message?.content;
+  if (!rawText) {
+    throw new Error('Respon dari Custom AI kosong.');
+  }
+
+  return {
+    text: rawText,
+    engineName: `Custom AI (${model})`,
+  };
+};
+
+// Uji Koneksi AI Universal
+export const testUniversalAIConnection = async (
+  configOverride?: Partial<UniversalAIConfig>
+): Promise<AITestResult> => {
+  const activeConfig = {
+    ...getUniversalAIConfig(),
+    ...(configOverride || {}),
+  };
+
+  const nowIso = new Date().toISOString();
+
+  // Mode Offline: Langsung berhasil instan tanpa request jaringan
+  if (activeConfig.mode === 'offline') {
+    return {
+      success: true,
+      message: 'Algoritma Sirkadian Lokal aktif & siap digunakan secara instan di perangkat Anda (100% Offline).',
+      latencyMs: 1,
+      engineName: 'Algoritma Sirkadian Lokal',
+      mode: 'offline',
+      testedAt: nowIso,
+    };
+  }
+
+  const start = performance.now();
+
+  try {
+    const result = await executeUniversalAICall('Jawab HANYA satu kata: PONG', {
+      expectJson: false,
+      configOverride: activeConfig,
+    });
+    const latencyMs = Math.round(performance.now() - start);
+
+    return {
+      success: true,
+      message: `AI terhubung & siap digunakan (${latencyMs} ms). Jawaban: "${result.text.slice(0, 20).trim()}".`,
+      latencyMs,
+      engineName: result.engineName,
+      mode: activeConfig.mode,
+      testedAt: nowIso,
+    };
+  } catch (err: any) {
+    const latencyMs = Math.round(performance.now() - start);
+    return {
+      success: false,
+      message: err?.message || 'Gagal menghubungi penyedia AI.',
+      latencyMs,
+      engineName:
+        activeConfig.mode === 'default'
+          ? 'Google Gemini Bawaan'
+          : `Custom AI (${activeConfig.customModel || 'Unknown'})`,
+      mode: activeConfig.mode,
+      testedAt: nowIso,
+    };
+  }
+};
+
+// Fungsi Buat Sub-tugas dengan AI
 export const generateSubTasksWithAI = async (
   title: string,
   description?: string,
   existingSubTasks?: string[]
 ): Promise<string[]> => {
-  const apiKey = getGeminiApiKey();
-
-  if (!apiKey) {
-    throw new Error('Gemini API key belum diatur. Pastikan environment variable NEXT_PUBLIC_GEMINI_API_KEY sudah diset di Cloudflare.');
-  }
-
   if (!title.trim()) {
     throw new Error('Judul tugas tidak boleh kosong');
   }
@@ -72,51 +375,13 @@ Ketentuan:
 2. Kembalikan HANYA JSON array string murni tanpa awalan/akhiran markdown, contoh:
 ["Langkah 1", "Langkah 2", "Langkah 3"]`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const { text } = await executeUniversalAICall(prompt, { expectJson: true });
+  const parsed = extractJsonFromText(text);
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [{ text: prompt }],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.6,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    return handleGeminiError(response);
+  if (Array.isArray(parsed)) {
+    return parsed.filter((item) => typeof item === 'string' && item.trim().length > 0);
   }
-
-  const data = await response.json();
-  const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!rawText) {
-    throw new Error('Tidak ada respon sub-tugas dari AI');
-  }
-
-  try {
-    const parsed = JSON.parse(rawText);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((item) => typeof item === 'string' && item.trim().length > 0);
-    }
-    throw new Error('Format respon bukan array');
-  } catch (parseError) {
-    console.error('Gagal mem-parsing respon Gemini:', rawText, parseError);
-    return rawText
-      .split('\n')
-      .map((s: string) => s.replace(/^[-*•\d.]+\s*/, '').trim())
-      .filter((s: string) => s.length > 0)
-      .slice(0, 5);
-  }
+  throw new Error('Format respon bukan array string');
 };
 
 export interface SubTasksAndEstimateResult {
@@ -126,18 +391,13 @@ export interface SubTasksAndEstimateResult {
   goalAlignmentReason?: string;
 }
 
+// Fungsi Buat Sub-tugas & Estimasi dengan AI
 export const generateSubTasksAndEstimateWithAI = async (
   title: string,
   description?: string,
   existingSubTasks?: string[],
   userGoal?: string
 ): Promise<SubTasksAndEstimateResult> => {
-  const apiKey = getGeminiApiKey();
-
-  if (!apiKey) {
-    throw new Error('Gemini API key belum diatur. Pastikan environment variable NEXT_PUBLIC_GEMINI_API_KEY sudah diset di Cloudflare.');
-  }
-
   if (!title.trim()) {
     throw new Error('Judul tugas tidak boleh kosong');
   }
@@ -177,42 +437,12 @@ WAJIB mengembalikan HANYA format JSON murni:
   "goalAlignmentReason": "Alasan singkat keselarasan terhadap tujuan hidup pengguna."
 }`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [{ text: prompt }],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.5,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    return handleGeminiError(response);
-  }
-
-  const data = await response.json();
-  const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!rawText) {
-    throw new Error('Tidak ada respon dari Gemini AI');
-  }
-
   try {
-    const parsed = JSON.parse(rawText);
+    const { text } = await executeUniversalAICall(prompt, { expectJson: true });
+    const parsed = extractJsonFromText(text);
+
     let score = Number(parsed.goalAlignmentScore);
     if (isNaN(score)) score = 50;
-    // Clamp to -100..100
     score = Math.max(-100, Math.min(100, Math.round(score)));
 
     return {
@@ -222,7 +452,7 @@ WAJIB mengembalikan HANYA format JSON murni:
       goalAlignmentReason: parsed.goalAlignmentReason || 'Mendukung produktivitas harian.',
     };
   } catch (err) {
-    console.error('Error parsing subtask and estimate:', rawText, err);
+    console.error('Error parsing subtask and estimate:', err);
     return {
       subTasks: ['Persiapkan materi', 'Eksekusi tugas', 'Verifikasi hasil akhir'],
       estimatedTime: '30 menit',
@@ -232,6 +462,7 @@ WAJIB mengembalikan HANYA format JSON murni:
   }
 };
 
+// Algoritma Sirkadian Lokal (Selalu Siap Saat Offline / Tanpa Koneksi)
 export const generateLocalCircadianAnalysis = (
   tasks: Task[],
   userGoal?: string
@@ -247,7 +478,6 @@ export const generateLocalCircadianAnalysis = (
   const currentDate = String(now.getDate()).padStart(2, '0');
   const todayDateStr = `${currentYear}-${currentMonth}-${currentDate}`;
 
-  // Helper formatting date to Indonesian short e.g. "08 Sep"
   const formatShortDate = (dateStr: string): string => {
     try {
       const parts = dateStr.split('-');
@@ -259,7 +489,6 @@ export const generateLocalCircadianAnalysis = (
     }
   };
 
-  // Helper parsing "HH:mm" to minutes from midnight
   const parseTimeToMinutes = (timeStr?: string): number | null => {
     if (!timeStr || !timeStr.includes(':')) return null;
     const [h, m] = timeStr.split(':').map(Number);
@@ -267,7 +496,6 @@ export const generateLocalCircadianAnalysis = (
     return h * 60 + m;
   };
 
-  // Tentukan fase sirkadian berdasarkan jam saat ini
   let circadianState = '';
   let circadianAdvice = '';
   let timeSuitabilityNote = '';
@@ -305,17 +533,13 @@ export const generateLocalCircadianAnalysis = (
   const activeTasks = tasks.filter((t) => !t.isCompleted);
   const tasksToAnalyze = activeTasks.length > 0 ? activeTasks : tasks;
 
-  // Analisis jendela waktu dan TANGGAL pengerjaan untuk setiap item
   const tasksAnalysis = tasksToAnalyze.map((t) => {
     const taskStartDateStr = t.startDate || t.dueDate || todayDateStr;
     const taskDueDateStr = t.dueDate || t.endDate || taskStartDateStr;
 
-    // Evaluasi relasi tanggal terhadap tanggal hari ini
     const isFutureTask = taskStartDateStr > todayDateStr;
     const isPastOverdueTask = taskDueDateStr < todayDateStr;
-    const isTodayTask = !isFutureTask && !isPastOverdueTask;
 
-    // Hitung label konteks tanggal yang ramah manusia
     let dateContextLabel = 'Hari ini';
     if (isFutureTask) {
       const todayD = new Date(Number(todayDateStr.split('-')[0]), Number(todayDateStr.split('-')[1]) - 1, Number(todayDateStr.split('-')[2]));
@@ -342,7 +566,6 @@ export const generateLocalCircadianAnalysis = (
     let isLockedNow = false;
 
     if (isFutureTask) {
-      // Tugas di hari mendatang: BELUM BISA DIMULAI HARI INI
       timeWindowStatus = 'locked_until_start';
       isLockedNow = true;
       if (t.startTime) {
@@ -351,11 +574,9 @@ export const generateLocalCircadianAnalysis = (
         timeWindowDescription = `${dateContextLabel}`;
       }
     } else if (isPastOverdueTask) {
-      // Tugas yang sudah lewat tanggal tenggat
       timeWindowStatus = 'nearing_deadline';
       timeWindowDescription = `Tenggat terlewat sejak ${formatShortDate(taskDueDateStr)}`;
     } else {
-      // Tugas untuk HARI INI: Evaluasi jam
       if (startMin !== null) {
         if (nowTotalMinutes < startMin) {
           timeWindowStatus = 'locked_until_start';
@@ -415,7 +636,6 @@ export const generateLocalCircadianAnalysis = (
       t.effortHours && t.effortHours >= 3 ? 'Tinggi' : t.effortHours && t.effortHours >= 1 ? 'Sedang' : 'Ringan';
     const estimatedDuration = t.estimatedTime || (t.effortHours ? `${t.effortHours} jam` : '30 - 45 menit');
 
-    // Hitung skor impak task terhadap tujuan/goal pengguna
     let goalScore = 55;
     if (userGoal && userGoal.trim()) {
       const goalWords = userGoal.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
@@ -445,7 +665,6 @@ export const generateLocalCircadianAnalysis = (
 
     const typeLabel = t.inboxType === 'kegiatan' ? 'Kegiatan/Acara' : t.inboxType === 'pengingat' ? 'Pengingat' : 'Tugas';
 
-    // Kalimat alasan yang sadar TANGGAL, jam mulai, dan batas selesai
     let reason = '';
     if (isFutureTask) {
       reason = `Item ini dijadwalkan untuk ${dateContextLabel}${t.startTime ? ` pukul ${t.startTime}` : ''}. Belum waktunya dieksekusi hari ini; AI mencatatnya agar Anda tetap fokus pada agenda hari ini.`;
@@ -458,7 +677,7 @@ export const generateLocalCircadianAnalysis = (
     } else if (isRecurring) {
       reason = `[Rutinitas ${recurrenceLabel}] Disarankan untuk diselesaikan secara berkala guna menjaga konsistensi kebiasaan harian Anda.`;
     } else if (t.isToday) {
-      reason = `Terpilih dalam 5 fokus Today dan sudah berada dalam jendela waktu pengerjaan. Selaras dengan ritme ${circadianState.split('•')[0].trim()}.`;
+      reason = `Terpilih dalam fokus Today dan sudah berada dalam jendela waktu pengerjaan. Selaras dengan ritme ${circadianState.split('•')[0].trim()}.`;
     } else if (t.priority === 'high') {
       reason = `Prioritas tinggi dalam Inbox dan siap dikerjakan sekarang tanpa hambatan waktu mulai.`;
     } else {
@@ -488,7 +707,6 @@ export const generateLocalCircadianAnalysis = (
     };
   });
 
-  // Pilih Top Priority: HANYA dari tugas HARI INI yang SUDAH BISA DIMULAI
   const readyTodayTasks = tasksAnalysis.filter((item) => {
     const orig = tasksToAnalyze.find((t) => t.id === item.taskId);
     const startStr = orig?.startDate || orig?.dueDate || todayDateStr;
@@ -498,7 +716,6 @@ export const generateLocalCircadianAnalysis = (
 
   const poolForTop = readyTodayTasks.length > 0 ? readyTodayTasks : tasksAnalysis;
 
-  // Prioritas sortir: Segera > Today > Skor Goal tertinggi
   const sortedForTop = [...poolForTop].sort((a, b) => {
     const taskA = tasksToAnalyze.find((t) => t.id === a.taskId);
     const taskB = tasksToAnalyze.find((t) => t.id === b.taskId);
@@ -518,11 +735,10 @@ export const generateLocalCircadianAnalysis = (
 
   let overallSummary = `Terdeteksi ${todayCount} fokus Today dan ${inboxCount} item Inbox aktif. `;
   if (lockedCount > 0) {
-    overallSummary += `Terdapat ${lockedCount} item dengan jendela waktu mulai mendatang (belum bisa dimulai sekarang). `;
+    overallSummary += `Terdapat ${lockedCount} item dengan jendela waktu mulai mendatang. `;
   }
-  overallSummary += `AI merekomendasikan fokus pada "${topPriorityTaskItem?.taskTitle || 'tugas prioritas'}" yang sudah memenuhi jendela waktu pengerjaan dan jam biologis saat ini.`;
+  overallSummary += `Fokus disarankan pada "${topPriorityTaskItem?.taskTitle || 'tugas prioritas'}" yang sudah memenuhi jendela waktu pengerjaan dan jam biologis saat ini.`;
 
-  // Urutkan rincian tugas secara terstruktur: Segera > Rutin > Nanti
   const sortedTasksAnalysis = sortTasksAnalysis(tasksAnalysis, tasksToAnalyze, todayDateStr);
 
   return {
@@ -534,6 +750,10 @@ export const generateLocalCircadianAnalysis = (
     overallSummary,
     userGoalContext: userGoal || 'Membangun rutinitas produktif dan seimbang',
     tasksAnalysis: sortedTasksAnalysis,
+    engine: 'local',
+    engineName: 'Algoritma Sirkadian Lokal',
+    engineStatus: 'Analisis berbasis perhitungan jam biologis lokal (Perangkat)',
+    isGeminiActive: false,
   };
 };
 
@@ -560,7 +780,6 @@ export const sortTasksAnalysis = (
     const taskA = tasks.find((t) => t.id === a.taskId);
     const taskB = tasks.find((t) => t.id === b.taskId);
 
-    // Kategori Segera: prioritaskan deadline mepet/terlewat > prioritas tinggi > skor goal
     if (a.urgencyLevel === 'Segera') {
       const aDeadline = a.timeWindowStatus === 'nearing_deadline' ? 1 : 0;
       const bDeadline = b.timeWindowStatus === 'nearing_deadline' ? 1 : 0;
@@ -573,7 +792,6 @@ export const sortTasksAnalysis = (
       return (b.goalAlignmentScore || 0) - (a.goalAlignmentScore || 0);
     }
 
-    // Kategori Rutin: prioritaskan yang ada di Today > skor goal
     if (a.urgencyLevel === 'Rutin') {
       const aToday = taskA?.isToday ? 1 : 0;
       const bToday = taskB?.isToday ? 1 : 0;
@@ -582,7 +800,6 @@ export const sortTasksAnalysis = (
       return (b.goalAlignmentScore || 0) - (a.goalAlignmentScore || 0);
     }
 
-    // Kategori Nanti: urutkan tanggal terdekat lebih dulu
     const dateA = taskA?.startDate || taskA?.dueDate || today;
     const dateB = taskB?.startDate || taskB?.dueDate || today;
     if (dateA !== dateB) {
@@ -593,6 +810,7 @@ export const sortTasksAnalysis = (
   });
 };
 
+// Analisis Tugas dengan AI Universal (dengan Auto-Fallback ke Algoritma Lokal jika gagal)
 export const analyzeTasksWithCircadianAI = async (
   tasks: Task[],
   userGoal?: string
@@ -601,14 +819,12 @@ export const analyzeTasksWithCircadianAI = async (
     throw new Error('Tidak ada tugas untuk dianalisis.');
   }
 
-  const apiKey = getGeminiApiKey();
-
-  // Jika belum ada API key, gunakan local smart circadian analysis yang akurat & instan
-  if (!apiKey) {
+  // 1. Jika pengguna memilih Mode Offline (Algoritma Lokal), langsung eksekusi instan tanpa koneksi!
+  const activeConfig = getUniversalAIConfig();
+  if (activeConfig.mode === 'offline') {
     return generateLocalCircadianAnalysis(tasks, userGoal);
   }
 
-  // Filter incomplete tasks (or all tasks if all completed)
   const activeTasks = tasks.filter((t) => !t.isCompleted);
   const tasksToAnalyze = activeTasks.length > 0 ? activeTasks : tasks;
 
@@ -662,7 +878,7 @@ ATURAN KRUSIAL PENJADWALAN, TANGGAL & WAKTU:
 3. "WAKTU BATAS/DEADLINE" (endTime / dueTime): Jika mendekati batas atau terlewat, berstatus "nearing_deadline" dengan urgensi "Segera".
 4. "topPriorityTaskId": HANYA BOLEH dipilih dari tugas HARI INI yang SUDAH BISA DIMULAI pada jam saat ini (${currentTimeFormatted}).
 
-WAJIB hasilkan output HANYA dalam format JSON murni:
+WAJIB hasilkan output HANYA dalam format JSON murni yang ringkas & padat (maksimal 1 kalimat untuk reason dan advice agar respon super cepat):
 {
   "circadianState": "Nama dan fase jam biologis saat ini beserta waktu",
   "circadianAdvice": "Saran pemanfaatan energi dan fokus biologis tubuh saat ini",
@@ -690,39 +906,9 @@ WAJIB hasilkan output HANYA dalam format JSON murni:
 }`;
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const { text, engineName } = await executeUniversalAICall(prompt, { expectJson: true });
+    const parsed = extractJsonFromText(text);
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.4,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      console.warn('Gemini API returned non-ok status, falling back to smart local analysis.');
-      return generateLocalCircadianAnalysis(tasks, userGoal);
-    }
-
-    const data = await response.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!rawText) {
-      return generateLocalCircadianAnalysis(tasks, userGoal);
-    }
-
-    const parsed = JSON.parse(rawText);
     const sortedTasksAnalysis = Array.isArray(parsed.tasksAnalysis)
       ? sortTasksAnalysis(parsed.tasksAnalysis, tasksToAnalyze, todayDateStr)
       : [];
@@ -733,9 +919,21 @@ WAJIB hasilkan output HANYA dalam format JSON murni:
       analyzedAt: now.toISOString(),
       currentTimeFormatted,
       userGoalContext: userGoal || '',
+      engine: 'gemini',
+      engineName,
+      engineStatus: `Dianalisis langsung via ${engineName}`,
+      isGeminiActive: true,
     } as AIAnalysisResult;
-  } catch (err) {
-    console.warn('Error during Gemini API call, falling back to smart local analysis:', err);
-    return generateLocalCircadianAnalysis(tasks, userGoal);
+  } catch (err: any) {
+    console.warn('AI Cloud call failed, falling back to smart local circadian analysis:', err);
+    const fallback = generateLocalCircadianAnalysis(tasks, userGoal);
+    return {
+      ...fallback,
+      engine: 'local',
+      engineName: 'Algoritma Sirkadian Lokal',
+      engineStatus: `Mode Lokal: ${err?.message || 'Koneksi AI tidak terhubung'}`,
+      isGeminiActive: false,
+      errorDetail: err?.message || 'Gagal terhubung ke penyedia AI',
+    };
   }
 };

@@ -128,7 +128,7 @@ export const InboxTaskRow: React.FC<InboxTaskRowProps> = ({ task }) => {
     setIsGeneratingAI(true);
 
     try {
-      const existingSubTitles = task.subTasks.map((st) => st.title);
+      const existingSubTitles = (task.subTasks || []).map((st) => st.title);
       const res = await generateSubTasksAndEstimateWithAI(
         task.title,
         task.description,

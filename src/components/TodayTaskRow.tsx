@@ -127,7 +127,7 @@ export const TodayTaskRow: React.FC<TodayTaskRowProps> = ({ task, slotNumber }) 
     setIsGeneratingAI(true);
 
     try {
-      const existingSubTitles = task.subTasks.map((st) => st.title);
+      const existingSubTitles = (task.subTasks || []).map((st) => st.title);
       const res = await generateSubTasksAndEstimateWithAI(
         task.title,
         task.description,

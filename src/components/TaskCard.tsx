@@ -132,7 +132,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
     setIsGeneratingAI(true);
 
     try {
-      const existingSubTitles = task.subTasks.map((st) => st.title);
+      const existingSubTitles = (task.subTasks || []).map((st) => st.title);
       const res = await generateSubTasksAndEstimateWithAI(
         task.title,
         task.description,
