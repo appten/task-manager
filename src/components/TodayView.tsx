@@ -52,21 +52,9 @@ export const TodayView: React.FC = () => {
         <div className="today-hero-header">
           <div className="today-hero-badge">
             <Sun size={14} className="today-sun-icon" />
-            <span>Fokus Harian (Rule of 5)</span>
+            <span>Fokus Hari Ini</span>
           </div>
-
-          <div className="today-header-right-actions">
-            <span className="today-date-text">{todayFormatted}</span>
-            <button
-              type="button"
-              className="btn-today-history-icon"
-              onClick={() => setIsHistoryOpen(true)}
-              title="Lihat Log Riwayat Today"
-            >
-              <History size={14} />
-              <span>Riwayat</span>
-            </button>
-          </div>
+          <span className="today-date-text">{todayFormatted}</span>
         </div>
 
         <h2 className="today-hero-title">Prioritas Utama Hari Ini</h2>
@@ -115,10 +103,11 @@ export const TodayView: React.FC = () => {
           <button
             type="button"
             className="btn-select-from-inbox"
-            onClick={() => setActiveTab('inbox')}
+            onClick={() => setIsHistoryOpen(true)}
+            title="Buka Log Riwayat Today"
           >
-            <Inbox size={13} />
-            <span>Kelola di Inbox</span>
+            <History size={13} />
+            <span>Riwayat Today</span>
             <ArrowRight size={11} />
           </button>
         </div>

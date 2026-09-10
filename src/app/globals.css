@@ -2418,21 +2418,21 @@ body {
 .timeline-hour-slot {
   display: flex;
   align-items: flex-start;
-  height: 56px;
+  height: 34px;
   box-sizing: border-box;
 }
 
 .timeline-slot-line {
   flex: 1;
   border-top: 1px dashed #e2e8f0;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .timeline-tasks-overlay {
   position: absolute;
   top: 12px;
-  left: 58px;
-  right: 10px;
+  left: 48px;
+  right: 8px;
   bottom: 12px;
   pointer-events: none;
 }
@@ -2448,6 +2448,8 @@ body {
   z-index: 5;
   transition: transform 0.15s ease, box-shadow 0.15s ease, z-index 0.15s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 3px 6px;
+  border-radius: 6px;
 }
 
 .timeline-task-block.continuous-block:hover {
@@ -2457,29 +2459,30 @@ body {
 }
 
 .timeline-task-block.continuous-block.is-shared-col {
-  padding: 4px 6px;
+  padding: 2px 4px;
 }
 
 .timeline-task-block.continuous-block.is-shared-col .timeline-block-title {
-  font-size: 11px;
+  font-size: 10.5px;
 }
 
 .timeline-task-block.continuous-block.is-shared-col .timeline-block-meta {
-  font-size: 9.5px;
-  gap: 3px;
+  font-size: 9px;
+  gap: 2px;
 }
 
 .timeline-time-col {
-  width: 48px;
+  width: 40px;
   flex-shrink: 0;
-  padding-top: 2px;
+  padding-top: 0;
 }
 
 .hour-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: #94a3b8;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .timeline-content-col {
@@ -2585,13 +2588,13 @@ body {
 .timeline-block-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .timeline-mini-checkbox {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
   border: 1.5px solid #94a3b8;
   background: #ffffff;
   display: flex;
@@ -2609,11 +2612,14 @@ body {
 }
 
 .timeline-block-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #0f172a;
-  line-height: 1.3;
+  line-height: 1.2;
   flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .timeline-block-title.checked-title {
@@ -2625,9 +2631,9 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin-top: 3px;
-  margin-left: 20px;
+  gap: 4px;
+  margin-top: 1px;
+  margin-left: 16px;
 }
 
 .block-time-range {
@@ -3898,9 +3904,10 @@ body {
 
 .today-hero-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
 .today-hero-badge {
@@ -3936,8 +3943,8 @@ body {
 }
 
 .today-date-text {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 12px;
+  color: #e2e8f0;
   font-weight: 500;
 }
 
@@ -8105,6 +8112,15 @@ body {
   background: #f8fafc;
 }
 
+/* Kartu Rencana Tindakan: Bagian Segera dengan background merah lembut */
+.ai-task-row.row-segera {
+  background: #fff5f5;
+}
+
+.ai-task-row.row-segera:hover {
+  background: #fee2e2;
+}
+
 .ai-task-row.completed .ai-row-content {
   opacity: 0.6;
 }
@@ -8304,6 +8320,78 @@ body {
   border-radius: 8px;
   align-self: flex-start;
   margin-top: -4px;
+}
+
+/* AI Action Toolbar: Kiri = Timestamp, Kanan = Tombol Perbarui */
+.ai-action-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-top: -6px;
+}
+
+.ai-timestamp-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.ai-timestamp-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ai-timestamp-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.ai-timestamp-value {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+/* AI Goal Impact Badge: Menaik, Datar, Menurun */
+.ai-goal-impact-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1.5px 6px;
+  border-radius: 6px;
+  line-height: 1.2;
+}
+
+.ai-goal-impact-badge.impact-up {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.ai-goal-impact-badge.impact-flat {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.ai-goal-impact-badge.impact-down {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .updated-clock-icon {

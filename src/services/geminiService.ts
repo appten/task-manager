@@ -415,14 +415,33 @@ export const generateLocalCircadianAnalysis = (
       t.effortHours && t.effortHours >= 3 ? 'Tinggi' : t.effortHours && t.effortHours >= 1 ? 'Sedang' : 'Ringan';
     const estimatedDuration = t.estimatedTime || (t.effortHours ? `${t.effortHours} jam` : '30 - 45 menit');
 
-    let goalScore = 70;
-    if (t.priority === 'high') goalScore += 15;
+    // Hitung skor impak task terhadap tujuan/goal pengguna
+    let goalScore = 55;
+    if (userGoal && userGoal.trim()) {
+      const goalWords = userGoal.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+      const taskText = `${t.title} ${t.description || ''} ${t.category || ''}`.toLowerCase();
+      if (goalWords.some((kw) => taskText.includes(kw))) {
+        goalScore += 25;
+      }
+    }
+    if (t.priority === 'high') goalScore += 20;
+    if (t.priority === 'low') goalScore -= 25;
     if (t.isToday) goalScore += 10;
-    if (isRecurring) goalScore += 8;
+    if (isRecurring) goalScore += 5;
     if (t.inboxType === 'kegiatan') goalScore += 5;
-    if (isFutureTask) goalScore -= 15;
+    if (isPastOverdueTask) goalScore -= 25;
+    if (isFutureTask) goalScore -= 10;
     if (timeWindowStatus === 'locked_until_start') goalScore -= 5;
-    goalScore = Math.min(100, Math.max(10, goalScore));
+    goalScore = Math.min(95, Math.max(15, goalScore));
+
+    let goalImpact: 'Mendekatkan' | 'Netral' | 'Menjauhkan' = 'Netral';
+    if (goalScore >= 65) {
+      goalImpact = 'Mendekatkan';
+    } else if (goalScore <= 35) {
+      goalImpact = 'Menjauhkan';
+    } else {
+      goalImpact = 'Netral';
+    }
 
     const typeLabel = t.inboxType === 'kegiatan' ? 'Kegiatan/Acara' : t.inboxType === 'pengingat' ? 'Pengingat' : 'Tugas';
 
@@ -458,7 +477,7 @@ export const generateLocalCircadianAnalysis = (
         ? `Terkunci hingga ${t.startTime}. Alokasikan energi untuk tugas lain saat ini.`
         : `${timeSuitabilityNote} Cocok dengan ritme energi saat ini.`,
       goalAlignmentScore: goalScore,
-      goalImpact: 'Mendekatkan' as const,
+      goalImpact,
       reason,
       recurrence: t.recurrence,
       dateContextLabel,

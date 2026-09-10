@@ -2,28 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTask } from '../context/TaskContext';
-import { TaskCard } from './TaskCard';
-import { ScheduleDiffModal } from './ScheduleDiffModal';
+import { InboxTaskRow } from './InboxTaskRow';
 import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
   Plus,
   Clock,
-  Sparkles,
   Layers,
   Shuffle,
   Check,
   List,
   CalendarDays,
-  AlertCircle,
-  HelpCircle,
-  RotateCcw,
-  Eye,
-  Coffee,
 } from 'lucide-react';
 import { getFormattedDate } from '../data/seedTasks';
-import { Task, ScheduledSession, ScheduleComparisonResult } from '../types/task';
+import { Task } from '../types/task';
 import { timeToMinutes } from '../services/smartScheduler';
 
 const MONTH_NAMES = [
@@ -45,8 +38,8 @@ const WEEKDAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 const TIMELINE_HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 06:00 s/d 22:00
 const TIMELINE_START_HOUR = 6; // 06:00
 const TIMELINE_END_HOUR = 23; // 23:00 (17 hours)
-const HOUR_HEIGHT = 56; // 56px per hour
-const MINUTE_HEIGHT = HOUR_HEIGHT / 60; // ~0.9333 px per minute
+const HOUR_HEIGHT = 34; // 34px per hour (lebih pendek & ringkas)
+const MINUTE_HEIGHT = HOUR_HEIGHT / 60; // ~0.5667 px per minute
 const DAY_START_MIN = TIMELINE_START_HOUR * 60;
 const DAY_END_MIN = TIMELINE_END_HOUR * 60;
 
@@ -167,41 +160,15 @@ export const CalendarView: React.FC = () => {
     setSelectedDate,
     setActiveTab,
     setIsTaskFormOpen,
-    autoScheduleDay,
-    addRecoveryBreak,
     setEditingTask,
     toggleTaskStatus,
-    previewAiSchedule,
-    applyAiSchedule,
-    revertToOriginal,
-    refreshAiSchedule,
-    hasOriginalSnapshot,
-    activeScheduleModes,
     activeScheduleVersion,
     setActiveScheduleVersion,
-    toggleScheduleVersion,
     getTasksForDateAndVersion,
   } = useTask();
 
   const [dailyViewMode, setDailyViewMode] = useState<'timeline' | 'list'>('timeline');
-  const [calendarSpan, setCalendarSpan] = useState<'month' | 'week'>('month');
-  const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
-  const [diffComparison, setDiffComparison] = useState<ScheduleComparisonResult | null>(null);
-
-  const handleOpenDiffModal = () => {
-    const comp = previewAiSchedule(selectedDate);
-    if (comp) {
-      setDiffComparison(comp);
-      setIsDiffModalOpen(true);
-    }
-  };
-
-  const handleRefreshDiff = () => {
-    const fresh = refreshAiSchedule(selectedDate);
-    if (fresh) {
-      setDiffComparison(fresh);
-    }
-  };
+  const [calendarSpan, setCalendarSpan] = useState<'month' | 'week'>('week');
 
   // Current real-time clock for today indicator
   const [nowTime, setNowTime] = useState<Date>(new Date());
@@ -241,11 +208,67 @@ export const CalendarView: React.FC = () => {
     }
   };
 
+  // Helper untuk mendapatkan hari Minggu dari suatu tanggal YYYY-MM-DD
+  const getSundayOfDate = (dateStr: string) => {
+    try {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      const day = date.getDay(); // 0 = Minggu
+      date.setDate(date.getDate() - day);
+      return date;
+    } catch {
+      const now = new Date();
+      now.setDate(now.getDate() - now.getDay());
+      return now;
+    }
+  };
+
+  const handlePrev = () => {
+    if (calendarSpan === 'week') {
+      const baseStr = selectedDate || todayStr;
+      const [y, m, d] = baseStr.split('-').map(Number);
+      const prevDate = new Date(y, m - 1, d - 7);
+      const prevDateStr = formatYMD(prevDate.getFullYear(), prevDate.getMonth(), prevDate.getDate());
+      setSelectedDate(prevDateStr);
+      setCurrentYear(prevDate.getFullYear());
+      setCurrentMonth(prevDate.getMonth());
+    } else {
+      prevMonth();
+    }
+  };
+
+  const handleNext = () => {
+    if (calendarSpan === 'week') {
+      const baseStr = selectedDate || todayStr;
+      const [y, m, d] = baseStr.split('-').map(Number);
+      const nextDate = new Date(y, m - 1, d + 7);
+      const nextDateStr = formatYMD(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate());
+      setSelectedDate(nextDateStr);
+      setCurrentYear(nextDate.getFullYear());
+      setCurrentMonth(nextDate.getMonth());
+    } else {
+      nextMonth();
+    }
+  };
+
   const jumpToToday = () => {
     const now = new Date();
     setCurrentYear(now.getFullYear());
     setCurrentMonth(now.getMonth());
     setSelectedDate(todayStr);
+  };
+
+  const handleSwitchToMonth = () => {
+    if (selectedDate) {
+      const [y, m] = selectedDate.split('-').map(Number);
+      setCurrentYear(y);
+      setCurrentMonth(m - 1);
+    }
+    setCalendarSpan('month');
+  };
+
+  const handleSwitchToWeek = () => {
+    setCalendarSpan('week');
   };
 
   // Build calendar matrix
@@ -291,16 +314,35 @@ export const CalendarView: React.FC = () => {
   // Week vs Month filter
   let displayedDays = calendarDays;
   if (calendarSpan === 'week') {
-    const selectedIdx = calendarDays.findIndex(
-      (c) => formatYMD(c.year, c.month, c.day) === selectedDate
-    );
-    if (selectedIdx !== -1) {
-      const weekStartIdx = Math.floor(selectedIdx / 7) * 7;
-      displayedDays = calendarDays.slice(weekStartIdx, weekStartIdx + 7);
-    } else {
-      displayedDays = calendarDays.slice(0, 7);
+    const sunday = getSundayOfDate(selectedDate || todayStr);
+    const weekList = [];
+    for (let i = 0; i < 7; i++) {
+      const cur = new Date(sunday);
+      cur.setDate(sunday.getDate() + i);
+      weekList.push({
+        day: cur.getDate(),
+        month: cur.getMonth(),
+        year: cur.getFullYear(),
+        isCurrentMonth: true,
+      });
     }
+    displayedDays = weekList;
   }
+
+  const formatWeekTitle = () => {
+    if (calendarSpan !== 'week' || displayedDays.length < 7) {
+      return `${MONTH_NAMES[currentMonth]} ${currentYear}`;
+    }
+    const first = displayedDays[0];
+    const last = displayedDays[6];
+    if (first.month === last.month) {
+      return `${MONTH_NAMES[first.month]} ${first.year}`;
+    }
+    if (first.year === last.year) {
+      return `${MONTH_NAMES[first.month]} - ${MONTH_NAMES[last.month]} ${last.year}`;
+    }
+    return `${MONTH_NAMES[first.month]} ${first.year} - ${MONTH_NAMES[last.month]} ${last.year}`;
+  };
 
   const rawDayTasks = tasks.filter((t) => t.dueDate === selectedDate);
   const tasksForSelectedDate = getTasksForDateAndVersion(selectedDate, activeScheduleVersion);
@@ -420,13 +462,13 @@ export const CalendarView: React.FC = () => {
           <div className="calendar-month-title">
             <CalendarIcon size={18} style={{ color: '#0284c7' }} />
             <span>
-              {MONTH_NAMES[currentMonth]} {currentYear}
+              {calendarSpan === 'week' ? formatWeekTitle() : `${MONTH_NAMES[currentMonth]} ${currentYear}`}
             </span>
             <div className="calendar-span-toggle">
               <button
                 type="button"
                 className={`calendar-span-btn ${calendarSpan === 'month' ? 'active' : ''}`}
-                onClick={() => setCalendarSpan('month')}
+                onClick={handleSwitchToMonth}
                 title="Tampilkan 1 Bulan Penuh"
               >
                 Bulan
@@ -434,7 +476,7 @@ export const CalendarView: React.FC = () => {
               <button
                 type="button"
                 className={`calendar-span-btn ${calendarSpan === 'week' ? 'active' : ''}`}
-                onClick={() => setCalendarSpan('week')}
+                onClick={handleSwitchToWeek}
                 title="Tampilkan 1 Minggu Ringkas"
               >
                 Minggu
@@ -454,18 +496,20 @@ export const CalendarView: React.FC = () => {
             <button
               type="button"
               className="android-icon-btn"
-              onClick={prevMonth}
+              onClick={handlePrev}
               style={{ width: '30px', height: '30px' }}
-              aria-label="Bulan sebelumnya"
+              aria-label={calendarSpan === 'week' ? 'Minggu sebelumnya' : 'Bulan sebelumnya'}
+              title={calendarSpan === 'week' ? 'Minggu sebelumnya' : 'Bulan sebelumnya'}
             >
               <ChevronLeft size={18} />
             </button>
             <button
               type="button"
               className="android-icon-btn"
-              onClick={nextMonth}
+              onClick={handleNext}
               style={{ width: '30px', height: '30px' }}
-              aria-label="Bulan berikutnya"
+              aria-label={calendarSpan === 'week' ? 'Minggu berikutnya' : 'Bulan berikutnya'}
+              title={calendarSpan === 'week' ? 'Minggu berikutnya' : 'Bulan berikutnya'}
             >
               <ChevronRight size={18} />
             </button>
@@ -542,7 +586,19 @@ export const CalendarView: React.FC = () => {
                 {isTodaySelected ? 'Hari Ini' : 'Agenda Tanggal Terpilih'}
               </div>
             </div>
+          </div>
 
+          {/* Baris Kontrol: Mode Tampilan (Timeline vs Daftar) & Switch Versi (Versi Ori vs Versi AI) */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '6px',
+              marginTop: '10px',
+              flexWrap: 'wrap',
+            }}
+          >
             {/* Switch Mode: Timeline vs List */}
             <div className="view-mode-toggle">
               <button
@@ -562,6 +618,30 @@ export const CalendarView: React.FC = () => {
               >
                 <List size={13} />
                 <span>Daftar</span>
+              </button>
+            </div>
+
+            {/* Switch Versi: Versi Ori vs Versi AI */}
+            <div className="parallel-toggle-pills">
+              <button
+                type="button"
+                className={`parallel-toggle-pill ${
+                  activeScheduleVersion === 'ori' ? 'active-ori' : ''
+                }`}
+                onClick={() => setActiveScheduleVersion('ori')}
+                title="Klik 1x untuk beralih ke Versi Ori (Jadwal Manual)"
+              >
+                📋 Versi Ori
+              </button>
+              <button
+                type="button"
+                className={`parallel-toggle-pill ${
+                  activeScheduleVersion === 'ai' ? 'active-ai' : ''
+                }`}
+                onClick={() => setActiveScheduleVersion('ai')}
+                title="Klik 1x untuk beralih ke Versi AI (Jadwal Cerdas AI)"
+              >
+                ⚡ Versi AI
               </button>
             </div>
           </div>
@@ -608,164 +688,6 @@ export const CalendarView: React.FC = () => {
             </div>
           )}
         </div>
-
-        {/* Banner Kontrol Paralel: Versi Ori vs Versi AI (1x Klik Berpindah) */}
-        {(rawDayTasks.length > 0 || tasksForSelectedDate.length > 0) && (
-          <div
-            style={{
-              background:
-                activeScheduleVersion === 'ai'
-                  ? 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)'
-                  : 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-              border: activeScheduleVersion === 'ai' ? '1px solid #bbf7d0' : '1px solid #cbd5e1',
-              borderRadius: '12px',
-              padding: '10px 12px',
-              marginBottom: '12px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-              transition: 'all 0.25s ease',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '8px',
-                flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '3px 8px',
-                    borderRadius: '999px',
-                    background: activeScheduleVersion === 'ai' ? '#dcfce7' : '#e2e8f0',
-                    color: activeScheduleVersion === 'ai' ? '#15803d' : '#334155',
-                    border: `1px solid ${activeScheduleVersion === 'ai' ? '#86efac' : '#cbd5e1'}`,
-                  }}
-                >
-                  {activeScheduleVersion === 'ai' ? (
-                    <>
-                      <Sparkles size={11} /> Versi AI Aktif
-                    </>
-                  ) : (
-                    <>
-                      <List size={11} /> Versi Ori Aktif
-                    </>
-                  )}
-                </span>
-                <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                  {activeScheduleVersion === 'ai'
-                    ? 'Jadwal anti-bentrok + jeda istirahat otomatis'
-                    : 'Jadwal asli sesuai input manual Anda'}
-                </span>
-              </div>
-
-              {/* 1-Click Parallel Version Switcher */}
-              <div className="parallel-toggle-pills">
-                <button
-                  type="button"
-                  className={`parallel-toggle-pill ${
-                    activeScheduleVersion === 'ori' ? 'active-ori' : ''
-                  }`}
-                  onClick={() => setActiveScheduleVersion('ori')}
-                  title="Klik 1x untuk beralih ke Versi Ori (Jadwal Manual)"
-                >
-                  📋 Versi Ori
-                </button>
-                <button
-                  type="button"
-                  className={`parallel-toggle-pill ${
-                    activeScheduleVersion === 'ai' ? 'active-ai' : ''
-                  }`}
-                  onClick={() => setActiveScheduleVersion('ai')}
-                  title="Klik 1x untuk beralih ke Versi AI (Jadwal Cerdas AI)"
-                >
-                  ⚡ Versi AI
-                </button>
-              </div>
-            </div>
-
-            {/* Action Buttons Row */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '6px',
-                flexWrap: 'wrap',
-                paddingTop: '2px',
-              }}
-            >
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{
-                    fontSize: '11px',
-                    padding: '5px 8px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#334155',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onClick={() => addRecoveryBreak(selectedDate, 'lunch', '12:00')}
-                  title="Sisipkan jeda makan siang & istirahat 45 menit"
-                >
-                  <Coffee size={11} />
-                  <span>+ Istirahat</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{
-                    fontSize: '11px',
-                    padding: '5px 8px',
-                    borderRadius: '8px',
-                    border: '1px solid #86efac',
-                    background: '#ffffff',
-                    color: '#166534',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onClick={handleOpenDiffModal}
-                  title="Buka dialog komparasi sebelum (asli) vs sesudah (rekomendasi AI)"
-                >
-                  <Eye size={12} />
-                  <span>Bandingkan Sebelum & Sesudah</span>
-                </button>
-              </div>
-
-              <button
-                type="button"
-                className="ai-schedule-btn"
-                onClick={handleOpenDiffModal}
-                title="Buka detail komparasi dan pengaturan jadwal AI"
-              >
-                <Sparkles size={12} />
-                <span>Analisis AI</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Unscheduled Tasks Alert & Dock */}
         {dailyViewMode === 'timeline' && unscheduledTasks.length > 0 && (
@@ -830,10 +752,10 @@ export const CalendarView: React.FC = () => {
             </button>
           </div>
         ) : dailyViewMode === 'list' ? (
-          /* List Mode */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+          /* List Mode - Unboxed Unified List like Inbox */
+          <div className="inbox-clean-list" style={{ marginTop: '8px' }}>
             {tasksForSelectedDate.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <InboxTaskRow key={task.id} task={task} />
             ))}
           </div>
         ) : (
@@ -878,7 +800,7 @@ export const CalendarView: React.FC = () => {
               {layoutBlocks.map((block, bIdx) => {
                 const originalTask = tasks.find((t) => t.id === block.taskId);
                 const topPx = (block.startMin - DAY_START_MIN) * MINUTE_HEIGHT;
-                const heightPx = Math.max(34, (block.endMin - block.startMin) * MINUTE_HEIGHT - 3);
+                const heightPx = Math.max(26, (block.endMin - block.startMin) * MINUTE_HEIGHT - 2);
 
                 // Overlap calculations for sharing horizontal space
                 const widthPercent = 100 / block.totalCols;
@@ -967,14 +889,6 @@ export const CalendarView: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Dialog Modal Komparasi Sebelum vs Sesudah (Original vs AI) */}
-      <ScheduleDiffModal
-        isOpen={isDiffModalOpen}
-        onClose={() => setIsDiffModalOpen(false)}
-        comparison={diffComparison}
-        onRefresh={handleRefreshDiff}
-      />
     </div>
   );
 };

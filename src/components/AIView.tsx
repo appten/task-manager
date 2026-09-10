@@ -14,6 +14,9 @@ import {
   Activity,
   ArrowRight,
   Star,
+  TrendingUp,
+  TrendingDown,
+  MoveRight,
 } from 'lucide-react';
 
 export const AIView: React.FC = () => {
@@ -83,6 +86,50 @@ export const AIView: React.FC = () => {
   const countSegera = sortedItems.filter((i) => i.urgencyLevel === 'Segera').length;
   const countNanti = sortedItems.filter((i) => i.urgencyLevel === 'Nanti' || i.urgencyLevel === 'Rutin').length;
 
+  // Render Badge Impak Task terhadap Goal Pengguna (Panah Menaik / Datar / Menurun)
+  const renderGoalImpactBadge = (
+    score?: number,
+    impact?: 'Mendekatkan' | 'Netral' | 'Menjauhkan'
+  ) => {
+    if (score === undefined && !impact) return null;
+    const numericScore = score ?? 50;
+    const isUp = impact === 'Mendekatkan' || numericScore >= 65;
+    const isDown = impact === 'Menjauhkan' || numericScore <= 35;
+
+    let displayScore = '';
+    if (isUp) {
+      displayScore = `+${numericScore}%`;
+    } else if (isDown) {
+      displayScore = numericScore <= 0 ? `${numericScore}%` : `-${100 - numericScore}%`;
+    } else {
+      displayScore = `${numericScore}%`;
+    }
+
+    const tooltipText = isUp
+      ? `Mendekatkan ke Goal (${displayScore})`
+      : isDown
+      ? `Menjauhkan dari Goal (${displayScore})`
+      : `Dampak Netral (${displayScore})`;
+
+    return (
+      <span
+        className={`ai-goal-impact-badge ${
+          isUp ? 'impact-up' : isDown ? 'impact-down' : 'impact-flat'
+        }`}
+        title={tooltipText}
+      >
+        {isUp ? (
+          <TrendingUp size={11} strokeWidth={2.5} />
+        ) : isDown ? (
+          <TrendingDown size={11} strokeWidth={2.5} />
+        ) : (
+          <MoveRight size={11} strokeWidth={2.5} />
+        )}
+        <span>{displayScore}</span>
+      </span>
+    );
+  };
+
   return (
     <div className="ai-view-clean-container">
       {/* 1. Header Minimalis & Bersih */}
@@ -98,45 +145,49 @@ export const AIView: React.FC = () => {
             </p>
           </div>
         </div>
+      </div>
 
-        {/* Tombol Utama Analisis */}
+      {/* Toolbar Tindakan: Kiri = Timestamp Terakhir Diperbarui, Kanan = Tombol Perbarui Analisis */}
+      <div className="ai-action-toolbar">
+        <div className="ai-timestamp-box">
+          <Clock size={13} className="updated-clock-icon" />
+          <div className="ai-timestamp-texts">
+            <span className="ai-timestamp-label">Terakhir diperbarui</span>
+            <span className="ai-timestamp-value">
+              {aiAnalysis ? (
+                formatAnalyzedTime(aiAnalysis.analyzedAt) || aiAnalysis.currentTimeFormatted
+              ) : (
+                'Belum ada riwayat'
+              )}
+            </span>
+          </div>
+        </div>
+
         <button
           type="button"
           className="ai-btn-analyze"
           onClick={runTaskAnalysis}
           disabled={isAnalyzingAI}
+          title="Perbarui rekomendasi analisis cerdas"
         >
           {isAnalyzingAI ? (
             <>
-              <Loader2 size={16} className="spin" />
-              <span>Menganalisis Tugas...</span>
+              <Loader2 size={14} className="spin" />
+              <span>Menganalisis...</span>
             </>
           ) : aiAnalysis ? (
             <>
-              <RotateCcw size={16} />
+              <RotateCcw size={14} />
               <span>Perbarui Analisis</span>
             </>
           ) : (
             <>
-              <Sparkles size={16} />
-              <span>Mulai Analisis Cerdas</span>
+              <Sparkles size={14} />
+              <span>Mulai Analisis</span>
             </>
           )}
         </button>
       </div>
-
-      {/* Keterangan Terakhir Kali Diperbarui */}
-      {aiAnalysis && (
-        <div className="ai-last-updated-bar">
-          <Clock size={12} className="updated-clock-icon" />
-          <span>
-            Terakhir kali diperbarui:{' '}
-            <strong>
-              {formatAnalyzedTime(aiAnalysis.analyzedAt) || aiAnalysis.currentTimeFormatted}
-            </strong>
-          </span>
-        </div>
-      )}
 
       {/* 2. Konten Hasil Analisis atau Tampilan Awal (Empty State) */}
       {!aiAnalysis ? (
@@ -201,6 +252,12 @@ export const AIView: React.FC = () => {
                       <Clock size={11} />
                       <span>{formatReadableDate(topTask.dueDate)}</span>
                       {topTask.startTime && <span>• Jam {topTask.startTime}</span>}
+                      {(() => {
+                        const topAnalysis = aiAnalysis?.tasksAnalysis?.find((a) => a.taskId === topTask.id);
+                        return topAnalysis
+                          ? renderGoalImpactBadge(topAnalysis.goalAlignmentScore, topAnalysis.goalImpact)
+                          : null;
+                      })()}
                     </div>
                   )}
                 </div>
@@ -257,7 +314,7 @@ export const AIView: React.FC = () => {
                 return (
                   <div
                     key={item.taskId}
-                    className={`ai-task-row ${isDone ? 'completed' : ''}`}
+                    className={`ai-task-row ${isSegera ? 'row-segera' : ''} ${isDone ? 'completed' : ''}`}
                   >
                     {/* Checkbox */}
                     <button
@@ -301,6 +358,7 @@ export const AIView: React.FC = () => {
                             <Calendar size={11} /> {formatReadableDate(originalTask.dueDate)}
                           </span>
                         )}
+                        {renderGoalImpactBadge(item.goalAlignmentScore, item.goalImpact)}
                       </div>
                     </div>
 
