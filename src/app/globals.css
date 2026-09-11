@@ -8763,6 +8763,36 @@ body {
   line-height: 1.2;
 }
 
+/* AI Source Engine Badges (AI Bawaan, Custom AI, Algoritma Lokal) */
+.ai-source-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1.5px 6px;
+  border-radius: 6px;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.ai-source-badge.source-ai {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.ai-source-badge.source-custom {
+  background: #faf5ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+.ai-source-badge.source-local {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
 /* AI Goal Impact Badge: Menaik, Datar, Menurun */
 .ai-goal-impact-badge {
   display: inline-flex;

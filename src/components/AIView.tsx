@@ -182,13 +182,35 @@ export const AIView: React.FC = () => {
           <Clock size={13} className="updated-clock-icon" />
           <div className="ai-timestamp-texts">
             <span className="ai-timestamp-label">Terakhir diperbarui</span>
-            <span className="ai-timestamp-value">
-              {aiAnalysis ? (
-                formatAnalyzedTime(aiAnalysis.analyzedAt) || aiAnalysis.currentTimeFormatted
-              ) : (
-                'Belum ada riwayat'
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <span className="ai-timestamp-value">
+                {aiAnalysis ? (
+                  formatAnalyzedTime(aiAnalysis.analyzedAt) || aiAnalysis.currentTimeFormatted
+                ) : (
+                  'Belum ada riwayat'
+                )}
+              </span>
+              {aiAnalysis && (
+                <span
+                  className={`ai-source-badge ${
+                    aiAnalysis.engine === 'custom' || aiAnalysis.sourceType === 'custom'
+                      ? 'source-custom'
+                      : aiAnalysis.engine === 'gemini' || aiAnalysis.sourceType === 'ai'
+                      ? 'source-ai'
+                      : 'source-local'
+                  }`}
+                  title={aiAnalysis.engineStatus || aiAnalysis.engineName}
+                >
+                  {aiAnalysis.engine === 'custom' || aiAnalysis.sourceType === 'custom'
+                    ? (aiAnalysis.engineName || 'Custom AI')
+                    : aiAnalysis.engine === 'gemini' || aiAnalysis.sourceType === 'ai'
+                    ? 'AI Bawaan'
+                    : aiAnalysis.isFallback
+                    ? 'Lokal (Fallback)'
+                    : 'Algoritma Lokal'}
+                </span>
               )}
-            </span>
+            </div>
           </div>
         </div>
 

@@ -28,17 +28,17 @@ export const BottomNav: React.FC = () => {
         )}
       </button>
 
-      {/* 2. Menu Kalender (Di kanan Inbox) */}
+      {/* 2. Menu AI (Di kanan Inbox) */}
       <button
         type="button"
-        className={`android-nav-item ${activeTab === 'calendar' ? 'active' : ''}`}
-        onClick={() => setActiveTab('calendar')}
-        aria-label="Menu Kalender"
+        className={`android-nav-item ${activeTab === 'ai' ? 'active' : ''}`}
+        onClick={() => setActiveTab('ai')}
+        aria-label="Menu AI Analisis & Rekomendasi"
       >
-        <div className="nav-icon-wrapper">
-          <CalendarDays size={19} strokeWidth={activeTab === 'calendar' ? 2.4 : 1.8} />
+        <div className="nav-icon-wrapper ai-nav-icon">
+          <Sparkles size={19} strokeWidth={activeTab === 'ai' ? 2.4 : 1.8} />
         </div>
-        <span className="android-nav-label">Kalender</span>
+        <span className="android-nav-label">AI</span>
       </button>
 
       {/* 3. Menu Today (Dibuat Lebih Menonjol di Tengah) */}
@@ -57,20 +57,20 @@ export const BottomNav: React.FC = () => {
         <span className="android-nav-label today-label">Today</span>
       </button>
 
-      {/* 4. Menu AI (Di kanan Today) */}
+      {/* 4. Menu Kalender (Di kanan Today) */}
       <button
         type="button"
-        className={`android-nav-item ${activeTab === 'ai' ? 'active' : ''}`}
-        onClick={() => setActiveTab('ai')}
-        aria-label="Menu AI Analisis & Rekomendasi"
+        className={`android-nav-item ${activeTab === 'calendar' ? 'active' : ''}`}
+        onClick={() => setActiveTab('calendar')}
+        aria-label="Menu Kalender"
       >
-        <div className="nav-icon-wrapper ai-nav-icon">
-          <Sparkles size={19} strokeWidth={activeTab === 'ai' ? 2.4 : 1.8} />
+        <div className="nav-icon-wrapper">
+          <CalendarDays size={19} strokeWidth={activeTab === 'calendar' ? 2.4 : 1.8} />
         </div>
-        <span className="android-nav-label">AI</span>
+        <span className="android-nav-label">Kalender</span>
       </button>
 
-      {/* 5. Menu Akun (Di kanan AI) */}
+      {/* 5. Menu Akun (Di kanan Kalender) */}
       <button
         type="button"
         className={`android-nav-item ${activeTab === 'account' ? 'active' : ''}`}

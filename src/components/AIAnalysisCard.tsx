@@ -77,7 +77,15 @@ export const AIAnalysisCard: React.FC = () => {
             <Clock size={11} />
             <span>{formatTimeAgo()}</span>
             <span style={{ margin: '0 4px' }}>•</span>
-            <span style={{ color: '#0b57d0', fontWeight: 600 }}>Tersimpan di lokal</span>
+            <span style={{ color: '#0b57d0', fontWeight: 600 }}>
+              {aiAnalysis.engine === 'custom' || aiAnalysis.sourceType === 'custom'
+                ? `Custom AI (${aiAnalysis.engineName || 'Kustom'})`
+                : aiAnalysis.engine === 'gemini' || aiAnalysis.sourceType === 'ai'
+                ? 'AI Bawaan'
+                : aiAnalysis.isFallback
+                ? 'Lokal (Fallback)'
+                : 'Algoritma Lokal'}
+            </span>
           </div>
         </div>
 

@@ -165,7 +165,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const syncTabWithUrl = () => {
       const rawPath = window.location.pathname.replace(/^\//, '').split('/')[0];
-      const validTabs: TabType[] = ['inbox', 'calendar', 'today', 'ai', 'account'];
+      const validTabs: TabType[] = ['inbox', 'ai', 'today', 'calendar', 'account'];
       if (validTabs.includes(rawPath as TabType)) {
         setActiveTabState(rawPath as TabType);
       } else if (!rawPath || rawPath === '') {
@@ -875,10 +875,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
       }
 
-      if (result.engine === 'gemini') {
-        showToast('Analisis tugas berhasil diselesaikan! ✨');
+      if (result.engine === 'custom' || result.sourceType === 'custom') {
+        showToast(`Analisis selesai menggunakan Custom AI (${result.engineName || 'Kustom'}) 🤖✨`);
+      } else if (result.engine === 'gemini' || result.sourceType === 'ai') {
+        showToast(`Analisis selesai menggunakan AI Bawaan (${result.engineName || 'Google Gemini'}) ✨`);
+      } else if (result.isFallback) {
+        showToast('Koneksi AI terputus, analisis berhasil dialihkan ke Algoritma Sirkadian Lokal ⚡');
       } else {
-        showToast('Analisis selesai menggunakan Algoritma Sirkadian Lokal ⚡');
+        showToast('Analisis selesai menggunakan Algoritma Sirkadian Lokal (Offline) ⚡');
       }
     } catch (err: any) {
       console.error('Error running AI task analysis:', err);

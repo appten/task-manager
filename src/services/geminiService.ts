@@ -19,7 +19,14 @@ export const STORAGE_CUSTOM_BASE_URL = 'ten_custom_ai_base_url';
 export const STORAGE_CUSTOM_KEY = 'ten_custom_ai_key';
 export const STORAGE_CUSTOM_MODEL = 'ten_custom_ai_model';
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+export const DEFAULT_GEMINI_MODELS = [
+  'gemini-flash-lite-latest',
+  'gemini-3.5-flash-lite',
+  'gemini-flash-latest',
+  'gemini-3.8-flash',
+  'gemini-2.5-flash',
+];
+export const DEFAULT_GEMINI_MODEL = 'gemini-flash-lite-latest';
 
 export const getUniversalAIConfig = (): UniversalAIConfig => {
   if (typeof window === 'undefined') {
@@ -118,6 +125,7 @@ export const executeUniversalAICall = async (
     systemPrompt?: string;
     expectJson?: boolean;
     configOverride?: Partial<UniversalAIConfig>;
+    timeoutMs?: number;
   }
 ): Promise<{ text: string; engineName: string }> => {
   const activeConfig = {
@@ -132,12 +140,13 @@ export const executeUniversalAICall = async (
     throw new Error('Mode Offline Aktif: Seluruh analisis dijalankan via Algoritma Lokal di perangkat.');
   }
 
+  const timeoutMs = options?.timeoutMs ?? 25000;
   const fetchSignal =
     typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
-      ? AbortSignal.timeout(12000)
+      ? AbortSignal.timeout(timeoutMs)
       : undefined;
 
-  // 1. MODE BAWAAN PENGEMBANG (Default Gemini 2.5 Flash)
+  // 1. MODE BAWAAN PENGEMBANG (Default Gemini dengan Auto-Fallback jika 429/503)
   if (activeConfig.mode === 'default') {
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
     if (!apiKey) {
@@ -146,40 +155,57 @@ export const executeUniversalAICall = async (
       );
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_GEMINI_MODEL}:generateContent?key=${apiKey}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: fetchSignal,
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: (options?.systemPrompt ? `${options.systemPrompt}\n\n` : '') + prompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 2048,
-          ...(expectJson ? { responseMimeType: 'application/json' } : {}),
-        },
-      }),
-    });
+    let lastError: any = null;
+    for (const model of DEFAULT_GEMINI_MODELS) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: fetchSignal,
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: (options?.systemPrompt ? `${options.systemPrompt}\n\n` : '') + prompt }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 2048,
+              ...(expectJson ? { responseMimeType: 'application/json' } : {}),
+            },
+          }),
+        });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Google Gemini Error (${res.status}): ${errText.slice(0, 150)}`);
+        if (!res.ok) {
+          const errText = await res.text();
+          if (res.status === 429 || res.status === 503 || res.status === 404) {
+            console.warn(`Model Gemini ${model} (${res.status}), beralih ke fallback model berikutnya...`);
+            lastError = new Error(`Google Gemini Error (${res.status}): ${errText.slice(0, 150)}`);
+            continue;
+          }
+          throw new Error(`Google Gemini Error (${res.status}): ${errText.slice(0, 150)}`);
+        }
+
+        const data = await res.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawText) {
+          throw new Error('Respon dari Google Gemini kosong.');
+        }
+
+        return {
+          text: rawText,
+          engineName: `Google Gemini (${model})`,
+        };
+      } catch (err: any) {
+        if (err.name === 'TimeoutError') {
+          throw err;
+        }
+        lastError = err;
+      }
     }
 
-    const data = await res.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) {
-      throw new Error('Respon dari Google Gemini kosong.');
-    }
-
-    return {
-      text: rawText,
-      engineName: `Google Gemini 2.5 Flash (Bawaan)`,
-    };
+    throw lastError || new Error('Semua model Google Gemini bawaan sedang tidak tersedia.');
   }
 
   // 2. MODE KUSTOM AI SENDIRI
@@ -754,6 +780,8 @@ export const generateLocalCircadianAnalysis = (
     engineName: 'Algoritma Sirkadian Lokal',
     engineStatus: 'Analisis berbasis perhitungan jam biologis lokal (Perangkat)',
     isGeminiActive: false,
+    sourceType: 'local',
+    isFallback: false,
   };
 };
 
@@ -913,16 +941,20 @@ WAJIB hasilkan output HANYA dalam format JSON murni yang ringkas & padat (maksim
       ? sortTasksAnalysis(parsed.tasksAnalysis, tasksToAnalyze, todayDateStr)
       : [];
 
+    const isCustom = activeConfig.mode === 'custom';
+
     return {
       ...parsed,
       tasksAnalysis: sortedTasksAnalysis,
       analyzedAt: now.toISOString(),
       currentTimeFormatted,
       userGoalContext: userGoal || '',
-      engine: 'gemini',
+      engine: isCustom ? 'custom' : 'gemini',
       engineName,
       engineStatus: `Dianalisis langsung via ${engineName}`,
       isGeminiActive: true,
+      sourceType: isCustom ? 'custom' : 'ai',
+      isFallback: false,
     } as AIAnalysisResult;
   } catch (err: any) {
     console.warn('AI Cloud call failed, falling back to smart local circadian analysis:', err);
@@ -934,6 +966,8 @@ WAJIB hasilkan output HANYA dalam format JSON murni yang ringkas & padat (maksim
       engineStatus: `Mode Lokal: ${err?.message || 'Koneksi AI tidak terhubung'}`,
       isGeminiActive: false,
       errorDetail: err?.message || 'Gagal terhubung ke penyedia AI',
+      sourceType: 'local',
+      isFallback: true,
     };
   }
 };
