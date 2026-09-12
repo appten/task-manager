@@ -7,6 +7,7 @@ import {
   getUniversalAIConfig,
   UniversalAIConfig,
 } from '../services/geminiService';
+import { TaskAnalysisItem } from '../types/task';
 import { AISettingsModal } from './AISettingsModal';
 import {
   Sparkles,
@@ -23,6 +24,10 @@ import {
   TrendingDown,
   MoveRight,
   Settings,
+  Scale,
+  ListFilter,
+  X,
+  Info,
 } from 'lucide-react';
 
 export const AIView: React.FC = () => {
@@ -40,6 +45,9 @@ export const AIView: React.FC = () => {
   const [filterLevel, setFilterLevel] = useState<'all' | 'segera' | 'nanti'>('all');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [configInfo, setConfigInfo] = useState<UniversalAIConfig>(getUniversalAIConfig());
+
+  // State Modal Penjelasan Skor Bobot Pengerjaan
+  const [selectedWeightModalItem, setSelectedWeightModalItem] = useState<TaskAnalysisItem | null>(null);
 
   // Perbarui info config saat modal ditutup / disimpan
   const refreshConfig = () => {
@@ -148,17 +156,49 @@ export const AIView: React.FC = () => {
     );
   };
 
+  // Render Chip Skor Bobot Pengerjaan (0 - 100) yang bisa diklik untuk melihat alasan AI
+  const renderWeightScoreBadge = (item?: TaskAnalysisItem) => {
+    if (!item) return null;
+    const score = item.weightScore ?? 50;
+    let colorClass = 'weight-moderate';
+    let levelLabel = 'Sedang';
+
+    if (score >= 75) {
+      colorClass = 'weight-heavy';
+      levelLabel = 'Berat';
+    } else if (score <= 40) {
+      colorClass = 'weight-light';
+      levelLabel = 'Ringan';
+    }
+
+    return (
+      <button
+        type="button"
+        className={`ai-weight-score-btn ${colorClass}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          setSelectedWeightModalItem(item);
+        }}
+        title={`Skor Bobot: ${score}/100 (${levelLabel}) • Klik untuk lihat alasan AI`}
+      >
+        <Scale size={11} className="weight-icon" />
+        <span className="weight-label">Bobot</span>
+        <span className="weight-val">{score}</span>
+      </button>
+    );
+  };
+
   return (
     <div className="ai-view-clean-container">
       {/* 1. Header Bersih dengan Icon Setting di Sebelah Judul */}
       <div className="ai-clean-header">
         <div className="ai-header-lead">
           <div className="ai-sparkle-icon-box">
-            <Sparkles size={18} />
+            <ListFilter size={18} />
           </div>
           <div className="ai-header-texts">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h2 className="ai-clean-title">Asisten Cerdas</h2>
+              <h2 className="ai-clean-title">Pilah Tugas Cerdas</h2>
               <button
                 type="button"
                 className="ai-header-setting-icon-btn"
@@ -170,7 +210,7 @@ export const AIView: React.FC = () => {
               </button>
             </div>
             <p className="ai-clean-subtitle">
-              Saran prioritas dan ritme kerja yang selaras dengan hari Anda.
+              Saran prioritas, keselarasan goal, dan bobot fokus pengerjaan.
             </p>
           </div>
         </div>
@@ -297,19 +337,24 @@ export const AIView: React.FC = () => {
                 </button>
                 <div className="top-focus-info">
                   <span className="top-focus-task-title">{topTask.title}</span>
-                  {topTask.dueDate && (
-                    <div className="top-focus-meta">
-                      <Clock size={11} />
-                      <span>{formatReadableDate(topTask.dueDate)}</span>
-                      {topTask.startTime && <span>• Jam {topTask.startTime}</span>}
-                      {(() => {
-                        const topAnalysis = aiAnalysis?.tasksAnalysis?.find((a) => a.taskId === topTask.id);
-                        return topAnalysis
-                          ? renderGoalImpactBadge(topAnalysis.goalAlignmentScore, topAnalysis.goalImpact)
-                          : null;
-                      })()}
-                    </div>
-                  )}
+                  <div className="top-focus-meta">
+                    {topTask.dueDate && (
+                      <>
+                        <Clock size={11} />
+                        <span>{formatReadableDate(topTask.dueDate)}</span>
+                        {topTask.startTime && <span>• Jam {topTask.startTime}</span>}
+                      </>
+                    )}
+                    {(() => {
+                      const topAnalysis = aiAnalysis?.tasksAnalysis?.find((a) => a.taskId === topTask.id);
+                      return topAnalysis ? (
+                        <>
+                          {renderGoalImpactBadge(topAnalysis.goalAlignmentScore, topAnalysis.goalImpact)}
+                          {renderWeightScoreBadge(topAnalysis)}
+                        </>
+                      ) : null;
+                    })()}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -354,19 +399,19 @@ export const AIView: React.FC = () => {
               </div>
             </div>
 
-            {/* Flat Row List */}
-            <div className="ai-flat-rows-list">
+            {/* List Tugas Hasil Pilahan AI */}
+            <div className="ai-clean-list">
               {displayedItems.map((item) => {
                 const originalTask = tasks.find((t) => t.id === item.taskId);
-                const isDone = originalTask?.isCompleted || false;
+                const isDone = originalTask ? originalTask.isCompleted : false;
                 const isSegera = item.urgencyLevel === 'Segera';
 
                 return (
                   <div
                     key={item.taskId}
-                    className={`ai-task-row ${isSegera ? 'row-segera' : ''} ${isDone ? 'completed' : ''}`}
+                    className={`ai-clean-row ${isDone ? 'is-completed' : ''}`}
                   >
-                    {/* Checkbox */}
+                    {/* Checkbox Lingkaran Minimalis */}
                     <button
                       type="button"
                       className={`inbox-circle-checkbox ${isDone ? 'checked' : ''}`}
@@ -376,7 +421,7 @@ export const AIView: React.FC = () => {
                       {isDone && <Check size={11} strokeWidth={3} />}
                     </button>
 
-                    {/* Info Utama */}
+                    {/* Konten Utama Tugas */}
                     <div className="ai-row-content">
                       <div className="ai-row-title-bar">
                         <span className={`ai-row-title ${isDone ? 'title-done' : ''}`}>
@@ -409,6 +454,7 @@ export const AIView: React.FC = () => {
                           </span>
                         )}
                         {renderGoalImpactBadge(item.goalAlignmentScore, item.goalImpact)}
+                        {renderWeightScoreBadge(item)}
                       </div>
                     </div>
 
@@ -434,6 +480,135 @@ export const AIView: React.FC = () => {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Alasan Skor Bobot Pengerjaan AI */}
+      {selectedWeightModalItem && (
+        <div
+          className="weight-modal-overlay"
+          onClick={() => setSelectedWeightModalItem(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="weight-modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="weight-modal-header">
+              <div className="weight-modal-title-wrap">
+                <div className="weight-modal-icon-badge">
+                  <Scale size={16} />
+                </div>
+                <div>
+                  <h3 className="weight-modal-title">Bobot Pengerjaan AI</h3>
+                  <span className="weight-modal-subtitle">
+                    Analisis beban fokus, urgensi, dan kompleksitas tugas
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="weight-modal-close-btn"
+                onClick={() => setSelectedWeightModalItem(null)}
+                title="Tutup dialog"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="weight-modal-body">
+              {/* Nama Tugas */}
+              <div className="weight-modal-task-name">
+                <span className="weight-modal-task-label">Tugas Terpilih</span>
+                <p className="weight-modal-task-text">{selectedWeightModalItem.taskTitle}</p>
+              </div>
+
+              {/* Skor Bobot Hero Card */}
+              {(() => {
+                const score = selectedWeightModalItem.weightScore ?? 50;
+                let level = 'Sedang';
+                let levelDesc = 'Memerlukan konsentrasi dan waktu pengerjaan standar.';
+                let colorClass = 'weight-moderate';
+                if (score >= 75) {
+                  level = 'Beban Berat / Fokus Utama';
+                  levelDesc = 'Menuntut energi mental dan fokus terbaik Anda.';
+                  colorClass = 'weight-heavy';
+                } else if (score <= 40) {
+                  level = 'Beban Ringan / Santai';
+                  levelDesc = 'Dapat diselesaikan cepat dengan sedikit beban kognitif.';
+                  colorClass = 'weight-light';
+                }
+
+                return (
+                  <div className={`weight-score-hero-card ${colorClass}`}>
+                    <div className="weight-hero-score-row">
+                      <div className="weight-hero-number-wrap">
+                        <span className="weight-hero-big-number">{score}</span>
+                        <span className="weight-hero-denom">/ 100</span>
+                      </div>
+                      <span className={`weight-hero-badge ${colorClass}`}>
+                        {level}
+                      </span>
+                    </div>
+
+                    {/* Visual Meter Bar */}
+                    <div className="weight-meter-bar-track">
+                      <div
+                        className={`weight-meter-bar-fill ${colorClass}`}
+                        style={{ width: `${Math.min(Math.max(score, 6), 100)}%` }}
+                      />
+                    </div>
+                    <p className="weight-hero-desc">{levelDesc}</p>
+                  </div>
+                );
+              })()}
+
+              {/* Alasan AI Memberikan Skor Ini */}
+              <div className="weight-reason-section">
+                <div className="weight-reason-label-row">
+                  <Sparkles size={13} className="text-amber" />
+                  <span className="weight-reason-title">Alasan AI Memberikan Skor:</span>
+                </div>
+                <div className="weight-reason-callout">
+                  <p className="weight-reason-text">
+                    {selectedWeightModalItem.weightReason ||
+                      selectedWeightModalItem.reason ||
+                      'Skor bobot dihitung berdasarkan estimasi kompleksitas pengerjaan, urgensi batas waktu, serta signifikansi dampaknya terhadap pencapaian tujuan.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Atribut Rincian Pendukung */}
+              <div className="weight-attributes-grid">
+                <div className="weight-attr-card">
+                  <span className="weight-attr-label">Tingkat Urgensi</span>
+                  <span className="weight-attr-val">{selectedWeightModalItem.urgencyLevel || 'Normal'}</span>
+                </div>
+                <div className="weight-attr-card">
+                  <span className="weight-attr-label">Estimasi Waktu</span>
+                  <span className="weight-attr-val">{selectedWeightModalItem.estimatedDuration || 'Fleksibel'}</span>
+                </div>
+                <div className="weight-attr-card">
+                  <span className="weight-attr-label">Kesesuaian Goal</span>
+                  <span className="weight-attr-val">
+                    {selectedWeightModalItem.goalAlignmentScore !== undefined
+                      ? `${selectedWeightModalItem.goalAlignmentScore}%`
+                      : 'Netral'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tombol Aksi Tutup */}
+              <button
+                type="button"
+                className="weight-modal-action-btn"
+                onClick={() => setSelectedWeightModalItem(null)}
+              >
+                Mengerti
+              </button>
             </div>
           </div>
         </div>

@@ -3,19 +3,21 @@
 import React, { useState } from 'react';
 import { useTask } from '../context/TaskContext';
 import { InboxTaskRow } from './InboxTaskRow';
-import { TaskForm } from './TaskForm';
+import { TaskFormModal } from './TaskFormModal';
+import { RelationshipRolesCard } from './RelationshipRolesCard';
 import { InboxType } from '../types/task';
 import {
   Search,
   Plus,
   X,
   ClipboardCheck,
-  Inbox as InboxIcon,
   CheckSquare,
   Calendar,
   Bell,
   SlidersHorizontal,
   Clock,
+  Inbox as InboxIcon,
+  Users,
 } from 'lucide-react';
 
 export const InboxView: React.FC = () => {
@@ -28,6 +30,12 @@ export const InboxView: React.FC = () => {
     addTask,
     showToast,
   } = useTask();
+
+  // State sub-tab di Inbox: 'inbox' (default) atau 'pengingat' (Fitur Peran)
+  const [inboxTab, setInboxTab] = useState<'inbox' | 'pengingat'>('inbox');
+
+  // State untuk Relasi yang sedang dibuka form-nya
+  const [selectedRelForModal, setSelectedRelForModal] = useState<string | undefined>(undefined);
 
   // Quick Add State
   const [quickTitle, setQuickTitle] = useState('');
@@ -123,77 +131,51 @@ export const InboxView: React.FC = () => {
 
   return (
     <div className="inbox-view-container">
-      {/* 1. Header Minimalis & Bersih */}
-      <div className="inbox-clean-header">
-        <div className="inbox-header-title-group">
-          <div className="inbox-icon-accent">
-            <InboxIcon size={18} />
-          </div>
-          <div>
-            <h1 className="inbox-main-title">Inbox</h1>
-            <p className="inbox-count-caption">
-              {activeCount} aktif {totalCount > activeCount ? `• ${totalCount - activeCount} selesai` : ''}
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className={`btn-toggle-detail-form ${isTaskFormOpen ? 'open' : ''}`}
-          onClick={() => setIsTaskFormOpen(!isTaskFormOpen)}
-          title={isTaskFormOpen ? 'Tutup Form Lengkap' : 'Buka Form dengan opsi detail & AI'}
-        >
-          {isTaskFormOpen ? (
-            <>
-              <X size={14} />
-              <span>Tutup Form</span>
-            </>
-          ) : (
-            <>
-              <SlidersHorizontal size={13} />
-              <span>Form Lengkap</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Form Lengkap Tambah Tugas (Opsional / Terbuka jika user butuh setting mendalam) */}
-      {isTaskFormOpen && (
-        <div className="inbox-form-wrapper">
-          <TaskForm />
-        </div>
-      )}
-
-      {/* 2. Quick-Add Bar (Cepat, Minimalis, Tanpa Distraksi) */}
+      {/* 1. Quick-Add Bar (Cepat, Minimalis, Tanpa Distraksi) */}
       <form onSubmit={handleQuickAdd} className="inbox-quick-add-bar">
-        {/* Type Selector Dropdown / Pill Toggle */}
-        <div className="quick-type-selector">
+        {/* Baris Atas: Kategori (Tugas, Acara, Pengingat) & Form Lengkap di kanan atas tombol + */}
+        <div className="quick-add-header-row">
+          <div className="quick-type-selector">
+            <button
+              type="button"
+              className={`type-chip ${quickType === 'tugas' ? 'selected' : ''}`}
+              onClick={() => setQuickType('tugas')}
+              title="Kategori: Tugas"
+            >
+              <CheckSquare size={12} />
+              <span>Tugas</span>
+            </button>
+            <button
+              type="button"
+              className={`type-chip ${quickType === 'kegiatan' ? 'selected' : ''}`}
+              onClick={() => setQuickType('kegiatan')}
+              title="Kategori: Acara / Kegiatan"
+            >
+              <Calendar size={12} />
+              <span>Acara</span>
+            </button>
+            <button
+              type="button"
+              className={`type-chip ${quickType === 'pengingat' ? 'selected' : ''}`}
+              onClick={() => setQuickType('pengingat')}
+              title="Kategori: Pengingat"
+            >
+              <Bell size={12} />
+              <span>Pengingat</span>
+            </button>
+          </div>
+
           <button
             type="button"
-            className={`type-chip ${quickType === 'tugas' ? 'selected' : ''}`}
-            onClick={() => setQuickType('tugas')}
-            title="Kategori: Tugas"
+            className="btn-toggle-detail-form"
+            onClick={() => {
+              setSelectedRelForModal(undefined);
+              setIsTaskFormOpen(true);
+            }}
+            title="Buka Form Lengkap dalam Dialog Modal"
           >
-            <CheckSquare size={12} />
-            <span>Tugas</span>
-          </button>
-          <button
-            type="button"
-            className={`type-chip ${quickType === 'kegiatan' ? 'selected' : ''}`}
-            onClick={() => setQuickType('kegiatan')}
-            title="Kategori: Acara / Kegiatan"
-          >
-            <Calendar size={12} />
-            <span>Acara</span>
-          </button>
-          <button
-            type="button"
-            className={`type-chip ${quickType === 'pengingat' ? 'selected' : ''}`}
-            onClick={() => setQuickType('pengingat')}
-            title="Kategori: Pengingat"
-          >
-            <Bell size={12} />
-            <span>Pengingat</span>
+            <SlidersHorizontal size={11} />
+            <span>Form Lengkap</span>
           </button>
         </div>
 
@@ -261,93 +243,142 @@ export const InboxView: React.FC = () => {
         )}
       </form>
 
-      {/* 3. Baris Pencarian & Filter Cepat (Clean & Subtle) */}
-      <div className="inbox-controls-bar">
-        {/* Search Input Bersih */}
-        <div className="inbox-clean-search">
-          <Search size={15} className="search-icon" />
-          <input
-            type="text"
-            className="clean-search-input"
-            placeholder="Cari item di inbox..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              className="btn-clear-search"
-              onClick={() => setSearchQuery('')}
-            >
-              Batal
-            </button>
-          )}
-        </div>
+      {/* 2. Dua Tab Navigasi di bawah Quick Input: Tab Inbox & Tab Pengingat (Fitur Peran) */}
+      <div className="inbox-subtabs-bar">
+        <button
+          type="button"
+          className={`inbox-subtab-btn ${inboxTab === 'inbox' ? 'active' : ''}`}
+          onClick={() => setInboxTab('inbox')}
+          title="Tampilkan daftar tugas Inbox"
+        >
+          <InboxIcon size={14} />
+          <span>Inbox</span>
+          <span className="inbox-subtab-badge">{activeCount}</span>
+        </button>
 
-        {/* Filter Chips Sederhana */}
-        <div className="inbox-filter-chips">
-          <button
-            type="button"
-            className={`chip-item ${typeFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setTypeFilter('all')}
-          >
-            Semua ({activeCount})
-          </button>
-          <button
-            type="button"
-            className={`chip-item ${typeFilter === 'tugas' ? 'active' : ''}`}
-            onClick={() => setTypeFilter('tugas')}
-          >
-            Tugas ({tugasCount})
-          </button>
-          <button
-            type="button"
-            className={`chip-item ${typeFilter === 'kegiatan' ? 'active' : ''}`}
-            onClick={() => setTypeFilter('kegiatan')}
-          >
-            Acara ({acaraCount})
-          </button>
-          <button
-            type="button"
-            className={`chip-item ${typeFilter === 'pengingat' ? 'active' : ''}`}
-            onClick={() => setTypeFilter('pengingat')}
-          >
-            Pengingat ({pengingatCount})
-          </button>
-        </div>
+        <button
+          type="button"
+          className={`inbox-subtab-btn ${inboxTab === 'pengingat' ? 'active' : ''}`}
+          onClick={() => setInboxTab('pengingat')}
+          title="Pengingat Peran & Jaga Hubungan"
+        >
+          <Users size={14} />
+          <span>Pengingat</span>
+          <span className="inbox-subtab-badge beta">Beta</span>
+        </button>
       </div>
 
-      {/* 4. List Tugas / Inbox (Unboxed Minimalist List) */}
-      {filteredTasks.length > 0 ? (
-        <div className="inbox-clean-list">
-          {filteredTasks.map((task) => (
-            <InboxTaskRow key={task.id} task={task} />
-          ))}
-        </div>
+      {/* 3. Modal Form Lengkap (Muncul sebagai dialog modal yang nyaman) */}
+      <TaskFormModal
+        isOpen={isTaskFormOpen}
+        onClose={() => {
+          setIsTaskFormOpen(false);
+          setSelectedRelForModal(undefined);
+        }}
+        defaultRelationshipId={selectedRelForModal}
+      />
+
+      {/* 4. Konten berdasarkan Tab Aktif */}
+      {inboxTab === 'pengingat' ? (
+        /* Tab Pengingat: Fitur Peran & Jaga Hubungan (Maksimal 1 Tugas Aktif per Hubungan) */
+        <RelationshipRolesCard
+          onOpenFormForRole={(relId) => {
+            setSelectedRelForModal(relId);
+            setIsTaskFormOpen(true);
+          }}
+        />
       ) : (
-        <div className="inbox-empty-card">
-          <div className="empty-icon-bubble">
-            <ClipboardCheck size={26} />
+        /* Tab Inbox: Kontrol Pencarian, Filter Chips, & List Tugas Inbox */
+        <>
+          {/* Baris Pencarian & Filter Cepat (Clean & Subtle) */}
+          <div className="inbox-controls-bar">
+            {/* Search Input Bersih */}
+            <div className="inbox-clean-search">
+              <Search size={15} className="search-icon" />
+              <input
+                type="text"
+                className="clean-search-input"
+                placeholder="Cari item di inbox..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="btn-clear-search"
+                  onClick={() => setSearchQuery('')}
+                >
+                  Batal
+                </button>
+              )}
+            </div>
+
+            {/* Filter Chips Sederhana */}
+            <div className="inbox-filter-chips">
+              <button
+                type="button"
+                className={`chip-item ${typeFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setTypeFilter('all')}
+              >
+                Semua ({activeCount})
+              </button>
+              <button
+                type="button"
+                className={`chip-item ${typeFilter === 'tugas' ? 'active' : ''}`}
+                onClick={() => setTypeFilter('tugas')}
+              >
+                Tugas ({tugasCount})
+              </button>
+              <button
+                type="button"
+                className={`chip-item ${typeFilter === 'kegiatan' ? 'active' : ''}`}
+                onClick={() => setTypeFilter('kegiatan')}
+              >
+                Acara ({acaraCount})
+              </button>
+              <button
+                type="button"
+                className={`chip-item ${typeFilter === 'pengingat' ? 'active' : ''}`}
+                onClick={() => setTypeFilter('pengingat')}
+              >
+                Pengingat ({pengingatCount})
+              </button>
+            </div>
           </div>
-          <h3 className="empty-title">
-            {searchQuery
-              ? 'Item Tidak Ditemukan'
-              : typeFilter !== 'all'
-              ? `Tidak ada item ${typeFilter} aktif`
-              : activeCount === 0 && totalCount > 0
-              ? 'Semua Selesai! 🎉'
-              : 'Inbox Bersih & Rapi'}
-          </h3>
-          <p className="empty-description">
-            {searchQuery
-              ? `Tidak ditemukan item yang cocok dengan "${searchQuery}".`
-              : typeFilter !== 'all'
-              ? `Belum ada item aktif untuk filter ini.`
-              : activeCount === 0 && totalCount > 0
-              ? 'Seluruh item aktif telah dituntaskan dan tersimpan rapi di Riwayat.'
-              : 'Ketik ide, tugas, atau acara pada kolom di atas untuk langsung mencatat ke Inbox.'}
-          </p>
-        </div>
+
+          {/* List Tugas / Inbox (Unboxed Minimalist List) */}
+          {filteredTasks.length > 0 ? (
+            <div className="inbox-clean-list">
+              {filteredTasks.map((task) => (
+                <InboxTaskRow key={task.id} task={task} />
+              ))}
+            </div>
+          ) : (
+            <div className="inbox-empty-card">
+              <div className="empty-icon-bubble">
+                <ClipboardCheck size={26} />
+              </div>
+              <h3 className="empty-title">
+                {searchQuery
+                  ? 'Item Tidak Ditemukan'
+                  : typeFilter !== 'all'
+                  ? `Tidak ada item ${typeFilter} aktif`
+                  : activeCount === 0 && totalCount > 0
+                  ? 'Semua Selesai! 🎉'
+                  : 'Inbox Bersih & Rapi'}
+              </h3>
+              <p className="empty-description">
+                {searchQuery
+                  ? `Tidak ditemukan item yang cocok dengan "${searchQuery}".`
+                  : typeFilter !== 'all'
+                  ? `Belum ada item aktif untuk filter ini.`
+                  : activeCount === 0 && totalCount > 0
+                  ? 'Seluruh item aktif telah dituntaskan dan tersimpan rapi di Riwayat.'
+                  : 'Ketik ide, tugas, atau acara pada kolom di atas untuk langsung mencatat ke Inbox.'}
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

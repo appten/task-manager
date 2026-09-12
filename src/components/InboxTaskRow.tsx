@@ -24,6 +24,7 @@ import {
   Play,
   Pause,
   Square,
+  HeartHandshake,
 } from 'lucide-react';
 
 interface InboxTaskRowProps {
@@ -254,6 +255,14 @@ export const InboxTaskRow: React.FC<InboxTaskRowProps> = ({ task }) => {
                     ? 'Mingguan'
                     : 'Bulanan'}
                 </span>
+              </span>
+            )}
+
+            {/* Indikator Peran & Hubungan */}
+            {task.relationshipName && (
+              <span className="inbox-meta-badge relasi" title={`Peran / Relasi: ${task.relationshipName}`}>
+                <HeartHandshake size={10} />
+                <span>{task.relationshipName}</span>
               </span>
             )}
 

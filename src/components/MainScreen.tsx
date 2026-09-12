@@ -39,7 +39,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ initialTab }) => {
       <main className="app-screen">
         <div className="scrollable-content">
           {activeTab === 'inbox' && <InboxView />}
-          {activeTab === 'ai' && <AIView />}
+          {(activeTab === 'pilah' || activeTab === 'ai') && <AIView />}
           {activeTab === 'today' && <TodayView />}
           {activeTab === 'calendar' && <CalendarView />}
           {activeTab === 'account' && <AccountView />}

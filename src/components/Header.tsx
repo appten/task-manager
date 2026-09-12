@@ -29,9 +29,10 @@ export const Header: React.FC = () => {
           title: 'Kalender & Jadwal',
           subtitle: 'Alokasi waktu & agenda harian',
         };
+      case 'pilah':
       case 'ai':
         return {
-          title: 'AI Productivity Suite',
+          title: 'Pilah Tugas',
           subtitle: 'Analisis beban & ritme sirkadian',
         };
       case 'account':

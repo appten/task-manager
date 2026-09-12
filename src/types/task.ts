@@ -1,6 +1,6 @@
 export type Priority = 'low' | 'medium' | 'high';
 
-export type Category = 'Pekerjaan' | 'Pribadi' | 'Belajar' | 'Kesehatan' | 'Istirahat' | 'Lainnya';
+export type Category = 'Pekerjaan' | 'Pribadi' | 'Belajar' | 'Kesehatan' | 'Istirahat' | 'Relasi' | 'Lainnya';
 
 export type InboxType = 'kegiatan' | 'tugas' | 'pengingat';
 
@@ -68,6 +68,10 @@ export interface Task {
   isTimerRunning?: boolean; // Penanda stopwatch sedang aktif berjalan
   timerStartedAt?: string; // Timestamp ISO saat timer sesi aktif dimulai
 
+  // Fitur Peran & Hubungan (Nurture Relationships - Maksimal 1 Tugas Aktif per Relasi)
+  relationshipRole?: string; // ID relasi (e.g. 'pasangan', 'keluarga', dll)
+  relationshipName?: string; // Nama relasi / orang (e.g. 'Pasangan Hidup', 'Orang Tua')
+
   priority: Priority;
   category: Category;
   isCompleted: boolean;
@@ -76,7 +80,17 @@ export interface Task {
   createdAt: string;
 }
 
-export type TabType = 'inbox' | 'calendar' | 'today' | 'ai' | 'account';
+export interface LifeRelationship {
+  id: string;
+  roleName: string; // e.g. "Pasangan Hidup", "Orang Tua", "Anak", "Sahabat", "Rekan Tim"
+  personName?: string; // e.g. "Istri", "Mama", "Budi"
+  iconType: 'heart' | 'home' | 'users' | 'briefcase' | 'smile' | 'star';
+  color: string; // Hex color for theme badge
+  description?: string; // Deskripsi komitmen peran
+  suggestedTasks?: string[]; // Rekomendasi aktivitas pemantik
+}
+
+export type TabType = 'inbox' | 'calendar' | 'today' | 'ai' | 'pilah' | 'account';
 
 export type FilterStatus = 'all' | 'active' | 'completed';
 
@@ -93,6 +107,8 @@ export interface TaskAnalysisItem {
   biologicalFit: string;
   goalAlignmentScore?: number; // Skor -100 s/d 100
   goalImpact?: 'Mendekatkan' | 'Netral' | 'Menjauhkan';
+  weightScore?: number; // Skor bobot pengerjaan (rentang 0 s/d 100)
+  weightReason?: string; // Alasan AI memberikan skor bobot pengerjaan
   reason: string;
   recurrence?: RecurrenceType;
   dateContextLabel?: string;

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTask } from '../context/TaskContext';
-import { Inbox, Sun, CalendarDays, Sparkles, User, Star } from 'lucide-react';
+import { Inbox, Sun, CalendarDays, ListFilter, User, Star } from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
   const { activeTab, setActiveTab, tasks, todayTasks } = useTask();
@@ -28,7 +28,20 @@ export const BottomNav: React.FC = () => {
         )}
       </button>
 
-      {/* 2. Menu AI (Di kanan Inbox) */}
+      {/* 2. Menu Pilah (Menggantikan menu AI, menu AI di-hide sementara) */}
+      <button
+        type="button"
+        className={`android-nav-item ${activeTab === 'pilah' ? 'active' : ''}`}
+        onClick={() => setActiveTab('pilah')}
+        aria-label="Menu Pilah Tugas & Rekomendasi"
+      >
+        <div className="nav-icon-wrapper pilah-nav-icon">
+          <ListFilter size={19} strokeWidth={activeTab === 'pilah' ? 2.4 : 1.8} />
+        </div>
+        <span className="android-nav-label">Pilah</span>
+      </button>
+
+      {/* Menu AI di-hide sementara:
       <button
         type="button"
         className={`android-nav-item ${activeTab === 'ai' ? 'active' : ''}`}
@@ -40,6 +53,7 @@ export const BottomNav: React.FC = () => {
         </div>
         <span className="android-nav-label">AI</span>
       </button>
+      */}
 
       {/* 3. Menu Today (Dibuat Lebih Menonjol di Tengah) */}
       <button

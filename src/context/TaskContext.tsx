@@ -9,8 +9,10 @@ import {
   AIAnalysisResult,
   ScheduleComparisonResult,
   RecurrenceType,
+  LifeRelationship,
 } from '../types/task';
 import { INITIAL_TASKS, getFormattedDate } from '../data/seedTasks';
+import { DEFAULT_RELATIONSHIPS } from '../data/seedRelationships';
 import { analyzeTasksWithCircadianAI } from '../services/geminiService';
 import {
   scheduleDailyTasksSmartly,
@@ -18,6 +20,7 @@ import {
   compareSchedules,
 } from '../services/smartScheduler';
 import { cloudSyncService, UserProfile } from '../services/cloudSyncService';
+import { useSession, signOut as nextAuthSignOut } from 'next-auth/react';
 
 interface TaskContextType {
   // Cloudflare KV Sync & User Account (Opsional)
@@ -29,6 +32,7 @@ interface TaskContextType {
   registerUser: (name: string, email: string, password: string, mergeLocalData?: boolean, recoveryPin?: string) => Promise<{ success: boolean; error?: string }>;
   logoutUser: (clearLocalTasks?: boolean) => void;
   triggerCloudSync: () => Promise<boolean>;
+  syncLocalTasksToKV: (mode?: 'merge' | 'push_local' | 'pull_cloud') => Promise<{ success: boolean; count?: number; message?: string }>;
   toggleAutoSync: () => void;
   verifyRecoveryPin: (email: string, recoveryPin: string) => Promise<{ success: boolean; name?: string; error?: string }>;
   resetPasswordUser: (email: string, recoveryPin: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
@@ -62,6 +66,19 @@ interface TaskContextType {
   isHistoryModalOpen: boolean;
   setIsHistoryModalOpen: (open: boolean) => void;
   clearAllCompletedTasks: () => void;
+
+  // Fitur Peran & Jaga Hubungan (Maks 1 Aktivitas Aktif per Relasi)
+  relationships: LifeRelationship[];
+  addRelationship: (rel: Omit<LifeRelationship, 'id'>) => void;
+  updateRelationship: (rel: LifeRelationship) => void;
+  deleteRelationship: (id: string) => void;
+  getActiveTaskForRelationship: (relId: string) => Task | undefined;
+  addTaskForRelationship: (
+    relId: string,
+    taskTitle: string,
+    dueDate?: string,
+    dueTime?: string
+  ) => { success: boolean; error?: string };
 
   // Fitur Perekaman Waktu Pengerjaan / Stopwatch Aktivitas
   startTaskTimer: (taskId: string) => void;
@@ -119,6 +136,7 @@ const STORAGE_ANALYSIS_KEY = 'ten_my_id_ai_analysis_v01';
 const STORAGE_GOAL_KEY = 'ten_my_id_user_goal_v01';
 const STORAGE_ORIGINAL_KEY = 'ten_my_id_original_schedules_v01';
 const STORAGE_VERSION_KEY = 'ten_my_id_active_schedule_version_v01';
+const STORAGE_RELATIONSHIPS_KEY = 'ten_my_id_relationships_v01';
 
 const DEFAULT_LIFE_GOAL = 'Merilis produk digital berdampak, menjaga kesehatan fisik prima, dan mandiri finansial di tahun 2026';
 
@@ -165,8 +183,11 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const syncTabWithUrl = () => {
       const rawPath = window.location.pathname.replace(/^\//, '').split('/')[0];
-      const validTabs: TabType[] = ['inbox', 'ai', 'today', 'calendar', 'account'];
-      if (validTabs.includes(rawPath as TabType)) {
+      const validTabs: TabType[] = ['inbox', 'pilah', 'today', 'calendar', 'account', 'ai'];
+      if (rawPath === 'ai') {
+        setActiveTabState('pilah');
+        window.history.replaceState(null, '', '/pilah');
+      } else if (validTabs.includes(rawPath as TabType)) {
         setActiveTabState(rawPath as TabType);
       } else if (!rawPath || rawPath === '') {
         setActiveTabState('inbox');
@@ -192,6 +213,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
+  // State Peran & Jaga Hubungan (Maks 1 Tugas Aktif per Relasi)
+  const [relationships, setRelationships] = useState<LifeRelationship[]>(DEFAULT_RELATIONSHIPS);
 
   // State Pengaturan Goal Hidup & Personalisasi
   const [userGoal, setUserGoal] = useState<string>(DEFAULT_LIFE_GOAL);
@@ -306,6 +330,17 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (savedAutoSync !== null) {
         setIsAutoSyncEnabled(savedAutoSync === 'true');
       }
+
+      // Load saved Life Relationships
+      const savedRel = localStorage.getItem(STORAGE_RELATIONSHIPS_KEY);
+      if (savedRel) {
+        try {
+          const parsed = JSON.parse(savedRel);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setRelationships(parsed);
+          }
+        } catch {}
+      }
     } catch (e) {
       console.warn('Gagal membaca localStorage, menggunakan data seed:', e);
       setTasks(INITIAL_TASKS);
@@ -313,6 +348,41 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsHydrated(true);
     }
   }, []);
+
+  // Sinkronisasi sesi NextAuth (SSO TEN) dengan currentUser aplikasi
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    if (session?.user) {
+      const userImage = (session.user as any).image || (session.user as any).picture || undefined;
+      const ssoUser: UserProfile = {
+        id: session.user.id,
+        name: session.user.name || 'Pengguna TEN',
+        email: session.user.email || '',
+        username: session.user.username,
+        avatar: userImage,
+        role: (session.user.role === 'admin' ? 'admin' : 'user') as any,
+        authProvider: 'ten-sso',
+        createdAt: new Date().toISOString(),
+      };
+
+      setCurrentUser((prev) => {
+        if (
+          prev &&
+          prev.authProvider === 'ten-sso' &&
+          prev.email === ssoUser.email &&
+          prev.name === ssoUser.name &&
+          prev.username === ssoUser.username
+        ) {
+          return prev;
+        }
+        try {
+          localStorage.setItem('ten_my_id_user_v01', JSON.stringify(ssoUser));
+        } catch {}
+        return ssoUser;
+      });
+    }
+  }, [session]);
 
   // Auto-sync debounced ke Task_KV ketika tasks berubah jika currentUser & isAutoSyncEnabled aktif
   useEffect(() => {
@@ -622,6 +692,103 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
     showToast('Hitungan waktu aktivitas di-reset ke 0');
   }, [showToast]);
+
+  // Kelola Peran & Relasi (Maksimal 1 Tugas Aktif per Relasi)
+  const saveRelationships = useCallback((updated: LifeRelationship[]) => {
+    setRelationships(updated);
+    try {
+      localStorage.setItem(STORAGE_RELATIONSHIPS_KEY, JSON.stringify(updated));
+    } catch {}
+  }, []);
+
+  const addRelationship = useCallback(
+    (relData: Omit<LifeRelationship, 'id'>) => {
+      const newRel: LifeRelationship = {
+        ...relData,
+        id: `rel-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
+      };
+      saveRelationships([...relationships, newRel]);
+      showToast(`Peran/relasi "${newRel.roleName}" berhasil ditambahkan! 🤝`);
+    },
+    [relationships, saveRelationships, showToast]
+  );
+
+  const updateRelationship = useCallback(
+    (updated: LifeRelationship) => {
+      const next = relationships.map((r) => (r.id === updated.id ? updated : r));
+      saveRelationships(next);
+      showToast(`Peran/relasi "${updated.roleName}" diperbarui!`);
+    },
+    [relationships, saveRelationships, showToast]
+  );
+
+  const deleteRelationship = useCallback(
+    (id: string) => {
+      const next = relationships.filter((r) => r.id !== id);
+      saveRelationships(next);
+      showToast('Peran/relasi telah dihapus.');
+    },
+    [relationships, saveRelationships, showToast]
+  );
+
+  const getActiveTaskForRelationship = useCallback(
+    (relId: string): Task | undefined => {
+      return tasks.find((t) => !t.isCompleted && t.relationshipRole === relId);
+    },
+    [tasks]
+  );
+
+  const addTaskForRelationship = useCallback(
+    (
+      relId: string,
+      taskTitle: string,
+      dueDate?: string,
+      dueTime?: string
+    ): { success: boolean; error?: string } => {
+      const targetRel = relationships.find((r) => r.id === relId);
+      if (!targetRel) {
+        return { success: false, error: 'Relasi tidak ditemukan.' };
+      }
+
+      const existingActive = tasks.find(
+        (t) => !t.isCompleted && t.relationshipRole === relId
+      );
+      if (existingActive) {
+        const msg = `Hubungan "${targetRel.roleName}" sudah memiliki 1 tugas aktif: "${existingActive.title}". Selesaikan tugas ini terlebih dahulu agar perhatian tetap fokus.`;
+        showToast(msg);
+        return { success: false, error: msg };
+      }
+
+      const todayDateStr = getTodayDateString();
+      const finalDate = dueDate || todayDateStr;
+
+      const newTask: Task = {
+        id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        createdAt: new Date().toISOString(),
+        title: taskTitle.trim(),
+        description: `Aktivitas fokus menjaga relasi: ${targetRel.roleName}${
+          targetRel.personName ? ` (${targetRel.personName})` : ''
+        }`,
+        inboxType: 'tugas',
+        priority: 'medium',
+        category: 'Relasi',
+        relationshipRole: relId,
+        relationshipName: targetRel.roleName,
+        dueDate: finalDate,
+        dueTime: dueTime || undefined,
+        startDate: finalDate,
+        endDate: finalDate,
+        recurrence: 'none',
+        isCompleted: false,
+        subTasks: [],
+      };
+
+      setTasks((prev) => [newTask, ...prev]);
+      showToast(`1 Tugas penting untuk "${targetRel.roleName}" berhasil dicatat! 💖`);
+      return { success: true };
+    },
+    [relationships, tasks, showToast]
+  );
 
   const addTask = useCallback((taskData: Omit<Task, 'id' | 'createdAt'>) => {
     const newTask: Task = {
@@ -1405,6 +1572,12 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('ten_my_id_last_sync_v01');
       } catch {}
 
+      if (session) {
+        try {
+          nextAuthSignOut({ redirect: false });
+        } catch {}
+      }
+
       if (clearLocalTasks) {
         setTasks([]);
         try {
@@ -1415,7 +1588,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         showToast('Telah keluar dari akun. Beroperasi dalam mode Guest lokal.');
       }
     },
-    [showToast]
+    [session, showToast]
   );
 
   // 7. Trigger Cloud Sync
@@ -1447,7 +1620,66 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [currentUser, tasks, userGoal, showToast]);
 
-  // 8. Toggle Auto Sync
+  // 8. Opsi Sinkronisasi Data Lokal ke Database Cloudflare KV (Merge / Push / Pull)
+  const syncLocalTasksToKV = useCallback(
+    async (mode: 'merge' | 'push_local' | 'pull_cloud' = 'merge'): Promise<{ success: boolean; count?: number; message?: string }> => {
+      if (!currentUser?.email) {
+        showToast('Silakan masuk via SSO TEN terlebih dahulu.');
+        return { success: false, message: 'Belum terautentikasi' };
+      }
+
+      setIsSyncingCloud(true);
+      try {
+        const cloudRes = await cloudSyncService.pullTasks(currentUser.email);
+        const cloudTasks = cloudRes.tasks || [];
+
+        let finalTasks: Task[] = [];
+        if (mode === 'pull_cloud') {
+          finalTasks = cloudTasks;
+          if (cloudRes.userGoal) setUserGoal(cloudRes.userGoal);
+        } else if (mode === 'push_local') {
+          finalTasks = tasks;
+          await cloudSyncService.pushTasks(currentUser.email, tasks, userGoal);
+        } else {
+          // 'merge' mode: satukan tugas lokal unik dengan tugas dari cloud KV
+          const cloudTaskIds = new Set(cloudTasks.map((t) => t.id));
+          const uniqueLocal = tasks.filter((t) => !cloudTaskIds.has(t.id));
+          finalTasks = [...cloudTasks, ...uniqueLocal];
+          await cloudSyncService.pushTasks(currentUser.email, finalTasks, cloudRes.userGoal || userGoal);
+        }
+
+        setTasks(finalTasks);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(finalTasks));
+          window.dispatchEvent(new Event('storage'));
+        } catch {}
+
+        const nowIso = new Date().toISOString();
+        setLastCloudSyncedAt(nowIso);
+        try {
+          localStorage.setItem('ten_my_id_last_sync_v01', nowIso);
+        } catch {}
+
+        const msg =
+          mode === 'pull_cloud'
+            ? `Berhasil mengambil ${finalTasks.length} tugas dari Cloudflare KV.`
+            : mode === 'push_local'
+            ? `Berhasil mengunggah ${finalTasks.length} tugas lokal ke database KV.`
+            : `Berhasil menyatukan ${finalTasks.length} tugas ke database Cloudflare KV.`;
+        showToast(msg);
+        return { success: true, count: finalTasks.length, message: msg };
+      } catch (err: any) {
+        const errMsg = err.message || 'Gagal menyinkronkan data ke Cloudflare KV';
+        showToast(errMsg);
+        return { success: false, message: errMsg };
+      } finally {
+        setIsSyncingCloud(false);
+      }
+    },
+    [currentUser, tasks, userGoal, showToast]
+  );
+
+  // 9. Toggle Auto Sync
   const toggleAutoSync = useCallback(() => {
     setIsAutoSyncEnabled((prev) => {
       const next = !prev;
@@ -1470,6 +1702,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         registerUser,
         logoutUser,
         triggerCloudSync,
+        syncLocalTasksToKV,
         toggleAutoSync,
         verifyRecoveryPin,
         resetPasswordUser,
@@ -1501,6 +1734,12 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isHistoryModalOpen,
         setIsHistoryModalOpen,
         clearAllCompletedTasks,
+        relationships,
+        addRelationship,
+        updateRelationship,
+        deleteRelationship,
+        getActiveTaskForRelationship,
+        addTaskForRelationship,
         startTaskTimer,
         pauseTaskTimer,
         stopTaskTimer,

@@ -1,30 +1,75 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTask } from '../context/TaskContext';
 import { getFormattedDate } from '../data/seedTasks';
 import { Priority, Category, SubTask, InboxType, RecurrenceType } from '../types/task';
-import { Plus, Trash2, Calendar, Clock, Tag, Flag, CheckCircle2, Sparkles, Loader2, CheckSquare, Bell, Repeat } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Calendar,
+  Clock,
+  Tag,
+  Flag,
+  CheckCircle2,
+  Sparkles,
+  Loader2,
+  CheckSquare,
+  Bell,
+  Repeat,
+  HeartHandshake,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Zap,
+} from 'lucide-react';
 import { generateSubTasksWithAI } from '../services/geminiService';
 
-export const TaskForm: React.FC = () => {
-  const { addTask, showToast } = useTask();
+export interface TaskFormProps {
+  onSuccess?: () => void;
+  onCancel?: () => void;
+  defaultRelationshipId?: string;
+}
+
+export const TaskForm: React.FC<TaskFormProps> = ({
+  onSuccess,
+  onCancel,
+  defaultRelationshipId,
+}) => {
+  const {
+    addTask,
+    showToast,
+    relationships,
+    getActiveTaskForRelationship,
+    setIsTaskFormOpen,
+  } = useTask();
 
   const [inboxType, setInboxType] = useState<InboxType>('tugas');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  
-  // Jadwal Mulai & Selesai yang Fleksibel (Opsional)
+
+  // Peran / Relasi yang dipilih (Opsional)
+  const [selectedRelationshipId, setSelectedRelationshipId] = useState<string>(
+    defaultRelationshipId || ''
+  );
+
+  // Jadwal Tanggal & Jam Cepat
+  const [selectedDatePreset, setSelectedDatePreset] = useState<'today' | 'tomorrow' | 'dayAfter' | 'custom'>('today');
+  const [dueDate, setDueDate] = useState(getFormattedDate(0));
+  const [dueTime, setDueTime] = useState('');
+
+  // Jadwal Detail Lanjutan (Collapsible)
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [startDate, setStartDate] = useState(getFormattedDate(0));
   const [startTime, setStartTime] = useState('');
-  const [endDate, setEndDate] = useState(getFormattedDate(0));
-  const [endTime, setEndTime] = useState('');
   const [effortHours, setEffortHours] = useState<number | ''>('');
   const [allowConcurrent, setAllowConcurrent] = useState(false);
 
   const [priority, setPriority] = useState<Priority>('medium');
-  const [category, setCategory] = useState<Category>('Pekerjaan');
+  const [category, setCategory] = useState<Category>(
+    defaultRelationshipId ? 'Relasi' : 'Pekerjaan'
+  );
 
   // Dynamic Subtasks Builder
   const [subTasks, setSubTasks] = useState<SubTask[]>([]);
@@ -32,9 +77,35 @@ export const TaskForm: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
+  // Sinkronisasi defaultRelationshipId jika berubah
+  useEffect(() => {
+    if (defaultRelationshipId) {
+      setSelectedRelationshipId(defaultRelationshipId);
+      setCategory('Relasi');
+    }
+  }, [defaultRelationshipId]);
+
+  // Tangani shortcut tanggal cepat
+  const handleDatePreset = (preset: 'today' | 'tomorrow' | 'dayAfter') => {
+    setSelectedDatePreset(preset);
+    const dayOffset = preset === 'today' ? 0 : preset === 'tomorrow' ? 1 : 2;
+    const formatted = getFormattedDate(dayOffset);
+    setDueDate(formatted);
+    setStartDate(formatted);
+  };
+
+  // Tangani shortcut jam cepat
+  const handleTimePreset = (timeStr: string) => {
+    setDueTime(timeStr);
+    if (!startTime && timeStr) {
+      setStartTime(timeStr);
+    }
+  };
+
+  // Handle Generate Sub-tasks dengan AI
   const handleGenerateAI = async () => {
     if (!title.trim()) {
-      setErrorMsg('Ketik judul tugas terlebih dahulu agar AI bisa membuat sub-tugas.');
+      setErrorMsg('Ketik judul tugas terlebih dahulu agar AI bisa merancang sub-tugas.');
       return;
     }
     setIsGeneratingAI(true);
@@ -47,7 +118,7 @@ export const TaskForm: React.FC = () => {
           isCompleted: false,
         }));
         setSubTasks((prev) => [...prev, ...newSubs]);
-        showToast(`AI berhasil menambahkan ${generated.length} sub-tugas! ✨`);
+        showToast(`AI menambahkan ${generated.length} sub-tugas! ✨`);
       }
     } catch (err: any) {
       console.error(err);
@@ -72,130 +143,135 @@ export const TaskForm: React.FC = () => {
     setSubTasks((prev) => prev.filter((st) => st.id !== id));
   };
 
+  // Handle Submit Form
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      setErrorMsg('Judul task wajib diisi');
+      setErrorMsg('Judul wajib diisi');
       return;
     }
 
+    // Periksa apakah memilih relasi yang sudah punya tugas aktif
+    if (selectedRelationshipId) {
+      const activeTask = getActiveTaskForRelationship(selectedRelationshipId);
+      if (activeTask) {
+        const rel = relationships.find((r) => r.id === selectedRelationshipId);
+        const relName = rel ? rel.roleName : 'Relasi ini';
+        setErrorMsg(
+          `Hubungan "${relName}" sudah memiliki 1 aktivitas aktif ("${activeTask.title}"). Setiap hubungan dibatasi 1 tugas fokus agar tidak terpecah.`
+        );
+        return;
+      }
+    }
+
     const isUserStartTimeFixed = Boolean(startTime.trim());
-    const isUserEndTimeFixed = Boolean(endTime.trim());
-    const finalDueDate = endDate || startDate || getFormattedDate(0);
-    const finalDueTime = endTime.trim() || undefined;
+    const isUserEndTimeFixed = Boolean(dueTime.trim());
+    const finalDate = dueDate || startDate || getFormattedDate(0);
+
+    const targetRel = relationships.find((r) => r.id === selectedRelationshipId);
 
     addTask({
       title: title.trim(),
       description: description.trim() || undefined,
       inboxType,
       recurrence,
-      dueDate: finalDueDate,
-      dueTime: finalDueTime,
-      startDate: startDate || finalDueDate,
+      dueDate: finalDate,
+      dueTime: dueTime.trim() || undefined,
+      startDate: startDate || finalDate,
       startTime: startTime.trim() || undefined,
-      endDate: endDate || finalDueDate,
-      endTime: endTime.trim() || undefined,
+      endDate: finalDate,
+      endTime: dueTime.trim() || undefined,
       isUserStartTimeFixed,
       isUserEndTimeFixed,
       effortHours: effortHours ? Number(effortHours) : undefined,
       estimatedTime: effortHours ? `${effortHours} jam` : undefined,
       allowConcurrent,
       priority,
-      category,
+      category: selectedRelationshipId ? 'Relasi' : category,
+      relationshipRole: selectedRelationshipId || undefined,
+      relationshipName: targetRel ? targetRel.roleName : undefined,
       isCompleted: false,
       subTasks,
     });
 
-    // Reset form
-    setInboxType('tugas');
-    setRecurrence('none');
-    setTitle('');
-    setDescription('');
-    setStartDate(getFormattedDate(0));
-    setStartTime('');
-    setEndDate(getFormattedDate(0));
-    setEndTime('');
-    setEffortHours('');
-    setAllowConcurrent(false);
-    setPriority('medium');
-    setCategory('Pekerjaan');
-    setSubTasks([]);
-    setErrorMsg('');
+    if (onSuccess) {
+      onSuccess();
+    } else {
+      setIsTaskFormOpen(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="form-container">
-      <div style={{ marginBottom: '8px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1f1f1f' }}>
-          Tambah Inbox Baru
-        </h2>
-        <p style={{ fontSize: '13px', color: '#444746', marginTop: '2px' }}>
-          Pilih kategori inbox: Kegiatan / Acara, Tugas, atau Pengingat.
-        </p>
-      </div>
-
-      {/* Kategori / Jenis Inbox */}
-      <div className="form-group" style={{ marginBottom: '14px' }}>
-        <label className="form-label" style={{ marginBottom: '6px' }}>
-          Kategori / Jenis Inbox <span style={{ color: '#f43f5e' }}>*</span>
+    <form onSubmit={handleSubmit} className="task-fast-form">
+      {/* 1. Tipe Item: Segmented Pills Nyaman */}
+      <div className="fast-form-section">
+        <label className="fast-form-label">
+          Jenis Catatan <span className="req-star">*</span>
         </label>
-        <div className="inbox-type-selector">
+        <div className="fast-inbox-type-grid">
           <button
             type="button"
-            className={`inbox-type-btn kegiatan ${inboxType === 'kegiatan' ? 'active' : ''}`}
-            onClick={() => setInboxType('kegiatan')}
-          >
-            <Calendar size={16} />
-            <div className="inbox-type-btn-content">
-              <span className="inbox-type-title">Kegiatan / Acara</span>
-              <span className="inbox-type-desc">Agenda, rapat, event</span>
-            </div>
-          </button>
-          <button
-            type="button"
-            className={`inbox-type-btn tugas ${inboxType === 'tugas' ? 'active' : ''}`}
+            className={`fast-type-card ${inboxType === 'tugas' ? 'active tugas' : ''}`}
             onClick={() => setInboxType('tugas')}
           >
             <CheckSquare size={16} />
-            <div className="inbox-type-btn-content">
-              <span className="inbox-type-title">Tugas</span>
-              <span className="inbox-type-desc">Pekerjaan & to-do</span>
+            <div className="type-card-texts">
+              <span className="type-card-name">Tugas</span>
+              <span className="type-card-hint">Pekerjaan & to-do</span>
             </div>
           </button>
+
           <button
             type="button"
-            className={`inbox-type-btn pengingat ${inboxType === 'pengingat' ? 'active' : ''}`}
+            className={`fast-type-card ${inboxType === 'kegiatan' ? 'active kegiatan' : ''}`}
+            onClick={() => {
+              setInboxType('kegiatan');
+              setShowAdvanced(true);
+            }}
+          >
+            <Calendar size={16} />
+            <div className="type-card-texts">
+              <span className="type-card-name">Acara</span>
+              <span className="type-card-hint">Agenda & rapat</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className={`fast-type-card ${inboxType === 'pengingat' ? 'active pengingat' : ''}`}
             onClick={() => setInboxType('pengingat')}
           >
             <Bell size={16} />
-            <div className="inbox-type-btn-content">
-              <span className="inbox-type-title">Pengingat</span>
-              <span className="inbox-type-desc">Notifikasi & memo</span>
+            <div className="type-card-texts">
+              <span className="type-card-name">Pengingat</span>
+              <span className="type-card-hint">Memo & notifikasi</span>
             </div>
           </button>
         </div>
       </div>
 
-      {/* Judul Task / Inbox */}
-      <div className="form-group">
-        <label className="form-label" htmlFor="task-title">
-          {inboxType === 'kegiatan'
-            ? 'Nama Kegiatan / Acara'
-            : inboxType === 'pengingat'
-            ? 'Pengingat Untuk'
-            : 'Judul Tugas'}{' '}
-          <span style={{ color: '#f43f5e' }}>*</span>
-        </label>
+      {/* 2. Judul Task Utama */}
+      <div className="fast-form-section">
+        <div className="fast-label-row">
+          <label className="fast-form-label" htmlFor="fast-task-title">
+            {inboxType === 'kegiatan'
+              ? 'Nama Kegiatan / Acara'
+              : inboxType === 'pengingat'
+              ? 'Pengingat Untuk'
+              : 'Judul Tugas'}
+            <span className="req-star"> *</span>
+          </label>
+        </div>
         <input
-          id="task-title"
+          id="fast-task-title"
           type="text"
-          className="form-input"
+          className="fast-text-input primary-title"
           placeholder={
             inboxType === 'kegiatan'
-              ? 'Contoh: Rapat evaluasi proyek / Seminar online'
+              ? 'Contoh: Rapat evaluasi program kerja...'
               : inboxType === 'pengingat'
-              ? 'Contoh: Ingat bayar tagihan listrik / Telepon rekan'
-              : 'Contoh: Menyelesaikan laporan kuartal'
+              ? 'Contoh: Ingat bayar tagihan listrik...'
+              : 'Contoh: Siapkan laporan mingguan...'
           }
           value={title}
           onChange={(e) => {
@@ -204,299 +280,388 @@ export const TaskForm: React.FC = () => {
           }}
           autoFocus
         />
-        {errorMsg && (
-          <span style={{ fontSize: '11px', color: '#f43f5e', fontWeight: 600 }}>
-            {errorMsg}
-          </span>
-        )}
+        {errorMsg && <p className="fast-error-banner">{errorMsg}</p>}
       </div>
 
-      {/* Deskripsi */}
-      <div className="form-group">
-        <label className="form-label" htmlFor="task-desc">
-          Deskripsi / Catatan Tambahan
+      {/* 3. Peran & Hubungan (Relasi) - Trigger Psikologis & Pembatasan 1 Tugas */}
+      <div className="fast-form-section">
+        <div className="fast-label-row">
+          <label className="fast-form-label">
+            <HeartHandshake size={14} className="label-icon rel-icon" />
+            <span>Peran & Hubungan (Opsional)</span>
+          </label>
+          <span className="fast-label-subtext">Maks 1 aktivitas per hubungan</span>
+        </div>
+        <div className="relationship-chips-scroll">
+          <button
+            type="button"
+            className={`rel-selector-chip ${!selectedRelationshipId ? 'active' : ''}`}
+            onClick={() => {
+              setSelectedRelationshipId('');
+              if (category === 'Relasi') setCategory('Pribadi');
+            }}
+          >
+            <span>Diri Sendiri / Umum</span>
+          </button>
+          {relationships.map((rel) => {
+            const activeTask = getActiveTaskForRelationship(rel.id);
+            const isFull = Boolean(activeTask);
+            const isSelected = selectedRelationshipId === rel.id;
+
+            return (
+              <button
+                key={rel.id}
+                type="button"
+                className={`rel-selector-chip ${isSelected ? 'active' : ''} ${
+                  isFull && !isSelected ? 'disabled-full' : ''
+                }`}
+                onClick={() => {
+                  if (isFull && !isSelected) {
+                    showToast(
+                      `Hubungan "${rel.roleName}" sudah memiliki 1 tugas aktif: "${activeTask?.title}". Selesaikan tugas tersebut terlebih dahulu.`
+                    );
+                    return;
+                  }
+                  setSelectedRelationshipId(isSelected ? '' : rel.id);
+                  setCategory('Relasi');
+                }}
+                title={
+                  isFull && !isSelected
+                    ? `Sudah ada 1 tugas aktif: ${activeTask?.title}`
+                    : `Tugaskan untuk peran ${rel.roleName}`
+                }
+              >
+                <span className="rel-chip-dot" style={{ backgroundColor: rel.color }} />
+                <span>{rel.roleName}</span>
+                {isFull && !isSelected && (
+                  <span className="rel-full-badge">1/1 Aktif</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4. Shortcut Tanggal & Jam Cepat (1-Tap) */}
+      <div className="fast-form-section">
+        <label className="fast-form-label">
+          <Calendar size={13} className="label-icon" />
+          <span>Waktu Penyelesaian</span>
+        </label>
+
+        {/* Date Quick Presets */}
+        <div className="fast-date-presets">
+          <button
+            type="button"
+            className={`fast-preset-chip ${selectedDatePreset === 'today' ? 'active' : ''}`}
+            onClick={() => handleDatePreset('today')}
+          >
+            Hari Ini
+          </button>
+          <button
+            type="button"
+            className={`fast-preset-chip ${selectedDatePreset === 'tomorrow' ? 'active' : ''}`}
+            onClick={() => handleDatePreset('tomorrow')}
+          >
+            Besok
+          </button>
+          <button
+            type="button"
+            className={`fast-preset-chip ${selectedDatePreset === 'dayAfter' ? 'active' : ''}`}
+            onClick={() => handleDatePreset('dayAfter')}
+          >
+            Lusa
+          </button>
+          <div className="custom-date-input-box">
+            <input
+              type="date"
+              className="fast-date-picker-input"
+              value={dueDate}
+              onChange={(e) => {
+                setDueDate(e.target.value);
+                setStartDate(e.target.value);
+                setSelectedDatePreset('custom');
+              }}
+              title="Pilih tanggal manual"
+            />
+          </div>
+        </div>
+
+        {/* Time Quick Presets */}
+        <div className="fast-time-presets">
+          <span className="time-preset-label">Jam:</span>
+          {[
+            { label: '08:00', time: '08:00' },
+            { label: '13:00', time: '13:00' },
+            { label: '16:00', time: '16:00' },
+            { label: '19:00', time: '19:00' },
+          ].map((item) => (
+            <button
+              key={item.time}
+              type="button"
+              className={`fast-time-chip ${dueTime === item.time ? 'active' : ''}`}
+              onClick={() => handleTimePreset(dueTime === item.time ? '' : item.time)}
+            >
+              {item.label}
+            </button>
+          ))}
+          <input
+            type="time"
+            className="fast-time-picker-input"
+            value={dueTime}
+            onChange={(e) => setDueTime(e.target.value)}
+            title="Pilih jam tepat"
+          />
+          {dueTime && (
+            <button
+              type="button"
+              className="fast-time-clear-btn"
+              onClick={() => setDueTime('')}
+              title="Hapus jam"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 5. Prioritas & Kategori */}
+      <div className="fast-form-row">
+        {/* Prioritas */}
+        <div className="fast-form-col">
+          <label className="fast-form-label">
+            <Flag size={13} className="label-icon" /> Prioritas
+          </label>
+          <div className="fast-priority-group">
+            <button
+              type="button"
+              className={`fast-prio-btn low ${priority === 'low' ? 'active' : ''}`}
+              onClick={() => setPriority('low')}
+            >
+              Rendah
+            </button>
+            <button
+              type="button"
+              className={`fast-prio-btn medium ${priority === 'medium' ? 'active' : ''}`}
+              onClick={() => setPriority('medium')}
+            >
+              Sedang
+            </button>
+            <button
+              type="button"
+              className={`fast-prio-btn high ${priority === 'high' ? 'active' : ''}`}
+              onClick={() => setPriority('high')}
+            >
+              Tinggi
+            </button>
+          </div>
+        </div>
+
+        {/* Kategori */}
+        <div className="fast-form-col">
+          <label className="fast-form-label" htmlFor="fast-category-select">
+            <Tag size={13} className="label-icon" /> Kategori
+          </label>
+          <select
+            id="fast-category-select"
+            className="fast-select-input"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as Category)}
+          >
+            <option value="Pekerjaan">💼 Pekerjaan</option>
+            <option value="Pribadi">🏠 Pribadi</option>
+            <option value="Relasi">🤝 Relasi & Peran</option>
+            <option value="Belajar">📚 Belajar</option>
+            <option value="Kesehatan">🏃 Kesehatan</option>
+            <option value="Istirahat">☕ Istirahat</option>
+            <option value="Lainnya">✨ Lainnya</option>
+          </select>
+        </div>
+      </div>
+
+      {/* 6. Catatan / Deskripsi Singkat */}
+      <div className="fast-form-section">
+        <label className="fast-form-label" htmlFor="fast-task-desc">
+          Catatan / Rincian Singkat
         </label>
         <textarea
-          id="task-desc"
-          className="form-textarea"
-          placeholder="Tuliskan catatan penting atau instruksi..."
+          id="fast-task-desc"
+          className="fast-text-area"
+          rows={2}
+          placeholder="Catatan tambahan, konteks, atau lokasi..."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
       </div>
 
-      {/* Card Pengaturan Jadwal Mulai & Selesai (Opsional) */}
-      <div className="schedule-card-group">
-        <div className="schedule-card-header">
-          <div className="schedule-card-title">
-            <Clock size={15} />
-            <span>Ketentuan Waktu Pengerjaan (Opsional)</span>
-          </div>
-          <span className="schedule-card-hint">
-            <strong>Mulai</strong>: Tugas hanya bisa dimulai pada/setelah waktu ini.<br />
-            <strong>Selesai</strong>: Tugas harus sudah beres sebelum batas waktu ini.
-          </span>
-        </div>
-
-        {/* Baris 1: Jadwal Mulai */}
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label" htmlFor="task-start-date">
-              <Calendar size={12} /> Tgl Mulai Terawal
-            </label>
-            <input
-              id="task-start-date"
-              type="date"
-              className="form-input"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                if (!endDate || endDate < e.target.value) setEndDate(e.target.value);
-              }}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="task-start-time">
-              <Clock size={12} /> Jam Mulai Terawal
-            </label>
-            <input
-              id="task-start-time"
-              type="time"
-              className="form-input"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              placeholder="--:--"
-            />
-            <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', display: 'block' }}>
-              Hanya boleh mulai ≥ jam ini
-            </span>
-          </div>
-        </div>
-
-        {/* Baris 2: Jadwal Selesai */}
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label" htmlFor="task-end-date">
-              <Calendar size={12} /> Tgl Batas Akhir
-            </label>
-            <input
-              id="task-end-date"
-              type="date"
-              className="form-input"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="task-end-time">
-              <Clock size={12} /> Batas Jam Selesai
-            </label>
-            <input
-              id="task-end-time"
-              type="time"
-              className="form-input"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              placeholder="--:--"
-            />
-            <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', display: 'block' }}>
-              Harus selesai ≤ jam ini
-            </span>
-          </div>
-        </div>
-
-        {/* Baris 3: Estimasi Durasi Usaha (Jam Kerja) */}
-        <div className="form-group" style={{ marginTop: '6px' }}>
-          <label className="form-label" htmlFor="task-effort-hours">
-            Estimasi Usaha Total (Jam)
-          </label>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <input
-              id="task-effort-hours"
-              type="number"
-              step="0.5"
-              min="0.25"
-              max="24"
-              className="form-input"
-              placeholder="Contoh: 5 (jam)"
-              value={effortHours}
-              onChange={(e) =>
-                setEffortHours(e.target.value ? parseFloat(e.target.value) : '')
-              }
-              style={{ flex: 1 }}
-            />
-            <div className="quick-effort-chips">
-              {[0.5, 1, 2, 5].map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  className={`effort-chip ${effortHours === h ? 'active' : ''}`}
-                  onClick={() => setEffortHours(h)}
-                >
-                  {h >= 1 ? `${h}j` : '30m'}
-                </button>
-              ))}
-            </div>
-          </div>
-          <span className="form-help">
-            Digunakan AI untuk membagi ke sesi-sesi kosong jika ada jadwal lain yang memotong.
-          </span>
-        </div>
-
-        {/* Checkbox Multitasking / Beban Ringan */}
-        <label className="concurrent-checkbox-label">
-          <input
-            type="checkbox"
-            checked={allowConcurrent}
-            onChange={(e) => setAllowConcurrent(e.target.checked)}
-          />
-          <span>Bisa dikerjakan bersamaan dengan tugas lain (Multitasking / Bobot Ringan)</span>
-        </label>
-      </div>
-
-      {/* Prioritas Selector */}
-      <div className="form-group">
-        <label className="form-label">
-          <Flag size={13} /> Prioritas
-        </label>
-        <div className="priority-selector">
-          <button
-            type="button"
-            className={`priority-btn low ${priority === 'low' ? 'active' : ''}`}
-            onClick={() => setPriority('low')}
-          >
-            Rendah
-          </button>
-          <button
-            type="button"
-            className={`priority-btn medium ${priority === 'medium' ? 'active' : ''}`}
-            onClick={() => setPriority('medium')}
-          >
-            Sedang
-          </button>
-          <button
-            type="button"
-            className={`priority-btn high ${priority === 'high' ? 'active' : ''}`}
-            onClick={() => setPriority('high')}
-          >
-            Tinggi
-          </button>
-        </div>
-      </div>
-
-      {/* Kategori */}
-      <div className="form-group">
-        <label className="form-label" htmlFor="task-category">
-          <Tag size={13} /> Kategori
-        </label>
-        <select
-          id="task-category"
-          className="form-select"
-          value={category}
-          onChange={(e) => setCategory(e.target.value as Category)}
+      {/* 7. Akordeon Opsi Lanjutan & Sub-Task AI */}
+      <div className="fast-advanced-accordion">
+        <button
+          type="button"
+          className="fast-advanced-toggle"
+          onClick={() => setShowAdvanced(!showAdvanced)}
         >
-          <option value="Pekerjaan">💼 Pekerjaan</option>
-          <option value="Pribadi">🏠 Pribadi</option>
-          <option value="Belajar">📚 Belajar</option>
-          <option value="Kesehatan">🏃 Kesehatan</option>
-          <option value="Istirahat">☕ Istirahat & Recharge</option>
-          <option value="Lainnya">✨ Lainnya</option>
-        </select>
-      </div>
+          <span className="adv-title">
+            <Zap size={14} className="adv-icon" />
+            <span>Opsi Lanjutan & Sub-Task AI</span>
+          </span>
+          {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
 
-      {/* Pengulangan / Rutin */}
-      <div className="form-group">
-        <label className="form-label" htmlFor="task-recurrence">
-          <Repeat size={13} /> Pengulangan / Rutin
-        </label>
-        <select
-          id="task-recurrence"
-          className="form-select"
-          value={recurrence}
-          onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
-        >
-          <option value="none">Tidak Berulang (Sekali)</option>
-          <option value="daily">🔁 Setiap Hari (Harian)</option>
-          <option value="weekdays">🔁 Hari Kerja (Senin - Jumat)</option>
-          <option value="weekly">🔁 Setiap Minggu (Mingguan)</option>
-          <option value="monthly">🔁 Setiap Bulan (Bulanan)</option>
-        </select>
-        <span className="form-help">
-          *Tugas rutin otomatis memperbarui jadwal ke periode berikutnya saat diselesaikan.
-        </span>
-      </div>
-
-      {/* Dynamic Sub-task Builder */}
-      <div className="form-group">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-          <label className="form-label" style={{ marginBottom: 0 }}>
-            <CheckCircle2 size={13} /> Sub-task (Opsional)
-          </label>
-          <button
-            type="button"
-            className="meta-ai-btn"
-            onClick={handleGenerateAI}
-            disabled={isGeneratingAI}
-            title="Buat sub-tugas otomatis berdasarkan judul & catatan tugas"
-          >
-            {isGeneratingAI ? (
-              <Loader2 size={11} className="spin" />
-            ) : (
-              <Sparkles size={11} />
-            )}
-            <span>{isGeneratingAI ? 'AI membuatkan...' : '✨ Buat dengan AI'}</span>
-          </button>
-        </div>
-        <div className="subtask-builder-wrapper">
-          <div className="subtask-input-row">
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Tambahkan langkah/sub-task..."
-              value={currentSubTaskInput}
-              onChange={(e) => setCurrentSubTaskInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddSubTask();
-                }
-              }}
-              style={{ padding: '8px 12px' }}
-            />
-            <button
-              type="button"
-              className="subtask-add-btn"
-              onClick={handleAddSubTask}
-            >
-              <Plus size={14} /> Tambah
-            </button>
-          </div>
-
-          {subTasks.length > 0 && (
-            <div className="built-subtask-list">
-              {subTasks.map((st, idx) => (
-                <div key={st.id} className="built-subtask-chip">
-                  <span>
-                    {idx + 1}. {st.title}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSubTask(st.id)}
-                    title="Hapus sub-task"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+        {showAdvanced && (
+          <div className="fast-advanced-content">
+            {/* Durasi & Rutin */}
+            <div className="fast-form-row">
+              <div className="fast-form-col">
+                <label className="fast-form-label" htmlFor="fast-effort">
+                  Estimasi Usaha (Jam)
+                </label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    id="fast-effort"
+                    type="number"
+                    step="0.5"
+                    min="0.25"
+                    max="24"
+                    className="fast-text-input"
+                    placeholder="Contoh: 2"
+                    value={effortHours}
+                    onChange={(e) =>
+                      setEffortHours(e.target.value ? parseFloat(e.target.value) : '')
+                    }
+                  />
+                  <div className="fast-quick-effort-chips">
+                    {[0.5, 1, 2, 4].map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        className={`mini-effort-btn ${effortHours === h ? 'active' : ''}`}
+                        onClick={() => setEffortHours(h)}
+                      >
+                        {h >= 1 ? `${h}j` : '30m'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              </div>
+
+              <div className="fast-form-col">
+                <label className="fast-form-label" htmlFor="fast-recurrence">
+                  <Repeat size={13} className="label-icon" /> Rutinitas
+                </label>
+                <select
+                  id="fast-recurrence"
+                  className="fast-select-input"
+                  value={recurrence}
+                  onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
+                >
+                  <option value="none">Sekali Saja</option>
+                  <option value="daily">🔁 Setiap Hari</option>
+                  <option value="weekdays">🔁 Hari Kerja (Senin - Jumat)</option>
+                  <option value="weekly">🔁 Setiap Minggu</option>
+                  <option value="monthly">🔁 Setiap Bulan</option>
+                </select>
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Checkbox Multitasking */}
+            <label className="fast-checkbox-label">
+              <input
+                type="checkbox"
+                checked={allowConcurrent}
+                onChange={(e) => setAllowConcurrent(e.target.checked)}
+              />
+              <span>Bisa dikerjakan bersamaan dengan aktivitas lain (Multitasking)</span>
+            </label>
+
+            {/* Sub-Task AI Builder */}
+            <div className="fast-subtasks-box">
+              <div className="subtask-header-row">
+                <span className="subtask-title">
+                  <CheckCircle2 size={13} /> Sub-task ({subTasks.length})
+                </span>
+                <button
+                  type="button"
+                  className="fast-ai-gen-btn"
+                  onClick={handleGenerateAI}
+                  disabled={isGeneratingAI}
+                >
+                  {isGeneratingAI ? (
+                    <>
+                      <Loader2 size={12} className="spin" />
+                      <span>Membuat...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={12} />
+                      <span>✨ Buat dengan AI</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="fast-subtask-input-row">
+                <input
+                  type="text"
+                  className="fast-text-input"
+                  placeholder="Tambahkan langkah/sub-task..."
+                  value={currentSubTaskInput}
+                  onChange={(e) => setCurrentSubTaskInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddSubTask();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="fast-btn-add-sub"
+                  onClick={handleAddSubTask}
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+
+              {subTasks.length > 0 && (
+                <div className="fast-subtask-chip-list">
+                  {subTasks.map((st, idx) => (
+                    <div key={st.id} className="fast-subtask-item">
+                      <span>
+                        {idx + 1}. {st.title}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSubTask(st.id)}
+                        className="btn-del-sub"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Tombol Simpan */}
-      <button type="submit" className="btn-primary">
-        <Plus size={18} /> Simpan ke Inbox
-      </button>
+      {/* 8. Tombol Tindakan Footer (Batal & Simpan) */}
+      <div className="fast-form-actions">
+        {onCancel && (
+          <button
+            type="button"
+            className="fast-btn-cancel"
+            onClick={onCancel}
+          >
+            Batal
+          </button>
+        )}
+        <button type="submit" className="fast-btn-submit">
+          <Plus size={17} strokeWidth={2.5} />
+          <span>Simpan ke Inbox</span>
+        </button>
+      </div>
     </form>
   );
 };

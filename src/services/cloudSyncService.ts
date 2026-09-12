@@ -4,13 +4,16 @@ import { feedbackService } from "./feedbackService";
 export type UserRole = 'user' | 'admin';
 
 export interface UserProfile {
+  id?: string;
   name: string;
   email: string;
+  username?: string;
   role?: UserRole;
   avatar?: string;
   createdAt?: string;
   recoveryPinSet?: boolean;
   taskCount?: number;
+  authProvider?: 'local' | 'ten-sso';
 }
 
 export interface AppStatistics {

@@ -689,6 +689,36 @@ export const generateLocalCircadianAnalysis = (
       goalImpact = 'Netral';
     }
 
+    // Perhitungan Skor Bobot Pengerjaan (Rentang 0 s/d 100)
+    let weightScore = 45;
+    if (t.priority === 'high') weightScore += 25;
+    else if (t.priority === 'medium') weightScore += 10;
+    else if (t.priority === 'low') weightScore -= 10;
+
+    if (effortLevel === 'Tinggi') weightScore += 20;
+    else if (effortLevel === 'Sedang') weightScore += 10;
+    else weightScore += 2;
+
+    if (isPastOverdueTask) weightScore += 15;
+    else if (timeWindowStatus === 'nearing_deadline') weightScore += 12;
+    else if (t.isToday) weightScore += 8;
+    else if (isFutureTask) weightScore -= 15;
+
+    if (goalScore >= 70) weightScore += 10;
+    else if (goalScore <= 35) weightScore -= 5;
+
+    weightScore = Math.min(100, Math.max(10, weightScore));
+
+    // Alasan Bobot Pengerjaan
+    let weightReason = '';
+    if (weightScore >= 80) {
+      weightReason = `Skor ${weightScore}/100: Memiliki prioritas tinggi dengan beban konsentrasi besar dan urgensi batas waktu penting.`;
+    } else if (weightScore >= 55) {
+      weightReason = `Skor ${weightScore}/100: Memiliki bobot pengerjaan moderat, efisien dikerjakan dalam alur produktif harian.`;
+    } else {
+      weightReason = `Skor ${weightScore}/100: Tugas ringan dan santai dengan beban eksekusi cepat tanpa menyita energi kognitif berlebih.`;
+    }
+
     const typeLabel = t.inboxType === 'kegiatan' ? 'Kegiatan/Acara' : t.inboxType === 'pengingat' ? 'Pengingat' : 'Tugas';
 
     let reason = '';
@@ -723,6 +753,8 @@ export const generateLocalCircadianAnalysis = (
         : `${timeSuitabilityNote} Cocok dengan ritme energi saat ini.`,
       goalAlignmentScore: goalScore,
       goalImpact,
+      weightScore,
+      weightReason,
       reason,
       recurrence: t.recurrence,
       dateContextLabel,
@@ -923,6 +955,8 @@ WAJIB hasilkan output HANYA dalam format JSON murni yang ringkas & padat (maksim
       "biologicalFit": "Kesesuaian jam biologis",
       "goalAlignmentScore": 85,
       "goalImpact": "Mendekatkan",
+      "weightScore": 85,
+      "weightReason": "Alasan spesifik mengapa tugas ini diberi skor bobot tersebut berdasarkan beban fokus, kesulitan, dan urgensi",
       "reason": "Alasan rekomendasi yang sadar tanggal dan jam mulai/selesai",
       "dateContextLabel": "misal Hari ini (08 Sep) / Besok (09 Sep) / Terlewat",
       "timeWindowStatus": "ready_now" | "locked_until_start" | "nearing_deadline" | "flexible",
@@ -937,9 +971,24 @@ WAJIB hasilkan output HANYA dalam format JSON murni yang ringkas & padat (maksim
     const { text, engineName } = await executeUniversalAICall(prompt, { expectJson: true });
     const parsed = extractJsonFromText(text);
 
-    const sortedTasksAnalysis = Array.isArray(parsed.tasksAnalysis)
-      ? sortTasksAnalysis(parsed.tasksAnalysis, tasksToAnalyze, todayDateStr)
-      : [];
+    // Pastikan tiap taskAnalysis memiliki weightScore (0-100) dan weightReason
+    const rawAnalysis = Array.isArray(parsed.tasksAnalysis) ? parsed.tasksAnalysis : [];
+    const enrichedAnalysis = rawAnalysis.map((item: any) => {
+      let ws = typeof item.weightScore === 'number' ? Math.round(item.weightScore) : 50;
+      ws = Math.min(100, Math.max(0, ws));
+      const wr =
+        item.weightReason && typeof item.weightReason === 'string'
+          ? item.weightReason
+          : `Skor ${ws}/100: Bobot pengerjaan dihitung berdasarkan prioritas, tingkat kesulitan, dan urgensi waktu tugas.`;
+
+      return {
+        ...item,
+        weightScore: ws,
+        weightReason: wr,
+      };
+    });
+
+    const sortedTasksAnalysis = sortTasksAnalysis(enrichedAnalysis, tasksToAnalyze, todayDateStr);
 
     const isCustom = activeConfig.mode === 'custom';
 
