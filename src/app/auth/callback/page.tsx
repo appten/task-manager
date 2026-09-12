@@ -36,7 +36,11 @@ function CallbackContent() {
 
         const clientId = 'ten_app_eaffqk';
         const clientSecret = 'sec_live_256rmh7fj21qcc6mbp3gkf';
-        const redirectUri = 'https://task.ten.my.id/auth/callback';
+        const redirectUri =
+          typeof window !== 'undefined' &&
+          (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? `${window.location.origin}/auth/callback`
+            : 'https://task.ten.my.id/auth/callback';
 
         // 1. Penukaran Kode Otorisasi ke https://account.ten.my.id/api/oauth/token
         // Format body: JSON (Sesuai panduan resmi SSO TEN terbaru)
@@ -60,7 +64,35 @@ function CallbackContent() {
         }
 
         const tokenData = (await tokenRes.json()) as any;
-        const rawUser = tokenData.user || {};
+        let rawUser = tokenData.user || {};
+
+        // Fallback 1: Jika rawUser kosong atau tidak ada email, coba decode id_token jika ada
+        if (!rawUser.email && !rawUser.sub && !rawUser.id && tokenData.id_token) {
+          try {
+            const parts = tokenData.id_token.split('.');
+            if (parts.length >= 2) {
+              const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+              rawUser = { ...payload, ...rawUser };
+            }
+          } catch (jwtErr) {
+            console.warn('Gagal decode id_token:', jwtErr);
+          }
+        }
+
+        // Fallback 2: Jika masih kosong, coba panggil endpoint userinfo jika ada access_token
+        if (!rawUser.email && !rawUser.sub && !rawUser.id && tokenData.access_token) {
+          try {
+            const infoRes = await fetch('https://account.ten.my.id/api/oauth/userinfo', {
+              headers: { Authorization: `Bearer ${tokenData.access_token}` },
+            });
+            if (infoRes.ok) {
+              const infoData = await infoRes.json();
+              rawUser = { ...infoData, ...rawUser };
+            }
+          } catch (infoErr) {
+            console.warn('Gagal fetch userinfo:', infoErr);
+          }
+        }
 
         const userEmail = (rawUser.email || '').trim().toLowerCase();
         const userName =
@@ -81,7 +113,7 @@ function CallbackContent() {
         const userAvatar = rawUser.avatar || rawUser.picture || rawUser.photoURL || undefined;
 
         const ssoUser = {
-          id: rawUser.id || rawUser.uid || rawUser.sub || userEmail,
+          id: rawUser.id || rawUser.uid || rawUser.sub || userEmail || `user_${Date.now()}`,
           name: userName,
           username: formattedUsername,
           email: userEmail,
@@ -101,6 +133,7 @@ function CallbackContent() {
           localStorage.setItem('ten_current_user', JSON.stringify(ssoUser));
           localStorage.setItem('ten_my_id_autosync_v01', 'true');
           window.dispatchEvent(new Event('storage'));
+          window.dispatchEvent(new CustomEvent('ten_auth_changed', { detail: ssoUser }));
         } catch (storageErr) {
           console.warn('Gagal menyimpan sesi ke localStorage:', storageErr);
         }
@@ -122,7 +155,7 @@ function CallbackContent() {
         setStatusText(`Selamat datang, ${ssoUser.name || ssoUser.username}!`);
 
         // 4. Tutup Jendela Popup dan Perbarui Halaman Induk
-        if (window.opener) {
+        if (window.opener && !window.opener.closed) {
           try {
             window.opener.postMessage(
               {
@@ -135,18 +168,26 @@ function CallbackContent() {
             console.warn('Gagal postMessage ke window opener:', postErr);
           }
 
+          try {
+            if (window.opener.location.origin === window.location.origin) {
+              window.opener.location.href = '/account';
+            }
+          } catch {}
+
           setTimeout(() => {
             try {
               window.close();
-            } catch {
-              router.replace('/account');
-            }
-          }, 500);
+            } catch {}
+            // Jika browser memblokir window.close(), arahkan popup ini ke /account
+            setTimeout(() => {
+              window.location.href = '/account';
+            }, 300);
+          }, 400);
         } else {
-          // Jika login direct (bukan popup), langsung arahkan ke menu akun
+          // Jika login direct (bukan popup), langsung arahkan ke menu akun via hard navigation
           setTimeout(() => {
-            router.replace('/account');
-          }, 700);
+            window.location.href = '/account';
+          }, 500);
         }
       } catch (err: any) {
         console.error('SSO Callback error:', err);
@@ -248,7 +289,9 @@ function CallbackContent() {
         {isError && (
           <button
             type="button"
-            onClick={() => router.replace('/account')}
+            onClick={() => {
+              window.location.href = '/account';
+            }}
             style={{
               marginTop: '12px',
               padding: '9px 18px',

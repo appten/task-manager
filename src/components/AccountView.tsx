@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   User,
@@ -38,6 +38,7 @@ export const AccountView: React.FC = () => {
     isSyncingCloud,
     lastCloudSyncedAt,
     isAutoSyncEnabled,
+    refreshUserSession,
     logoutUser,
     triggerCloudSync,
     syncLocalTasksToKV,
@@ -71,6 +72,30 @@ export const AccountView: React.FC = () => {
 
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((t) => t.isCompleted).length;
+
+  // Pantau fokus jendela, visibility & storage agar saat kembali dari SSO TEN, status akun langsung aktif
+  useEffect(() => {
+    refreshUserSession();
+
+    const checkSessionState = () => {
+      const activeUser = refreshUserSession();
+      if (activeUser && !currentUser) {
+        // State sudah otomatis diperbarui oleh refreshUserSession
+      }
+    };
+
+    window.addEventListener('focus', checkSessionState);
+    window.addEventListener('storage', checkSessionState);
+    window.addEventListener('visibilitychange', checkSessionState);
+    window.addEventListener('ten_auth_changed', checkSessionState);
+
+    return () => {
+      window.removeEventListener('focus', checkSessionState);
+      window.removeEventListener('storage', checkSessionState);
+      window.removeEventListener('visibilitychange', checkSessionState);
+      window.removeEventListener('ten_auth_changed', checkSessionState);
+    };
+  }, [currentUser, refreshUserSession]);
 
   // Handler Konfirmasi Logout
   const handleConfirmLogout = () => {

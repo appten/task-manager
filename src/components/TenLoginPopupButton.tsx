@@ -20,22 +20,25 @@ export const TenLoginPopupButton: React.FC<TenLoginPopupButtonProps> = ({
   style,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { showToast } = useTask();
+  const { showToast, refreshUserSession } = useTask();
 
   // Dengarkan sinyal sukses dari jendela popup
   useEffect(() => {
     const handleAuthMessage = (event: MessageEvent) => {
       if (event.data?.type === 'TEN_SSO_LOGIN_SUCCESS') {
         setIsLoading(false);
+        refreshUserSession();
         if (onSuccess) {
           onSuccess();
+        } else {
+          window.location.href = '/account';
         }
       }
     };
 
     window.addEventListener('message', handleAuthMessage);
     return () => window.removeEventListener('message', handleAuthMessage);
-  }, [onSuccess]);
+  }, [onSuccess, refreshUserSession]);
 
   const handleLoginPopup = () => {
     setIsLoading(true);
@@ -75,13 +78,37 @@ export const TenLoginPopupButton: React.FC<TenLoginPopupButtonProps> = ({
       return;
     }
 
-    // Pantau jika popup ditutup manual oleh pengguna
+    // Pantau jika popup selesai menyimpan sesi atau ditutup
     const intervalTimer = setInterval(() => {
+      const saved =
+        localStorage.getItem('ten_my_id_user_v01') ||
+        localStorage.getItem('ten_cloud_session');
+
+      if (saved) {
+        clearInterval(intervalTimer);
+        setIsLoading(false);
+        refreshUserSession();
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          window.location.href = '/account';
+        }
+        return;
+      }
+
       if (popup.closed) {
         clearInterval(intervalTimer);
         setIsLoading(false);
+        const user = refreshUserSession();
+        if (user) {
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            window.location.href = '/account';
+          }
+        }
       }
-    }, 600);
+    }, 400);
   };
 
   return (

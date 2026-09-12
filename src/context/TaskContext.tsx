@@ -27,6 +27,7 @@ interface TaskContextType {
   isSyncingCloud: boolean;
   lastCloudSyncedAt: string | null;
   isAutoSyncEnabled: boolean;
+  refreshUserSession: () => UserProfile | null;
   loginUser: (email: string, password: string, mergeLocalData?: boolean) => Promise<{ success: boolean; error?: string }>;
   registerUser: (name: string, email: string, password: string, mergeLocalData?: boolean, recoveryPin?: string) => Promise<{ success: boolean; error?: string }>;
   logoutUser: (clearLocalTasks?: boolean) => void;
@@ -380,32 +381,20 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Sinkronisasi sesi SSO TEN dengan currentUser aplikasi secara reaktif
-  useEffect(() => {
-    const syncSessionFromStorage = () => {
-      try {
-        const u = cloudSyncService.getCurrentUser();
-        if (u) {
-          setCurrentUser((prev) => {
-            if (
-              prev &&
-              prev.email === u.email &&
-              prev.name === u.name &&
-              prev.username === u.username
-            ) {
-              return prev;
-            }
-            return u;
-          });
-          return;
-        }
-
-        const rawCloud = localStorage.getItem('ten_cloud_session') || localStorage.getItem('ten_current_user');
-        if (rawCloud) {
-          const parsed = JSON.parse(rawCloud);
+  // Fungsi publik & reaktif untuk menyegarkan sesi akun dari storage kapan pun
+  const refreshUserSession = useCallback((): UserProfile | null => {
+    try {
+      let u = cloudSyncService.getCurrentUser();
+      if (!u) {
+        const raw =
+          localStorage.getItem('ten_cloud_session') ||
+          localStorage.getItem('ten_current_user') ||
+          localStorage.getItem('ten_my_id_user_v01');
+        if (raw) {
+          const parsed = JSON.parse(raw);
           const rawUser = parsed?.user || parsed;
-          if (rawUser && rawUser.email) {
-            const ssoUser: UserProfile = {
+          if (rawUser && (rawUser.email || rawUser.id)) {
+            u = {
               id: rawUser.id || rawUser.sub || rawUser.email,
               name: rawUser.name || 'Pengguna TEN',
               email: rawUser.email || '',
@@ -415,16 +404,36 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
               authProvider: 'ten-sso',
               createdAt: rawUser.createdAt || new Date().toISOString(),
             };
-            setCurrentUser(ssoUser);
-            cloudSyncService.setCurrentUser(ssoUser);
+            cloudSyncService.setCurrentUser(u);
           }
         }
-      } catch (err) {
-        console.warn('Gagal membaca sesi SSO TEN dari storage:', err);
       }
-    };
 
-    syncSessionFromStorage();
+      if (u) {
+        setCurrentUser((prev) => {
+          if (
+            prev &&
+            prev.email === u!.email &&
+            prev.name === u!.name &&
+            prev.username === u!.username &&
+            prev.role === u!.role &&
+            prev.avatar === u!.avatar
+          ) {
+            return prev;
+          }
+          return u;
+        });
+      }
+      return u;
+    } catch (err) {
+      console.warn('Gagal membaca sesi SSO TEN:', err);
+      return null;
+    }
+  }, []);
+
+  // Sinkronisasi sesi SSO TEN secara otomatis & reaktif ke semua jendela/tab/event
+  useEffect(() => {
+    refreshUserSession();
 
     // Dengarkan pesan sukses dari popup login SSO TEN
     const handleAuthMessage = (event: MessageEvent) => {
@@ -452,18 +461,34 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Dengarkan perubahan storage dari tab/jendela lain
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'ten_my_id_user_v01' || e.key === 'ten_cloud_session' || e.key === 'ten_current_user') {
-        syncSessionFromStorage();
+      if (
+        !e.key ||
+        e.key === 'ten_my_id_user_v01' ||
+        e.key === 'ten_cloud_session' ||
+        e.key === 'ten_current_user'
+      ) {
+        refreshUserSession();
       }
+    };
+
+    const handleFocusOrVisible = () => {
+      refreshUserSession();
     };
 
     window.addEventListener('message', handleAuthMessage);
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleFocusOrVisible);
+    window.addEventListener('ten_auth_changed', handleFocusOrVisible);
+    document.addEventListener('visibilitychange', handleFocusOrVisible);
+
     return () => {
       window.removeEventListener('message', handleAuthMessage);
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleFocusOrVisible);
+      window.removeEventListener('ten_auth_changed', handleFocusOrVisible);
+      document.removeEventListener('visibilitychange', handleFocusOrVisible);
     };
-  }, [showToast]);
+  }, [refreshUserSession, showToast]);
 
   // Auto-sync debounced ke Task_KV ketika tasks berubah jika currentUser & isAutoSyncEnabled aktif
   useEffect(() => {
@@ -1768,6 +1793,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isSyncingCloud,
         lastCloudSyncedAt,
         isAutoSyncEnabled,
+        refreshUserSession,
         loginUser,
         registerUser,
         logoutUser,
