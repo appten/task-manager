@@ -1,22 +1,136 @@
 'use client';
 
-import React from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Shield, User, Mail, AtSign, Key, LogOut, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  Shield,
+  User,
+  Mail,
+  AtSign,
+  Key,
+  LogOut,
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
+import { useTask } from '../../context/TaskContext';
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { currentUser, logoutUser } = useTask();
+  const [localSessionUser, setLocalSessionUser] = useState<any>(null);
+  const [isChecking, setIsChecking] = useState(true);
 
-  if (status === 'loading') {
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('ten_cloud_session');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.user) {
+          setLocalSessionUser(parsed.user);
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsChecking(false);
+    }
+  }, []);
+
+  const user = currentUser || localSessionUser;
+
+  if (isChecking) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          fontFamily: 'system-ui, sans-serif',
+        }}
+      >
         <p style={{ fontSize: '15px', color: '#64748b' }}>Memverifikasi sesi SSO TEN...</p>
       </div>
     );
   }
 
-  const user = session?.user;
+  if (!user) {
+    return (
+      <div
+        style={{
+          maxWidth: '520px',
+          margin: '60px auto',
+          padding: '32px 20px',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          textAlign: 'center',
+        }}
+      >
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            border: '1px solid #e2e8f0',
+            padding: '36px 24px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: '#fef3c7',
+              color: '#d97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px',
+            }}
+          >
+            <AlertCircle size={26} />
+          </div>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', margin: '0 0 8px 0' }}>
+            Akses Memerlukan Login
+          </h2>
+          <p style={{ fontSize: '13.5px', color: '#64748b', margin: '0 0 24px 0' }}>
+            Halaman dashboard profil ini dilindungi. Silakan masuk terlebih dahulu melalui SSO TEN.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.replace('/account')}
+            style={{
+              padding: '10px 20px',
+              background: '#0284c7',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Menuju Halaman Akun
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleSignOut = () => {
+    logoutUser(false);
+    try {
+      localStorage.removeItem('ten_cloud_session');
+    } catch {
+      // ignore
+    }
+    router.replace('/account');
+  };
 
   return (
     <div
@@ -28,9 +142,16 @@ export default function DashboardPage() {
       }}
     >
       {/* Top Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '24px',
+        }}
+      >
         <Link
-          href="/inbox"
+          href="/account"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -41,12 +162,12 @@ export default function DashboardPage() {
             fontWeight: 600,
           }}
         >
-          <ArrowLeft size={16} /> Kembali ke Aplikasi
+          <ArrowLeft size={16} /> Kembali ke Akun
         </Link>
 
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: '/account' })}
+          onClick={handleSignOut}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -75,10 +196,19 @@ export default function DashboardPage() {
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f1f5f9' }}>
-          {user?.image ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            marginBottom: '20px',
+            paddingBottom: '20px',
+            borderBottom: '1px solid #f1f5f9',
+          }}
+        >
+          {user?.avatar || user?.image ? (
             <img
-              src={user.image}
+              src={user.avatar || user.image}
               alt={user.name || 'User Avatar'}
               style={{
                 width: '64px',
@@ -133,23 +263,66 @@ export default function DashboardPage() {
         </div>
 
         <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#334155', marginBottom: '12px' }}>
-          Informasi Session Token OIDC
+          Informasi Sesi Token OIDC
         </h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {/* User ID */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-            <span style={{ fontSize: '12.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              background: '#f8fafc',
+              borderRadius: '12px',
+              border: '1px solid #f1f5f9',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '12.5px',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
               <Key size={14} /> ID Akun (sub)
             </span>
-            <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#0f172a', fontFamily: 'monospace' }}>
+            <span
+              style={{
+                fontSize: '12.5px',
+                fontWeight: 600,
+                color: '#0f172a',
+                fontFamily: 'monospace',
+              }}
+            >
               {user?.id || '-'}
             </span>
           </div>
 
           {/* Nama */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-            <span style={{ fontSize: '12.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              background: '#f8fafc',
+              borderRadius: '12px',
+              border: '1px solid #f1f5f9',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '12.5px',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
               <User size={14} /> Nama Lengkap
             </span>
             <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#0f172a' }}>
@@ -158,8 +331,26 @@ export default function DashboardPage() {
           </div>
 
           {/* Username */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-            <span style={{ fontSize: '12.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              background: '#f8fafc',
+              borderRadius: '12px',
+              border: '1px solid #f1f5f9',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '12.5px',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
               <AtSign size={14} /> Username
             </span>
             <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#2563eb' }}>
@@ -168,8 +359,26 @@ export default function DashboardPage() {
           </div>
 
           {/* Email */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-            <span style={{ fontSize: '12.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              background: '#f8fafc',
+              borderRadius: '12px',
+              border: '1px solid #f1f5f9',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '12.5px',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
               <Mail size={14} /> Email
             </span>
             <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#0f172a' }}>
@@ -178,8 +387,26 @@ export default function DashboardPage() {
           </div>
 
           {/* Role */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-            <span style={{ fontSize: '12.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              background: '#f8fafc',
+              borderRadius: '12px',
+              border: '1px solid #f1f5f9',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '12.5px',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
               <Shield size={14} /> Peran (Role)
             </span>
             <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#16a34a' }}>
@@ -188,10 +415,21 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div style={{ marginTop: '20px', padding: '12px 14px', background: '#ecfdf5', borderRadius: '12px', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div
+          style={{
+            marginTop: '20px',
+            padding: '12px 14px',
+            background: '#ecfdf5',
+            borderRadius: '12px',
+            border: '1px solid #a7f3d0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
           <CheckCircle2 size={16} color="#059669" />
           <span style={{ fontSize: '12px', color: '#065f46', fontWeight: 500 }}>
-            Halaman /dashboard ini dilindungi oleh <strong>middleware.ts</strong> NextAuth. Hanya akun terautentikasi yang dapat mengakses.
+            Akun Anda terverifikasi oleh <strong>SSO TEN</strong>. Sesi tersinkronisasi dengan database cloud Task_KV.
           </span>
         </div>
       </div>

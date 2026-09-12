@@ -20,7 +20,6 @@ import {
   compareSchedules,
 } from '../services/smartScheduler';
 import { cloudSyncService, UserProfile } from '../services/cloudSyncService';
-import { useSession, signOut as nextAuthSignOut } from 'next-auth/react';
 
 interface TaskContextType {
   // Cloudflare KV Sync & User Account (Opsional)
@@ -349,40 +348,67 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Sinkronisasi sesi NextAuth (SSO TEN) dengan currentUser aplikasi
-  const { data: session } = useSession();
-
+  // Sinkronisasi sesi SSO TEN dengan currentUser aplikasi
   useEffect(() => {
-    if (session?.user) {
-      const userImage = (session.user as any).image || (session.user as any).picture || undefined;
-      const ssoUser: UserProfile = {
-        id: session.user.id,
-        name: session.user.name || 'Pengguna TEN',
-        email: session.user.email || '',
-        username: session.user.username,
-        avatar: userImage,
-        role: (session.user.role === 'admin' ? 'admin' : 'user') as any,
-        authProvider: 'ten-sso',
-        createdAt: new Date().toISOString(),
-      };
-
-      setCurrentUser((prev) => {
-        if (
-          prev &&
-          prev.authProvider === 'ten-sso' &&
-          prev.email === ssoUser.email &&
-          prev.name === ssoUser.name &&
-          prev.username === ssoUser.username
-        ) {
-          return prev;
+    const checkAndSyncSession = () => {
+      try {
+        const rawCloud = localStorage.getItem('ten_cloud_session');
+        if (rawCloud) {
+          const parsed = JSON.parse(rawCloud);
+          if (parsed?.user) {
+            const u = parsed.user;
+            const ssoUser: UserProfile = {
+              id: u.id || u.sub || u.email,
+              name: u.name || 'Pengguna TEN',
+              email: u.email || '',
+              username: u.username,
+              avatar: u.avatar || u.picture || u.image,
+              role: (u.role === 'admin' ? 'admin' : 'user') as any,
+              authProvider: 'ten-sso',
+              createdAt: u.createdAt || new Date().toISOString(),
+            };
+            setCurrentUser((prev) => {
+              if (
+                prev &&
+                prev.email === ssoUser.email &&
+                prev.name === ssoUser.name &&
+                prev.username === ssoUser.username
+              ) {
+                return prev;
+              }
+              return ssoUser;
+            });
+            cloudSyncService.setCurrentUser(ssoUser);
+          }
         }
-        try {
-          localStorage.setItem('ten_my_id_user_v01', JSON.stringify(ssoUser));
-        } catch {}
-        return ssoUser;
-      });
-    }
-  }, [session]);
+      } catch (err) {
+        console.warn('Gagal membaca sesi SSO TEN dari storage:', err);
+      }
+    };
+
+    checkAndSyncSession();
+
+    const handleAuthMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'TEN_SSO_LOGIN_SUCCESS' && event.data?.user) {
+        const u = event.data.user;
+        const ssoUser: UserProfile = {
+          id: u.id || u.sub || u.email,
+          name: u.name || 'Pengguna TEN',
+          email: u.email || '',
+          username: u.username,
+          avatar: u.avatar || u.picture || u.image,
+          role: (u.role === 'admin' ? 'admin' : 'user') as any,
+          authProvider: 'ten-sso',
+          createdAt: u.createdAt || new Date().toISOString(),
+        };
+        setCurrentUser(ssoUser);
+        cloudSyncService.setCurrentUser(ssoUser);
+      }
+    };
+
+    window.addEventListener('message', handleAuthMessage);
+    return () => window.removeEventListener('message', handleAuthMessage);
+  }, []);
 
   // Auto-sync debounced ke Task_KV ketika tasks berubah jika currentUser & isAutoSyncEnabled aktif
   useEffect(() => {
@@ -1570,13 +1596,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLastCloudSyncedAt(null);
       try {
         localStorage.removeItem('ten_my_id_last_sync_v01');
+        localStorage.removeItem('ten_cloud_session');
+        localStorage.removeItem('ten_current_user');
       } catch {}
-
-      if (session) {
-        try {
-          nextAuthSignOut({ redirect: false });
-        } catch {}
-      }
 
       if (clearLocalTasks) {
         setTasks([]);
@@ -1588,7 +1610,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         showToast('Telah keluar dari akun. Beroperasi dalam mode Guest lokal.');
       }
     },
-    [session, showToast]
+    [showToast]
   );
 
   // 7. Trigger Cloud Sync

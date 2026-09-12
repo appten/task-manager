@@ -9,6 +9,9 @@ interface Env {
   DEV_ADMIN_EMAIL?: string;
   DEV_ADMIN_PASSWORD?: string;
   DEV_ADMIN_NAME?: string;
+  TEN_CLIENT_ID?: string;
+  TEN_CLIENT_SECRET?: string;
+  TEN_ISSUER?: string;
 }
 
 type PagesFunction<T = any> = (context: {
@@ -31,7 +34,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         | 'reset-password'
         | 'update-profile'
         | 'get-users'
-        | 'update-role';
+        | 'update-role'
+        | 'ten-sso-callback';
       email?: string;
       password?: string;
       name?: string;
@@ -42,6 +46,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       initialTasks?: any[];
       userGoal?: string;
       requesterEmail?: string;
+      code?: string;
+      redirectUri?: string;
     };
 
     const {
@@ -56,6 +62,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       initialTasks,
       userGoal,
       requesterEmail,
+      code,
+      redirectUri,
     } = body;
 
     if (!env.Task_KV) {
@@ -123,6 +131,135 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         return false;
       }
     };
+
+    // Penanganan Login SSO TEN (OIDC Token Exchange & Sinkronisasi Akun KV)
+    if (action === 'ten-sso-callback') {
+      if (!code) {
+        return new Response(JSON.stringify({ error: 'Kode otorisasi tidak ditemukan' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const clientId =
+        env.TEN_CLIENT_ID ||
+        (typeof process !== 'undefined' && process.env?.TEN_CLIENT_ID) ||
+        'ten_app_eaffqk';
+      const clientSecret =
+        env.TEN_CLIENT_SECRET ||
+        (typeof process !== 'undefined' && process.env?.TEN_CLIENT_SECRET) ||
+        'sec_live_256rmh7fj21qcc6mbp3gkf';
+      const redirectUriParam = redirectUri || 'https://task.ten.my.id/auth/callback';
+
+      try {
+        // 1. Tukar authorization code dengan access token ke SSO TEN
+        const tokenRes = await fetch('https://account.ten.my.id/api/oauth/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            grant_type: 'authorization_code',
+            code,
+            redirect_uri: redirectUriParam,
+            client_id: clientId,
+            client_secret: clientSecret,
+          }),
+        });
+
+        if (!tokenRes.ok) {
+          const errText = await tokenRes.text();
+          return new Response(
+            JSON.stringify({ error: `Gagal menukar token SSO TEN: ${errText}` }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const tokenData = (await tokenRes.json()) as any;
+        const accessToken = tokenData.access_token;
+
+        // 2. Ambil profil pengguna dari userinfo endpoint
+        let profile: any = {};
+        if (accessToken) {
+          const userinfoRes = await fetch('https://account.ten.my.id/api/oauth/userinfo', {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+          if (userinfoRes.ok) {
+            profile = await userinfoRes.json();
+          }
+        }
+
+        const userEmail = (profile.email || tokenData.email || '').trim().toLowerCase();
+        if (!userEmail) {
+          return new Response(
+            JSON.stringify({ error: 'Email pengguna tidak tersedia dari SSO TEN' }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const rawUsername = profile.username || profile.preferred_username || '';
+        const formattedUsername = rawUsername
+          ? rawUsername.startsWith('@')
+            ? rawUsername
+            : `@${rawUsername}`
+          : undefined;
+        const userName = profile.name || profile.username || userEmail.split('@')[0];
+        const userRole =
+          profile.role ||
+          (configuredAdminEmail && userEmail === configuredAdminEmail ? 'admin' : 'user');
+        const userAvatar = profile.picture || profile.avatar || null;
+
+        // 3. Simpan atau perbarui di Task_KV
+        const existingUserRaw = await env.Task_KV.get(`user:${userEmail}`);
+        let userData: any;
+        if (existingUserRaw) {
+          userData = JSON.parse(existingUserRaw);
+          userData.name = userName;
+          userData.username = formattedUsername;
+          userData.avatar = userAvatar;
+          userData.lastLoginAt = new Date().toISOString();
+        } else {
+          userData = {
+            name: userName,
+            username: formattedUsername,
+            email: userEmail,
+            role: userRole,
+            avatar: userAvatar,
+            authProvider: 'sso_ten',
+            ssoId: profile.sub || tokenData.sub || '',
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+          };
+          await addToUsersIndex(userEmail);
+        }
+        await env.Task_KV.put(`user:${userEmail}`, JSON.stringify(userData));
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            user: {
+              id: profile.sub || tokenData.sub || userEmail,
+              email: userEmail,
+              name: userName,
+              username: formattedUsername,
+              role: userData.role || userRole,
+              avatar: userAvatar,
+            },
+            token: tokenData,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      } catch (exchangeErr: any) {
+        return new Response(
+          JSON.stringify({
+            error: exchangeErr.message || 'Terjadi kesalahan komunikasi dengan server SSO TEN',
+          }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Aksi yang tidak wajib menyertakan email di body utama: get-users
     if (action === 'get-users') {

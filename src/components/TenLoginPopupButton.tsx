@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { signIn, useSession } from 'next-auth/react';
-import { Shield, Loader2, LogIn } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { useTask } from '../context/TaskContext';
 
 export interface TenLoginPopupButtonProps {
   callbackUrl?: string;
@@ -13,20 +13,23 @@ export interface TenLoginPopupButtonProps {
 }
 
 export const TenLoginPopupButton: React.FC<TenLoginPopupButtonProps> = ({
-  callbackUrl = '/auth/popup-callback',
+  callbackUrl = '/auth/callback',
   onSuccess,
   className,
   buttonText = 'Masuk via SSO TEN (Popup)',
   style,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { data: session, status } = useSession();
+  const { showToast } = useTask();
 
   // Dengarkan sinyal sukses dari jendela popup
   useEffect(() => {
     const handleAuthMessage = (event: MessageEvent) => {
       if (event.data?.type === 'TEN_SSO_LOGIN_SUCCESS') {
         setIsLoading(false);
+        if (event.data?.user?.name) {
+          showToast(`Berhasil masuk sebagai ${event.data.user.name}`);
+        }
         if (onSuccess) {
           onSuccess();
         } else {
@@ -37,7 +40,7 @@ export const TenLoginPopupButton: React.FC<TenLoginPopupButtonProps> = ({
 
     window.addEventListener('message', handleAuthMessage);
     return () => window.removeEventListener('message', handleAuthMessage);
-  }, [onSuccess]);
+  }, [onSuccess, showToast]);
 
   const handleLoginPopup = () => {
     setIsLoading(true);
@@ -47,34 +50,40 @@ export const TenLoginPopupButton: React.FC<TenLoginPopupButtonProps> = ({
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
 
-    const targetCallback = callbackUrl.startsWith('http')
-      ? callbackUrl
-      : `${window.location.origin}${callbackUrl.startsWith('/') ? callbackUrl : `/${callbackUrl}`}`;
+    const clientId = 'ten_app_eaffqk';
+    const targetRedirect = `${window.location.origin}${
+      callbackUrl.startsWith('/') ? callbackUrl : `/${callbackUrl}`
+    }`;
+    const state = Math.random().toString(36).substring(2, 15);
+    try {
+      sessionStorage.setItem('ten_sso_state', state);
+    } catch {
+      // ignore
+    }
 
-    const signinUrl = `/api/auth/signin/ten?callbackUrl=${encodeURIComponent(targetCallback)}`;
+    const authUrl = `https://account.ten.my.id/api/oauth/authorize?response_type=code&client_id=${encodeURIComponent(
+      clientId
+    )}&redirect_uri=${encodeURIComponent(targetRedirect)}&scope=${encodeURIComponent(
+      'openid profile email'
+    )}&state=${encodeURIComponent(state)}`;
 
     const popup = window.open(
-      signinUrl,
+      authUrl,
       'TEN_SSO_LOGIN_POPUP',
       `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no,location=yes,resizable=yes`
     );
 
     if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      // Jika popup diblokir browser, fallback langsung redirect
-      signIn('ten', { callbackUrl: targetCallback });
+      // Jika popup diblokir browser, fallback langsung redirect di tab saat ini
+      window.location.href = authUrl;
       return;
     }
 
-    // Pantau penutupan jendela popup (fallback jika postMessage terhalang)
+    // Pantau jika popup ditutup manual oleh pengguna
     const intervalTimer = setInterval(() => {
       if (popup.closed) {
         clearInterval(intervalTimer);
         setIsLoading(false);
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          window.location.reload();
-        }
       }
     }, 600);
   };
@@ -108,7 +117,7 @@ export const TenLoginPopupButton: React.FC<TenLoginPopupButtonProps> = ({
     >
       {isLoading ? (
         <>
-          <Loader2 size={16} className="spin" />
+          <Loader2 size={16} className="spin-animate" />
           <span>Menghubungkan ke TEN...</span>
         </>
       ) : (
