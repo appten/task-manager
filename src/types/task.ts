@@ -78,6 +78,7 @@ export interface Task {
   completedAt?: string;
   subTasks: SubTask[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface LifeRelationship {

@@ -621,45 +621,75 @@ export const AccountView: React.FC = () => {
             </div>
 
             <div className="auth-form">
-              <p className="logout-desc-text">
-                Data Anda di database Cloudflare KV tetap tersimpan aman. Bagaimana Anda ingin menangani data tugas di HP/browser ini?
+              <p className="logout-desc-text" style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
+                Catatan tugas Anda di akun cloud tetap tersimpan aman. Bagaimana Anda ingin menangani catatan dan riwayat tugas pada perangkat ini?
               </p>
 
-              <div className="logout-choices">
+              <div className="logout-choices" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <label
                   className={`logout-choice-card ${!logoutClearLocal ? 'selected' : ''}`}
                   onClick={() => setLogoutClearLocal(false)}
+                  style={{
+                    border: !logoutClearLocal ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                    background: !logoutClearLocal ? '#eff6ff' : '#f8fafc',
+                    borderRadius: '12px',
+                    padding: '12px 14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                  }}
                 >
                   <input
                     type="radio"
                     name="logoutChoice"
                     checked={!logoutClearLocal}
                     onChange={() => setLogoutClearLocal(false)}
+                    style={{ marginTop: '3px' }}
                   />
                   <div className="choice-text">
-                    <strong>Tetap Simpan Tugas di HP Ini (Disarankan)</strong>
-                    <span>Beralih ke mode tamu. Anda tetap bisa melihat dan mengedit tugas secara offline.</span>
+                    <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>
+                      Tetap Simpan Catatan di Perangkat Ini (Perangkat Pribadi)
+                    </strong>
+                    <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.35, display: 'block', marginTop: '2px' }}>
+                      Beralih ke mode offline. Catatan tugas tetap dapat Anda buka dan gunakan di perangkat ini.
+                    </span>
                   </div>
                 </label>
 
                 <label
                   className={`logout-choice-card ${logoutClearLocal ? 'selected' : ''}`}
                   onClick={() => setLogoutClearLocal(true)}
+                  style={{
+                    border: logoutClearLocal ? '1.5px solid #dc2626' : '1px solid #e2e8f0',
+                    background: logoutClearLocal ? '#fef2f2' : '#f8fafc',
+                    borderRadius: '12px',
+                    padding: '12px 14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                  }}
                 >
                   <input
                     type="radio"
                     name="logoutChoice"
                     checked={logoutClearLocal}
                     onChange={() => setLogoutClearLocal(true)}
+                    style={{ marginTop: '3px' }}
                   />
                   <div className="choice-text">
-                    <strong>Bersihkan Tugas dari HP Ini</strong>
-                    <span>Cocok jika ini adalah perangkat umum atau Anda ingin memulai dari layar bersih.</span>
+                    <strong style={{ fontSize: '13px', color: logoutClearLocal ? '#b91c1c' : '#0f172a', display: 'block' }}>
+                      Bersihkan Seluruh Catatan & Riwayat (Bebas Jejak Privasi)
+                    </strong>
+                    <span style={{ fontSize: '11.5px', color: logoutClearLocal ? '#991b1b' : '#64748b', lineHeight: 1.35, display: 'block', marginTop: '2px' }}>
+                      Sangat disarankan untuk komputer bersama, kantor, atau warnet. Semua tugas, riwayat, dan sesi lokal akan dikosongkan total agar tidak ada celah data bagi pengguna berikutnya.
+                    </span>
                   </div>
                 </label>
               </div>
 
-              <div className="auth-form-footer">
+              <div className="auth-form-footer" style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button
                   type="button"
                   className="btn-cancel"
@@ -671,9 +701,22 @@ export const AccountView: React.FC = () => {
                   type="button"
                   className="btn-logout-confirm"
                   onClick={handleConfirmLogout}
+                  style={{
+                    background: logoutClearLocal ? '#dc2626' : '#2563eb',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '9px 18px',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
                 >
                   <LogOut size={14} />
-                  <span>Konfirmasi Keluar</span>
+                  <span>{logoutClearLocal ? 'Keluar & Bersihkan Data' : 'Konfirmasi Keluar'}</span>
                 </button>
               </div>
             </div>

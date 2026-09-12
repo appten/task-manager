@@ -21,6 +21,16 @@ import {
 } from '../services/smartScheduler';
 import { cloudSyncService, UserProfile } from '../services/cloudSyncService';
 
+export interface SyncConflictInfo {
+  localCount: number;
+  cloudCount: number;
+  localTasks: Task[];
+  cloudTasks: Task[];
+  localGoal?: string;
+  cloudGoal?: string;
+  cloudEmail: string;
+}
+
 interface TaskContextType {
   // Cloudflare KV Sync & User Account (Opsional)
   currentUser: UserProfile | null;
@@ -28,6 +38,10 @@ interface TaskContextType {
   lastCloudSyncedAt: string | null;
   isAutoSyncEnabled: boolean;
   refreshUserSession: () => UserProfile | null;
+  syncConflict: SyncConflictInfo | null;
+  isReconciling: boolean;
+  resolveSyncConflict: (choice: 'merge' | 'use_cloud' | 'use_local') => Promise<void>;
+  dismissSyncConflict: () => void;
   loginUser: (email: string, password: string, mergeLocalData?: boolean) => Promise<{ success: boolean; error?: string }>;
   registerUser: (name: string, email: string, password: string, mergeLocalData?: boolean, recoveryPin?: string) => Promise<{ success: boolean; error?: string }>;
   logoutUser: (clearLocalTasks?: boolean) => void;
@@ -230,6 +244,12 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
   const [lastCloudSyncedAt, setLastCloudSyncedAt] = useState<string | null>(null);
   const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState<boolean>(true);
+
+  // State Pengaman Sinkronisasi Data Akun (Konflik Data & Rekonsiliasi)
+  const [syncConflict, setSyncConflict] = useState<SyncConflictInfo | null>(null);
+  const [isReconciling, setIsReconciling] = useState<boolean>(false);
+  const isReconciledRef = React.useRef<boolean>(false);
+  const lastReconciledEmailRef = React.useRef<string | null>(null);
 
   // State Jadwal Asli & Proposal AI untuk Komparasi Sebelum/Sesudah
   const [originalSchedules, setOriginalSchedules] = useState<Record<string, Task[]>>({});
@@ -490,9 +510,186 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [refreshUserSession, showToast]);
 
-  // Auto-sync debounced ke Task_KV ketika tasks berubah jika currentUser & isAutoSyncEnabled aktif
+  // Rekonsiliasi data dua arah saat akun berhasil login (mencegah penimpaan data sepihak)
+  const reconcileUserDataOnLogin = useCallback(
+    async (user: UserProfile) => {
+      if (!user?.email) return;
+      if (lastReconciledEmailRef.current === user.email && isReconciledRef.current) {
+        return;
+      }
+      setIsReconciling(true);
+
+      try {
+        // 1. Simpan cadangan snapshot keselamatan lokal terlebih dahulu sebelum rekonsiliasi
+        try {
+          const safetySnapshot = {
+            timestamp: new Date().toISOString(),
+            userEmail: user.email,
+            tasks,
+            userGoal,
+          };
+          localStorage.setItem(
+            `ten_backup_safety_pre_sync_${user.email}`,
+            JSON.stringify(safetySnapshot)
+          );
+          localStorage.setItem('ten_backup_latest_safety', JSON.stringify(safetySnapshot));
+        } catch (snapErr) {
+          console.warn('Gagal menyimpan snapshot pengaman data:', snapErr);
+        }
+
+        // 2. Tarik data dari Cloud untuk akun ini
+        const cloudRes = await cloudSyncService.pullTasks(user.email);
+        const cloudTasks = cloudRes.tasks || [];
+        const cloudGoal = cloudRes.userGoal || '';
+
+        const localTasks = tasks;
+
+        // Kondisi 1: Cloud kosong, Lokal ada catatan tugas
+        if (cloudTasks.length === 0 && localTasks.length > 0) {
+          await cloudSyncService.pushTasks(user.email, localTasks, userGoal);
+          isReconciledRef.current = true;
+          lastReconciledEmailRef.current = user.email;
+          showToast(`Catatan tugas perangkat Anda telah dicadangkan aman ke akun ${user.email}.`);
+          return;
+        }
+
+        // Kondisi 2: Cloud ada data, Lokal kosong
+        if (cloudTasks.length > 0 && localTasks.length === 0) {
+          setTasks(cloudTasks);
+          if (cloudGoal) setUserGoal(cloudGoal);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudTasks));
+          } catch {}
+          isReconciledRef.current = true;
+          lastReconciledEmailRef.current = user.email;
+          showToast(`Berhasil memuat ${cloudTasks.length} catatan tugas dari akun Cloud Anda.`);
+          return;
+        }
+
+        // Kondisi 3: Keduanya kosong
+        if (cloudTasks.length === 0 && localTasks.length === 0) {
+          isReconciledRef.current = true;
+          lastReconciledEmailRef.current = user.email;
+          return;
+        }
+
+        // Kondisi 4: Keduanya punya data -> Cek apakah ID dan isinya sama persis
+        const cloudIds = new Set(cloudTasks.map((t) => t.id));
+        const isSameIds =
+          localTasks.length === cloudTasks.length &&
+          localTasks.every((t) => cloudIds.has(t.id));
+
+        if (isSameIds) {
+          // Data sudah identik
+          isReconciledRef.current = true;
+          lastReconciledEmailRef.current = user.email;
+          return;
+        }
+
+        // Kondisi 5: KONFLIK DATA NYATA (Perangkat & Cloud sama-sama punya tugas berbeda)
+        // Buka modal dialog pengaman agar pengguna dapat memilih opsi terbaik
+        setSyncConflict({
+          localCount: localTasks.length,
+          cloudCount: cloudTasks.length,
+          localTasks,
+          cloudTasks,
+          localGoal: userGoal,
+          cloudGoal,
+          cloudEmail: user.email,
+        });
+      } catch (err: any) {
+        console.error('Error saat rekonsiliasi data akun:', err);
+      } finally {
+        setIsReconciling(false);
+      }
+    },
+    [tasks, userGoal, showToast]
+  );
+
+  // Resolusi konflik sinkronisasi sesuai pilihan sadar pengguna
+  const resolveSyncConflict = useCallback(
+    async (choice: 'merge' | 'use_cloud' | 'use_local') => {
+      if (!syncConflict || !currentUser?.email) return;
+      setIsReconciling(true);
+
+      try {
+        let finalTasks: Task[] = [];
+        let finalGoal = userGoal;
+
+        if (choice === 'merge') {
+          // GABUNGKAN KEDUA DATA SECARA CERDAS (Merge & Keep Both)
+          const mergedMap = new Map<string, Task>();
+          // Masukkan tugas dari cloud
+          for (const t of syncConflict.cloudTasks) {
+            mergedMap.set(t.id, t);
+          }
+          // Satukan tugas lokal: jika ada ID sama, ambil versi dengan updatedAt terbaru
+          for (const lt of syncConflict.localTasks) {
+            if (mergedMap.has(lt.id)) {
+              const ct = mergedMap.get(lt.id)!;
+              const ctTime = new Date(ct.updatedAt || ct.createdAt || 0).getTime();
+              const ltTime = new Date(lt.updatedAt || lt.createdAt || 0).getTime();
+              if (ltTime >= ctTime) {
+                mergedMap.set(lt.id, lt);
+              }
+            } else {
+              mergedMap.set(lt.id, lt);
+            }
+          }
+          finalTasks = Array.from(mergedMap.values());
+          finalGoal = syncConflict.cloudGoal || syncConflict.localGoal || userGoal;
+          await cloudSyncService.pushTasks(currentUser.email, finalTasks, finalGoal);
+          showToast(`Berhasil menggabungkan ${finalTasks.length} tugas (Perangkat & Cloud).`);
+        } else if (choice === 'use_cloud') {
+          // GUNAKAN DATA CLOUD
+          finalTasks = syncConflict.cloudTasks;
+          finalGoal = syncConflict.cloudGoal || userGoal;
+          showToast(`Menggunakan ${finalTasks.length} tugas dari akun Cloud Anda.`);
+        } else if (choice === 'use_local') {
+          // GUNAKAN DATA PERANGKAT
+          finalTasks = syncConflict.localTasks;
+          finalGoal = syncConflict.localGoal || userGoal;
+          await cloudSyncService.pushTasks(currentUser.email, finalTasks, finalGoal);
+          showToast(`Menyimpan ${finalTasks.length} tugas dari perangkat ini ke Cloud.`);
+        }
+
+        setTasks(finalTasks);
+        if (finalGoal) setUserGoal(finalGoal);
+
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(finalTasks));
+          window.dispatchEvent(new Event('storage'));
+        } catch {}
+
+        isReconciledRef.current = true;
+        lastReconciledEmailRef.current = currentUser.email;
+        setSyncConflict(null);
+      } catch (err: any) {
+        showToast(err.message || 'Gagal menyelesaikan penyesuaian data');
+      } finally {
+        setIsReconciling(false);
+      }
+    },
+    [syncConflict, currentUser, userGoal, showToast]
+  );
+
+  const dismissSyncConflict = useCallback(() => {
+    setSyncConflict(null);
+    showToast('Penyesuaian ditunda. Data di perangkat dan cloud tetap terpisah aman.');
+  }, [showToast]);
+
+  // Pantau login untuk memicu rekonsiliasi data aman
   useEffect(() => {
-    if (!isHydrated || !currentUser || !isAutoSyncEnabled) return;
+    if (isHydrated && currentUser?.email) {
+      if (lastReconciledEmailRef.current !== currentUser.email) {
+        reconcileUserDataOnLogin(currentUser);
+      }
+    }
+  }, [currentUser, isHydrated, reconcileUserDataOnLogin]);
+
+  // Auto-sync debounced ke Task_KV ketika tasks berubah jika currentUser, isAutoSyncEnabled, & status rekonsiliasi aman
+  useEffect(() => {
+    if (!isHydrated || !currentUser || !isAutoSyncEnabled || !isReconciledRef.current) return;
 
     const timer = setTimeout(() => {
       setIsSyncingCloud(true);
@@ -1661,12 +1858,16 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [currentUser, showToast]
   );
 
-  // 6. Logout
+  // 6. Logout dengan Konfirmasi & Opsi Pembersihan Bersih (Zero-Footprint Mode)
   const logoutUser = useCallback(
     (clearLocalTasks = false) => {
       cloudSyncService.logout();
       setCurrentUser(null);
       setLastCloudSyncedAt(null);
+      setSyncConflict(null);
+      isReconciledRef.current = false;
+      lastReconciledEmailRef.current = null;
+
       try {
         localStorage.removeItem('ten_my_id_last_sync_v01');
         localStorage.removeItem('ten_cloud_session');
@@ -1674,13 +1875,43 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch {}
 
       if (clearLocalTasks) {
+        // Bersihkan seluruh state aplikasi
         setTasks([]);
+        setUserGoal('');
+        setRelationships([]);
+        setAiAnalysis(null);
+        setOriginalSchedules({});
+        setAiProposals({});
+        setActiveScheduleModes({});
+
+        // Bersihkan seluruh kunci lokal terkait data aplikasi di browser
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-        } catch {}
-        showToast('Telah keluar dari akun dan data lokal dibersihkan.');
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (
+              key &&
+              (key.startsWith('ten_') ||
+                key.startsWith('task_') ||
+                key.includes('schedule') ||
+                key.includes('relationships') ||
+                key.includes('goal') ||
+                key.includes('analysis') ||
+                key.includes('backup'))
+            ) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach((k) => localStorage.removeItem(k));
+          sessionStorage.clear();
+          window.dispatchEvent(new Event('storage'));
+        } catch (e) {
+          console.warn('Gagal membersihkan storage saat logout:', e);
+        }
+
+        showToast('Telah keluar dari akun. Seluruh catatan & riwayat perangkat telah dibersihkan bersih.');
       } else {
-        showToast('Telah keluar dari akun. Beroperasi dalam mode Guest lokal.');
+        showToast('Telah keluar dari akun. Catatan tugas tetap tersimpan di perangkat ini (mode offline).');
       }
     },
     [showToast]
@@ -1794,6 +2025,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lastCloudSyncedAt,
         isAutoSyncEnabled,
         refreshUserSession,
+        syncConflict,
+        isReconciling,
+        resolveSyncConflict,
+        dismissSyncConflict,
         loginUser,
         registerUser,
         logoutUser,
