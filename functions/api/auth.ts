@@ -152,13 +152,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       const redirectUriParam = redirectUri || 'https://task.ten.my.id/auth/callback';
 
       try {
-        // 1. Tukar authorization code dengan access token ke SSO TEN
+        // 1. Tukar authorization code dengan access token ke SSO TEN (Format JSON)
         const tokenRes = await fetch('https://account.ten.my.id/api/oauth/token', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json',
           },
-          body: new URLSearchParams({
+          body: JSON.stringify({
             grant_type: 'authorization_code',
             code,
             redirect_uri: redirectUriParam,
@@ -177,18 +177,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
         const tokenData = (await tokenRes.json()) as any;
         const accessToken = tokenData.access_token;
+        const rawUser = tokenData.user || {};
 
-        // 2. Ambil profil pengguna dari userinfo endpoint
-        let profile: any = {};
-        if (accessToken) {
-          const userinfoRes = await fetch('https://account.ten.my.id/api/oauth/userinfo', {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          });
-          if (userinfoRes.ok) {
-            profile = await userinfoRes.json();
-          }
+        // 2. Ambil profil pengguna (dari tokenData.user atau userinfo endpoint fallback)
+        let profile: any = rawUser;
+        if ((!profile || !profile.email) && accessToken) {
+          try {
+            const userinfoRes = await fetch('https://account.ten.my.id/api/oauth/userinfo', {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            });
+            if (userinfoRes.ok) {
+              profile = await userinfoRes.json();
+            }
+          } catch {}
         }
 
         const userEmail = (profile.email || tokenData.email || '').trim().toLowerCase();
@@ -205,11 +208,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             ? rawUsername
             : `@${rawUsername}`
           : undefined;
-        const userName = profile.name || profile.username || userEmail.split('@')[0];
+        const userName =
+          profile.displayName ||
+          profile.name ||
+          profile.username ||
+          userEmail.split('@')[0];
         const userRole =
-          profile.role ||
-          (configuredAdminEmail && userEmail === configuredAdminEmail ? 'admin' : 'user');
-        const userAvatar = profile.picture || profile.avatar || null;
+          profile.role?.toLowerCase() === 'admin' ||
+          profile.role?.toLowerCase() === 'pengelola' ||
+          (configuredAdminEmail && userEmail === configuredAdminEmail)
+            ? 'admin'
+            : 'user';
+        const userAvatar = profile.avatar || profile.picture || profile.photoURL || null;
 
         // 3. Simpan atau perbarui di Task_KV
         const existingUserRaw = await env.Task_KV.get(`user:${userEmail}`);

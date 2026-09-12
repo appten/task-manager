@@ -7,7 +7,7 @@ import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [statusText, setStatusText] = useState('Menghubungkan autentikasi SSO TEN...');
+  const [statusText, setStatusText] = useState('Menghubungkan ke SSO TEN...');
   const [isError, setIsError] = useState(false);
 
   useEffect(() => {
@@ -21,139 +21,107 @@ function CallbackContent() {
         if (error) {
           if (!isMounted) return;
           setIsError(true);
-          setStatusText(`Autentikasi dibatalkan atau ditolak: ${error}`);
+          setStatusText(`Autentikasi ditolak atau dibatalkan: ${error}`);
           return;
         }
 
         if (!code) {
           if (!isMounted) return;
           setIsError(true);
-          setStatusText('Kode otorisasi SSO TEN tidak ditemukan.');
+          setStatusText('Kode otorisasi SSO TEN tidak ditemukan di URL callback.');
           return;
         }
 
-        setStatusText('Menukar token otorisasi dan memuat profil TEN...');
+        setStatusText('Menukar kode otorisasi dan memuat sesi akun TEN...');
 
-        const redirectUri =
-          window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? `${window.location.origin}/auth/callback`
-            : 'https://task.ten.my.id/auth/callback';
+        const clientId = 'ten_app_eaffqk';
+        const clientSecret = 'sec_live_256rmh7fj21qcc6mbp3gkf';
+        const redirectUri = 'https://task.ten.my.id/auth/callback';
 
-        let userData: any = null;
-        let tokenData: any = null;
+        // 1. Penukaran Kode Otorisasi ke https://account.ten.my.id/api/oauth/token
+        // Format body: JSON (Sesuai panduan resmi SSO TEN terbaru)
+        const tokenRes = await fetch('https://account.ten.my.id/api/oauth/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            grant_type: 'authorization_code',
+            client_id: clientId,
+            client_secret: clientSecret,
+            code,
+            redirect_uri: redirectUri,
+          }),
+        });
 
-        // 1. Coba tukar via backend Cloudflare Pages Functions /api/auth
+        if (!tokenRes.ok) {
+          const errText = await tokenRes.text();
+          throw new Error(`Gagal menukar token SSO TEN (${tokenRes.status}): ${errText}`);
+        }
+
+        const tokenData = (await tokenRes.json()) as any;
+        const rawUser = tokenData.user || {};
+
+        const userEmail = (rawUser.email || '').trim().toLowerCase();
+        const userName =
+          rawUser.displayName ||
+          rawUser.name ||
+          (userEmail ? userEmail.split('@')[0] : 'Pengguna TEN');
+        const rawUsername = rawUser.username || '';
+        const formattedUsername = rawUsername
+          ? rawUsername.startsWith('@')
+            ? rawUsername
+            : `@${rawUsername}`
+          : undefined;
+        const userRole =
+          rawUser.role?.toLowerCase() === 'admin' ||
+          rawUser.role?.toLowerCase() === 'pengelola'
+            ? 'admin'
+            : 'user';
+        const userAvatar = rawUser.avatar || rawUser.picture || rawUser.photoURL || undefined;
+
+        const ssoUser = {
+          id: rawUser.id || rawUser.uid || rawUser.sub || userEmail,
+          name: userName,
+          username: formattedUsername,
+          email: userEmail,
+          avatar: userAvatar,
+          role: userRole as any,
+          authProvider: 'ten-sso' as const,
+          createdAt: new Date().toISOString(),
+        };
+
+        // 2. Simpan Sesi Pengguna ke Penyimpanan Lokal (Local Storage)
         try {
-          const res = await fetch('/api/auth', {
+          localStorage.setItem('ten_my_id_user_v01', JSON.stringify(ssoUser));
+          localStorage.setItem(
+            'ten_cloud_session',
+            JSON.stringify({ user: ssoUser, token: tokenData.access_token })
+          );
+          localStorage.setItem('ten_current_user', JSON.stringify(ssoUser));
+          localStorage.setItem('ten_my_id_autosync_v01', 'true');
+          window.dispatchEvent(new Event('storage'));
+        } catch (storageErr) {
+          console.warn('Gagal menyimpan sesi ke localStorage:', storageErr);
+        }
+
+        // 3. Cadangkan Sesi ke Task_KV via endpoint worker (/api/auth) di latar belakang (opsional)
+        try {
+          fetch('/api/auth', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               action: 'ten-sso-callback',
               code,
               redirectUri,
             }),
-          });
-
-          if (res.ok) {
-            const data = (await res.json()) as any;
-            if (data?.success && data?.user) {
-              userData = data.user;
-              tokenData = data.token;
-            }
-          }
-        } catch (fetchErr) {
-          console.warn('Panggilan backend /api/auth tidak tersedia, beralih ke direct exchange:', fetchErr);
-        }
-
-        // 2. Jika backend /api/auth gagal (misal 404 pada local Next.js dev server), gunakan Direct Client Exchange
-        if (!userData) {
-          const clientId = 'ten_app_eaffqk';
-          const clientSecret = 'sec_live_256rmh7fj21qcc6mbp3gkf';
-
-          const tokenRes = await fetch('https://account.ten.my.id/api/oauth/token', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-              grant_type: 'authorization_code',
-              code,
-              redirect_uri: redirectUri,
-              client_id: clientId,
-              client_secret: clientSecret,
-            }),
-          });
-
-          if (!tokenRes.ok) {
-            const errText = await tokenRes.text();
-            throw new Error(`Gagal menukar token otorisasi SSO TEN (${tokenRes.status}): ${errText}`);
-          }
-
-          tokenData = (await tokenRes.json()) as any;
-          const accessToken = tokenData.access_token;
-
-          let profile: any = {};
-          if (accessToken) {
-            const userinfoRes = await fetch('https://account.ten.my.id/api/oauth/userinfo', {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            });
-            if (userinfoRes.ok) {
-              profile = await userinfoRes.json();
-            }
-          }
-
-          const userEmail = (profile.email || tokenData.email || '').trim().toLowerCase();
-          const rawUsername = profile.username || profile.preferred_username || '';
-          const formattedUsername = rawUsername
-            ? rawUsername.startsWith('@')
-              ? rawUsername
-              : `@${rawUsername}`
-            : undefined;
-          const userName = profile.name || profile.username || (userEmail ? userEmail.split('@')[0] : 'Pengguna TEN');
-          const userAvatar = profile.picture || profile.avatar || null;
-          const userRole = profile.role || 'user';
-
-          userData = {
-            id: profile.sub || tokenData.sub || userEmail,
-            email: userEmail,
-            name: userName,
-            username: formattedUsername,
-            role: userRole,
-            avatar: userAvatar,
-            authProvider: 'ten-sso',
-          };
-        }
-
-        const ssoUser = {
-          id: userData.id || userData.sub || userData.email,
-          name: userData.name || 'Pengguna TEN',
-          email: userData.email,
-          username: userData.username,
-          avatar: userData.avatar || userData.picture || userData.image,
-          role: userData.role || 'user',
-          authProvider: 'ten-sso' as const,
-          createdAt: userData.createdAt || new Date().toISOString(),
-        };
-
-        // Simpan ke SELURUH key storage aplikasi agar terbaca oleh TaskContext & CloudSync
-        try {
-          localStorage.setItem('ten_my_id_user_v01', JSON.stringify(ssoUser));
-          localStorage.setItem('ten_cloud_session', JSON.stringify({ user: ssoUser, token: tokenData }));
-          localStorage.setItem('ten_current_user', JSON.stringify(ssoUser));
-          localStorage.setItem('ten_my_id_autosync_v01', 'true');
-          window.dispatchEvent(new Event('storage'));
-        } catch (e) {
-          console.warn('Gagal menyimpan sesi ke localStorage:', e);
-        }
+          }).catch(() => {});
+        } catch {}
 
         if (!isMounted) return;
         setStatusText(`Selamat datang, ${ssoUser.name || ssoUser.username}!`);
 
-        // Jika login via popup window
+        // 4. Tutup Jendela Popup dan Perbarui Halaman Induk
         if (window.opener) {
           try {
             window.opener.postMessage(
@@ -163,8 +131,8 @@ function CallbackContent() {
               },
               '*'
             );
-          } catch (e) {
-            console.warn('Gagal mengirim postMessage ke opener:', e);
+          } catch (postErr) {
+            console.warn('Gagal postMessage ke window opener:', postErr);
           }
 
           setTimeout(() => {
@@ -173,12 +141,12 @@ function CallbackContent() {
             } catch {
               router.replace('/account');
             }
-          }, 600);
+          }, 500);
         } else {
-          // Jika login via direct redirect (bukan popup)
+          // Jika login direct (bukan popup), langsung arahkan ke menu akun
           setTimeout(() => {
             router.replace('/account');
-          }, 800);
+          }, 700);
         }
       } catch (err: any) {
         console.error('SSO Callback error:', err);
@@ -273,7 +241,7 @@ function CallbackContent() {
             }}
           >
             <Loader2 size={16} className="spin-animate" />
-            <span>Menyelaraskan sesi Anda...</span>
+            <span>Memperbarui sesi akun Anda...</span>
           </div>
         )}
 
@@ -293,7 +261,7 @@ function CallbackContent() {
               cursor: 'pointer',
             }}
           >
-            Kembali ke Akun
+            Kembali ke Halaman Akun
           </button>
         )}
       </div>
@@ -316,7 +284,7 @@ export default function CallbackPage() {
             fontSize: '14px',
           }}
         >
-          Memuat callback...
+          Memuat callback SSO TEN...
         </div>
       }
     >
