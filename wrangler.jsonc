@@ -1,9 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "task",
+  "main": "src/worker.ts",
   "compatibility_date": "2024-11-01",
   "assets": {
-    "directory": "./out"
+    "directory": "./out",
+    "binding": "ASSETS"
   },
   "kv_namespaces": [
     {
@@ -13,7 +15,9 @@
   ],
   "vars": {
     "DEV_ADMIN_EMAIL": "admin@ten.my.id",
-    "DEV_ADMIN_NAME": "Pengelola Sistem"
+    "DEV_ADMIN_NAME": "Pengelola Sistem",
+    "TEN_CLIENT_ID": "ten_app_eaffqk",
+    "TEN_CLIENT_SECRET": "sec_live_256rmh7fj21qcc6mbp3gkf",
+    "TEN_ISSUER": "https://account.ten.my.id"
   }
 }
-
