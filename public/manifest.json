@@ -1,0 +1,26 @@
+{
+  "name": "TEN Tasks - Pengelola Tugas Cerdas",
+  "short_name": "TEN Tasks",
+  "description": "Aplikasi pengelola tugas mobile cerdas, produktif, dan terfokus untuk produktivitas harian Anda",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#1d4ed8",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

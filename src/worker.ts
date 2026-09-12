@@ -1,5 +1,9 @@
 import { onRequestPost as handleAuthPost } from '../functions/api/auth';
-import { onRequestGet as handleSyncGet, onRequestPost as handleSyncPost } from '../functions/api/sync';
+import {
+  onRequestGet as handleSyncGet,
+  onRequestPost as handleSyncPost,
+  onRequestDelete as handleSyncDelete,
+} from '../functions/api/sync';
 
 export interface Env {
   Task_KV: any;
@@ -50,6 +54,16 @@ export default {
       }
       if (request.method === 'POST') {
         return handleSyncPost({
+          request,
+          env,
+          params: {},
+          waitUntil: (promise: Promise<any>) => ctx?.waitUntil ? ctx.waitUntil(promise) : promise,
+          next: () => Promise.resolve(new Response(null, { status: 404 })),
+          data: {},
+        });
+      }
+      if (request.method === 'DELETE') {
+        return handleSyncDelete({
           request,
           env,
           params: {},

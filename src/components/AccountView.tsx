@@ -23,6 +23,12 @@ import {
   Upload,
   HardDrive,
   FileJson,
+  Laptop,
+  Tablet,
+  Wifi,
+  WifiOff,
+  Globe,
+  DownloadCloud,
 } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
 import { VersionHistoryView } from './VersionHistoryView';
@@ -39,6 +45,14 @@ export const AccountView: React.FC = () => {
     lastCloudSyncedAt,
     isAutoSyncEnabled,
     refreshUserSession,
+    storageMode,
+    setStorageMode,
+    isAutoOfflineFallbackEnabled,
+    toggleAutoOfflineFallback,
+    isOnline,
+    activeDevices,
+    refreshActiveDevices,
+    revokeDeviceSession,
     logoutUser,
     triggerCloudSync,
     syncLocalTasksToKV,
@@ -70,8 +84,72 @@ export const AccountView: React.FC = () => {
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
 
+  // Multi-Device & PWA states
+  const [canInstallPwa, setCanInstallPwa] = useState(false);
+  const [isPwaInstalled, setIsPwaInstalled] = useState(false);
+  const [isRevokingDevice, setIsRevokingDevice] = useState<string | null>(null);
+
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((t) => t.isCompleted).length;
+
+  // PWA Prompt & Display Mode Detection
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isStandalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone === true;
+      setIsPwaInstalled(isStandalone);
+
+      if ((window as any).deferredPwaPrompt) {
+        setCanInstallPwa(true);
+      }
+
+      const handlePwaReady = () => setCanInstallPwa(true);
+      const handleAppInstalled = () => {
+        setIsPwaInstalled(true);
+        setCanInstallPwa(false);
+      };
+
+      window.addEventListener('pwa_prompt_ready', handlePwaReady);
+      window.addEventListener('appinstalled', handleAppInstalled);
+
+      return () => {
+        window.removeEventListener('pwa_prompt_ready', handlePwaReady);
+        window.removeEventListener('appinstalled', handleAppInstalled);
+      };
+    }
+  }, []);
+
+  const handleInstallPwa = async () => {
+    const promptEvent = (window as any).deferredPwaPrompt;
+    if (promptEvent) {
+      promptEvent.prompt();
+      const result = await promptEvent.userChoice;
+      if (result && result.outcome === 'accepted') {
+        showToast('Aplikasi TEN Tasks berhasil dipasang! 🎉');
+        setCanInstallPwa(false);
+        setIsPwaInstalled(true);
+      }
+      (window as any).deferredPwaPrompt = null;
+    } else {
+      showToast('Aplikasi dapat dipasang via menu browser Anda ("Tambahkan ke Layar Utama")');
+    }
+  };
+
+  const handleRevokeDevice = async (deviceId: string, deviceName: string) => {
+    if (!window.confirm(`Yakin ingin mencabut sesi untuk "${deviceName}"? Perangkat tersebut harus login kembali.`)) {
+      return;
+    }
+    try {
+      setIsRevokingDevice(deviceId);
+      await revokeDeviceSession(deviceId);
+      showToast(`Akses sesi perangkat "${deviceName}" berhasil dicabut.`);
+    } catch (err: any) {
+      showToast(`Gagal mencabut perangkat: ${err.message || 'Error'}`);
+    } finally {
+      setIsRevokingDevice(null);
+    }
+  };
 
   // Pantau fokus jendela, visibility & storage agar saat kembali dari SSO TEN, status akun langsung aktif
   useEffect(() => {
@@ -364,14 +442,14 @@ export const AccountView: React.FC = () => {
             />
           )}
         </div>
-      </div>
-
-      {/* 2. Kartu Status Penyimpanan Data (Manusiawi, Ramah & Non-Teknis) */}
+      </div>      {/* 2. Kartu Status Penyimpanan Data & Mode Operasi */}
       <div className="account-sync-card">
         <div className="sync-card-header">
           <div className={`sync-icon-box ${currentUser ? 'cloud-active' : 'local-only'}`}>
             {currentUser ? (
-              isAutoSyncEnabled ? (
+              storageMode === 'cloud_priority' ? (
+                <Globe size={20} />
+              ) : isAutoSyncEnabled ? (
                 <Cloud size={20} />
               ) : (
                 <Smartphone size={20} />
@@ -382,28 +460,43 @@ export const AccountView: React.FC = () => {
           </div>
           <div className="sync-header-content">
             <div className="sync-title-row">
-              <h3 className="sync-title">Status Penyimpanan Data</h3>
-              <span
-                className={`sync-pill ${
-                  currentUser
-                    ? isAutoSyncEnabled
-                      ? 'active'
-                      : 'paused'
-                    : 'local'
-                }`}
-              >
-                {currentUser
-                  ? isAutoSyncEnabled
-                    ? 'Cloud & Perangkat'
-                    : 'Hanya di Perangkat'
-                  : 'Hanya di Perangkat'}
-              </span>
+              <h3 className="sync-title">Penyimpanan & Sinkronisasi</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className={`network-pill ${isOnline ? 'online' : 'offline'}`}>
+                  {isOnline ? <Wifi size={11} /> : <WifiOff size={11} />}
+                  <span>{isOnline ? 'Online' : 'Offline'}</span>
+                </span>
+                <span
+                  className={`sync-pill ${
+                    currentUser
+                      ? storageMode === 'cloud_priority'
+                        ? 'cloud-priority'
+                        : isAutoSyncEnabled
+                        ? 'active'
+                        : 'paused'
+                      : 'local'
+                  }`}
+                >
+                  {currentUser
+                    ? storageMode === 'cloud_priority'
+                      ? 'Prioritas Cloud'
+                      : isAutoSyncEnabled
+                      ? 'Cloud & Perangkat'
+                      : 'Hanya di Perangkat'
+                    : 'Hanya di Perangkat'}
+                </span>
+              </div>
             </div>
             <div className="sync-status-text">
               {currentUser ? (
-                isAutoSyncEnabled ? (
+                storageMode === 'cloud_priority' ? (
                   <span>
-                    Data tugas Anda tersimpan di perangkat ini dan secara otomatis dicadangkan ke akun cloud Anda (<strong>{currentUser.email}</strong>).
+                    Mode <strong>Prioritas Cloud</strong> aktif. Data disinkronkan langsung ke server cloud ({currentUser.email})
+                    {isAutoOfflineFallbackEnabled ? ' dengan peralihan otomatis ke lokal jika koneksi terputus.' : '.'}
+                  </span>
+                ) : isAutoSyncEnabled ? (
+                  <span>
+                    Data tugas tersimpan di perangkat ini dan secara otomatis dicadangkan ke akun cloud Anda (<strong>{currentUser.email}</strong>).
                   </span>
                 ) : (
                   <span>
@@ -441,10 +534,58 @@ export const AccountView: React.FC = () => {
               </button>
             </div>
 
+            {/* Pilihan Mode Penyimpanan: Prioritas Cloud vs Hibrida */}
+            <div className="storage-mode-selector-wrap" style={{ marginTop: '6px' }}>
+              <span className="storage-section-subtitle">Pilihan Mode Penyimpanan:</span>
+              <div className="storage-mode-grid">
+                <button
+                  type="button"
+                  className={`storage-mode-card ${storageMode === 'cloud_priority' ? 'active' : ''}`}
+                  onClick={() => setStorageMode('cloud_priority')}
+                >
+                  <div className="mode-card-header">
+                    <Globe size={15} />
+                    <strong>Prioritas Cloud</strong>
+                    {storageMode === 'cloud_priority' && <Check size={14} className="mode-check" />}
+                  </div>
+                  <p>Sinkron otomatis tanpa ketergantungan lokal saat terhubung internet.</p>
+                </button>
+
+                <button
+                  type="button"
+                  className={`storage-mode-card ${storageMode === 'hybrid' ? 'active' : ''}`}
+                  onClick={() => setStorageMode('hybrid')}
+                >
+                  <div className="mode-card-header">
+                    <Cloud size={15} />
+                    <strong>Hibrida (Lokal & Cloud)</strong>
+                    {storageMode === 'hybrid' && <Check size={14} className="mode-check" />}
+                  </div>
+                  <p>Simpan di memori browser ini dan cadangkan ke cloud saat tersambung.</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Fitur On / Off Cadangan Offline Otomatis */}
+            <div className="storage-auto-sync-box" style={{ marginTop: '8px' }}>
+              <div className="auto-sync-desc">
+                <strong>Peralihan Offline Otomatis</strong>
+                <span>Gunakan penyimpanan lokal secara otomatis saat perangkat tidak memiliki koneksi internet</span>
+              </div>
+              <label className="auto-sync-switch" style={{ margin: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={isAutoOfflineFallbackEnabled}
+                  onChange={toggleAutoOfflineFallback}
+                />
+                <span className="switch-slider"></span>
+              </label>
+            </div>
+
             {/* Fitur On / Off Sinkronisasi Otomatis */}
             <div className="storage-auto-sync-box">
               <div className="auto-sync-desc">
-                <strong>Pencadangan Otomatis ke Akun</strong>
+                <strong>Sinkronisasi Otomatis ke Cloud</strong>
                 <span>Setiap perubahan tugas langsung disimpan ke cloud agar selalu aman</span>
               </div>
               <label className="auto-sync-switch" style={{ margin: 0 }}>
@@ -456,6 +597,119 @@ export const AccountView: React.FC = () => {
                 <span className="switch-slider"></span>
               </label>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* 2.5 Kartu Perangkat Terhubung (Multi-Device Active Tracker) */}
+      {currentUser && (
+        <div className="account-sync-card account-devices-card">
+          <div className="sync-card-header">
+            <div className="sync-icon-box" style={{ background: '#f0fdf4', color: '#16a34a' }}>
+              <Laptop size={20} />
+            </div>
+            <div className="sync-header-content">
+              <div className="sync-title-row">
+                <h3 className="sync-title">Perangkat Terhubung ({activeDevices.length || 1})</h3>
+                <button
+                  type="button"
+                  className="btn-devices-refresh"
+                  onClick={() => refreshActiveDevices()}
+                  title="Segarkan status perangkat aktif"
+                >
+                  <RefreshCw size={12} />
+                  <span>Segarkan</span>
+                </button>
+              </div>
+              <div className="sync-status-text">
+                Daftar perangkat yang aktif mengakses akun <strong>{currentUser.email}</strong>. Anda dapat mencabut sesi perangkat yang tidak dikenali kapan saja.
+              </div>
+            </div>
+          </div>
+
+          <div className="device-list-wrap">
+            {activeDevices.length === 0 ? (
+              <div className="device-list-empty">
+                <span>Memuat daftar perangkat aktif...</span>
+              </div>
+            ) : (
+              activeDevices.map((device) => (
+                <div key={device.id} className={`device-item ${device.isCurrentDevice ? 'current-device' : ''}`}>
+                  <div className="device-icon-wrapper">
+                    {device.type === 'mobile' ? (
+                      <Smartphone size={18} />
+                    ) : device.type === 'tablet' ? (
+                      <Tablet size={18} />
+                    ) : (
+                      <Laptop size={18} />
+                    )}
+                  </div>
+                  <div className="device-details">
+                    <div className="device-name-row">
+                      <strong className="device-name">{device.name}</strong>
+                      {device.isCurrentDevice && (
+                        <span className="device-current-badge">
+                          <Check size={11} /> Perangkat Ini (Aktif)
+                        </span>
+                      )}
+                    </div>
+                    <div className="device-meta-row">
+                      <span>{device.browser} • {device.os}</span>
+                      <span className="device-dot">•</span>
+                      <span>Aktif: {formatLastSync(device.lastActiveAt)}</span>
+                    </div>
+                  </div>
+                  {!device.isCurrentDevice && (
+                    <button
+                      type="button"
+                      className="btn-device-revoke"
+                      onClick={() => handleRevokeDevice(device.id, device.name)}
+                      disabled={isRevokingDevice === device.id}
+                      title="Cabut sesi dari perangkat ini"
+                    >
+                      {isRevokingDevice === device.id ? 'Mencabut...' : 'Cabut Sesi'}
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 2.8 Kartu Aplikasi Web Progresif (PWA) */}
+      <div className="account-sync-card pwa-install-card">
+        <div className="sync-card-header">
+          <div className="sync-icon-box" style={{ background: '#f5f3ff', color: '#7c3aed' }}>
+            <DownloadCloud size={20} />
+          </div>
+          <div className="sync-header-content">
+            <div className="sync-title-row">
+              <h3 className="sync-title">Aplikasi Web Progresif (PWA)</h3>
+              <span className={`sync-pill ${isPwaInstalled ? 'active' : 'pwa-ready'}`}>
+                {isPwaInstalled ? 'Terpasang' : 'Tersedia'}
+              </span>
+            </div>
+            <div className="sync-status-text">
+              {isPwaInstalled ? (
+                <span>Aplikasi TEN Tasks telah terpasang dan dapat dibuka mandiri di layar utama Anda.</span>
+              ) : (
+                <span>Pasang TEN Tasks di ponsel atau desktop Anda untuk akses secepat aplikasi bawaan, tanpa address bar browser, serta kemampuan offline.</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {!isPwaInstalled && (
+          <div className="sync-card-body" style={{ marginTop: '2px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+            <button
+              type="button"
+              className="btn-install-pwa-cta"
+              onClick={handleInstallPwa}
+            >
+              <DownloadCloud size={15} />
+              <span>Pasang TEN Tasks ke Layar Utama</span>
+            </button>
           </div>
         )}
       </div>

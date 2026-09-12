@@ -1,5 +1,6 @@
 import { Task } from "@/types/task";
 import { feedbackService } from "./feedbackService";
+import { getCurrentDeviceInfo, DeviceInfo } from "./deviceService";
 
 export type UserRole = 'user' | 'admin';
 
@@ -34,6 +35,7 @@ export interface SyncResponse {
   message?: string;
   tasks?: Task[];
   userGoal?: string;
+  devices?: DeviceInfo[];
   error?: string;
 }
 
@@ -618,6 +620,7 @@ export const cloudSyncService = {
   // 9. Unggah Tugas ke Cloud
   async pushTasks(email: string, tasks: Task[], userGoal?: string): Promise<SyncResponse> {
     const normalizedEmail = email.trim().toLowerCase();
+    const currentDevice = getCurrentDeviceInfo();
 
     try {
       const res = await fetch('/api/sync', {
@@ -627,12 +630,22 @@ export const cloudSyncService = {
           email: normalizedEmail,
           tasks,
           userGoal,
+          deviceInfo: currentDevice,
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        return { success: true, updatedAt: data.updatedAt, message: 'Berhasil disinkronkan ke Task_KV' };
+        const devices: DeviceInfo[] = (data.devices || []).map((d: DeviceInfo) => ({
+          ...d,
+          isCurrentDevice: d.id === currentDevice.id,
+        }));
+        return {
+          success: true,
+          updatedAt: data.updatedAt,
+          devices,
+          message: 'Berhasil disinkronkan ke Task_KV',
+        };
       } else if (res.status === 404 || res.status === 502) {
         throw new Error('FALLBACK_MOCK');
       } else {
@@ -648,24 +661,47 @@ export const cloudSyncService = {
         userGoal: userGoal || '',
         updatedAt,
       };
+
+      // Simpan device di mock KV
+      let devicesList: DeviceInfo[] = kv[`devices:${normalizedEmail}`] || [];
+      const existingIdx = devicesList.findIndex((d) => d.id === currentDevice.id);
+      if (existingIdx >= 0) {
+        devicesList[existingIdx] = { ...devicesList[existingIdx], ...currentDevice };
+      } else {
+        devicesList.unshift(currentDevice);
+      }
+      devicesList = devicesList.slice(0, 10);
+      kv[`devices:${normalizedEmail}`] = devicesList;
       saveMockKV(kv);
-      return { success: true, updatedAt, message: 'Berhasil disinkronkan ke Task_KV (Lokal Terhubung)' };
+
+      return {
+        success: true,
+        updatedAt,
+        devices: devicesList.map((d) => ({ ...d, isCurrentDevice: d.id === currentDevice.id })),
+        message: 'Berhasil disinkronkan ke Task_KV (Lokal Terhubung)',
+      };
     }
   },
 
   // 10. Ambil Tugas dari Cloud
   async pullTasks(email: string): Promise<SyncResponse> {
     const normalizedEmail = email.trim().toLowerCase();
+    const currentDevice = getCurrentDeviceInfo();
 
     try {
       const res = await fetch(`/api/sync?email=${encodeURIComponent(normalizedEmail)}`);
       if (res.ok) {
         const data = await res.json();
+        const devices: DeviceInfo[] = (data.devices || []).map((d: DeviceInfo) => ({
+          ...d,
+          isCurrentDevice: d.id === currentDevice.id,
+        }));
         return {
           success: true,
           tasks: data.tasks || [],
           userGoal: data.userGoal || '',
           updatedAt: data.updatedAt,
+          devices,
         };
       } else if (res.status === 404 || res.status === 502) {
         throw new Error('FALLBACK_MOCK');
@@ -677,12 +713,21 @@ export const cloudSyncService = {
       // Mock KV fallback
       const kv = getMockKV();
       const data = kv[`tasks:${normalizedEmail}`];
+      let devicesList: DeviceInfo[] = kv[`devices:${normalizedEmail}`] || [];
+      // Pastikan current device ada di list
+      if (!devicesList.some((d) => d.id === currentDevice.id)) {
+        devicesList.unshift(currentDevice);
+        kv[`devices:${normalizedEmail}`] = devicesList;
+        saveMockKV(kv);
+      }
+
       if (data) {
         return {
           success: true,
           tasks: data.tasks || [],
           userGoal: data.userGoal || '',
           updatedAt: data.updatedAt,
+          devices: devicesList.map((d) => ({ ...d, isCurrentDevice: d.id === currentDevice.id })),
         };
       }
       return {
@@ -690,11 +735,33 @@ export const cloudSyncService = {
         tasks: [],
         userGoal: '',
         updatedAt: undefined,
+        devices: devicesList.map((d) => ({ ...d, isCurrentDevice: d.id === currentDevice.id })),
       };
     }
   },
 
-  // 11. Logout
+  // 11. Cabut Sesi Perangkat
+  async removeDevice(email: string, deviceId: string): Promise<boolean> {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    try {
+      const res = await fetch(
+        `/api/sync?email=${encodeURIComponent(normalizedEmail)}&deviceId=${encodeURIComponent(deviceId)}`,
+        { method: 'DELETE' }
+      );
+      if (res.ok) return true;
+      throw new Error('FALLBACK_MOCK');
+    } catch {
+      const kv = getMockKV();
+      let devicesList: DeviceInfo[] = kv[`devices:${normalizedEmail}`] || [];
+      devicesList = devicesList.filter((d) => d.id !== deviceId);
+      kv[`devices:${normalizedEmail}`] = devicesList;
+      saveMockKV(kv);
+      return true;
+    }
+  },
+
+  // 12. Logout
   logout() {
     this.setCurrentUser(null);
   },

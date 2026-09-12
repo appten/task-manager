@@ -20,6 +20,9 @@ import {
   compareSchedules,
 } from '../services/smartScheduler';
 import { cloudSyncService, UserProfile } from '../services/cloudSyncService';
+import { DeviceInfo } from '../services/deviceService';
+
+export type StorageMode = 'cloud_priority' | 'hybrid';
 
 export interface SyncConflictInfo {
   localCount: number;
@@ -42,6 +45,16 @@ interface TaskContextType {
   isReconciling: boolean;
   resolveSyncConflict: (choice: 'merge' | 'use_cloud' | 'use_local') => Promise<void>;
   dismissSyncConflict: () => void;
+  // Pengaturan Mode Penyimpanan & Jaringan
+  storageMode: StorageMode;
+  setStorageMode: (mode: StorageMode) => void;
+  isAutoOfflineFallbackEnabled: boolean;
+  toggleAutoOfflineFallback: () => void;
+  isOnline: boolean;
+  // Perangkat Terhubung (Multi-Device Sessions)
+  activeDevices: DeviceInfo[];
+  refreshActiveDevices: () => Promise<void>;
+  revokeDeviceSession: (deviceId: string) => Promise<boolean>;
   loginUser: (email: string, password: string, mergeLocalData?: boolean) => Promise<{ success: boolean; error?: string }>;
   registerUser: (name: string, email: string, password: string, mergeLocalData?: boolean, recoveryPin?: string) => Promise<{ success: boolean; error?: string }>;
   logoutUser: (clearLocalTasks?: boolean) => void;
@@ -251,6 +264,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isReconciledRef = React.useRef<boolean>(false);
   const lastReconciledEmailRef = React.useRef<string | null>(null);
 
+  // State Pengaturan Mode Penyimpanan (Cloud-First vs Hybrid) & Auto-Offline Fallback
+  const [storageMode, setStorageModeState] = useState<StorageMode>('cloud_priority');
+  const [isAutoOfflineFallbackEnabled, setIsAutoOfflineFallbackEnabled] = useState<boolean>(true);
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  // State Daftar Perangkat Terhubung (Multi-Device Active Sessions)
+  const [activeDevices, setActiveDevices] = useState<DeviceInfo[]>([]);
+
   // State Jadwal Asli & Proposal AI untuk Komparasi Sebelum/Sesudah
   const [originalSchedules, setOriginalSchedules] = useState<Record<string, Task[]>>({});
   const [aiProposals, setAiProposals] = useState<Record<string, Task[]>>({});
@@ -381,6 +402,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const savedAutoSync = localStorage.getItem('ten_my_id_autosync_v01');
       if (savedAutoSync !== null) {
         setIsAutoSyncEnabled(savedAutoSync === 'true');
+      }
+      const savedStorageMode = localStorage.getItem('ten_my_id_storage_mode');
+      if (savedStorageMode === 'cloud_priority' || savedStorageMode === 'hybrid') {
+        setStorageModeState(savedStorageMode);
+      }
+      const savedOfflineFallback = localStorage.getItem('ten_my_id_auto_offline_fallback');
+      if (savedOfflineFallback !== null) {
+        setIsAutoOfflineFallbackEnabled(savedOfflineFallback === 'true');
       }
 
       // Load saved Life Relationships
@@ -539,6 +568,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // 2. Tarik data dari Cloud untuk akun ini
         const cloudRes = await cloudSyncService.pullTasks(user.email);
+        if (cloudRes.devices) {
+          setActiveDevices(cloudRes.devices);
+        }
         const cloudTasks = cloudRes.tasks || [];
         const cloudGoal = cloudRes.userGoal || '';
 
@@ -546,7 +578,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Kondisi 1: Cloud kosong, Lokal ada catatan tugas
         if (cloudTasks.length === 0 && localTasks.length > 0) {
-          await cloudSyncService.pushTasks(user.email, localTasks, userGoal);
+          const pushRes = await cloudSyncService.pushTasks(user.email, localTasks, userGoal);
+          if (pushRes.devices) setActiveDevices(pushRes.devices);
           isReconciledRef.current = true;
           lastReconciledEmailRef.current = user.email;
           showToast(`Catatan tugas perangkat Anda telah dicadangkan aman ke akun ${user.email}.`);
@@ -649,7 +682,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // GUNAKAN DATA PERANGKAT
           finalTasks = syncConflict.localTasks;
           finalGoal = syncConflict.localGoal || userGoal;
-          await cloudSyncService.pushTasks(currentUser.email, finalTasks, finalGoal);
+          const pushRes = await cloudSyncService.pushTasks(currentUser.email, finalTasks, finalGoal);
+          if (pushRes.devices) setActiveDevices(pushRes.devices);
           showToast(`Menyimpan ${finalTasks.length} tugas dari perangkat ini ke Cloud.`);
         }
 
@@ -678,6 +712,93 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast('Penyesuaian ditunda. Data di perangkat dan cloud tetap terpisah aman.');
   }, [showToast]);
 
+  // Pengaturan Mode Penyimpanan (Prioritas Cloud vs Hybrid Offline)
+  const setStorageMode = useCallback((mode: StorageMode) => {
+    setStorageModeState(mode);
+    try {
+      localStorage.setItem('ten_my_id_storage_mode', mode);
+    } catch {}
+    showToast(
+      mode === 'cloud_priority'
+        ? 'Mode Prioritas Cloud aktif. Perubahan langsung dicadangkan otomatis.'
+        : 'Mode Penyimpanan Seimbang (Perangkat & Cloud) aktif.'
+    );
+  }, [showToast]);
+
+  const toggleAutoOfflineFallback = useCallback(() => {
+    setIsAutoOfflineFallbackEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('ten_my_id_auto_offline_fallback', String(next));
+      } catch {}
+      showToast(
+        next
+          ? 'Peralihan otomatis ke perangkat saat offline diaktifkan.'
+          : 'Peralihan otomatis saat offline dinonaktifkan.'
+      );
+      return next;
+    });
+  }, [showToast]);
+
+  // Manajemen Perangkat Terhubung (Multi-Device Active Sessions)
+  const refreshActiveDevices = useCallback(async () => {
+    if (!currentUser?.email) return;
+    try {
+      const res = await cloudSyncService.pullTasks(currentUser.email);
+      if (res.devices) {
+        setActiveDevices(res.devices);
+      }
+    } catch {}
+  }, [currentUser]);
+
+  const revokeDeviceSession = useCallback(
+    async (deviceId: string): Promise<boolean> => {
+      if (!currentUser?.email) return false;
+      try {
+        const ok = await cloudSyncService.removeDevice(currentUser.email, deviceId);
+        if (ok) {
+          setActiveDevices((prev) => prev.filter((d) => d.id !== deviceId));
+          showToast('Sesi perangkat berhasil dicabut.');
+          return true;
+        }
+        return false;
+      } catch (e: any) {
+        showToast(e.message || 'Gagal mencabut sesi perangkat');
+        return false;
+      }
+    },
+    [currentUser, showToast]
+  );
+
+  // Pantau status koneksi internet (Online / Offline)
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      showToast('Koneksi internet terhubung. Menyinkronkan data...');
+      if (currentUser && isAutoSyncEnabled && isReconciledRef.current) {
+        cloudSyncService.pushTasks(currentUser.email, tasks, userGoal).then((res) => {
+          if (res.devices) setActiveDevices(res.devices);
+          if (res.updatedAt) setLastCloudSyncedAt(res.updatedAt);
+        }).catch(() => {});
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      if (isAutoOfflineFallbackEnabled) {
+        showToast('Koneksi terputus. Mode offline aktif, catatan disimpan di perangkat Anda.');
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [currentUser, isAutoSyncEnabled, isAutoOfflineFallbackEnabled, tasks, userGoal, showToast]);
+
   // Pantau login untuk memicu rekonsiliasi data aman
   useEffect(() => {
     if (isHydrated && currentUser?.email) {
@@ -694,6 +815,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const timer = setTimeout(() => {
       setIsSyncingCloud(true);
       cloudSyncService.pushTasks(currentUser.email, tasks, userGoal).then((res) => {
+        if (res.devices) {
+          setActiveDevices(res.devices);
+        }
         if (res.success && res.updatedAt) {
           setLastCloudSyncedAt(res.updatedAt);
           try {
@@ -2029,6 +2153,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isReconciling,
         resolveSyncConflict,
         dismissSyncConflict,
+        storageMode,
+        setStorageMode,
+        isAutoOfflineFallbackEnabled,
+        toggleAutoOfflineFallback,
+        isOnline,
+        activeDevices,
+        refreshActiveDevices,
+        revokeDeviceSession,
         loginUser,
         registerUser,
         logoutUser,
