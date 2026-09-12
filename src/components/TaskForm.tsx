@@ -22,6 +22,7 @@ import {
   ChevronUp,
   X,
   Zap,
+  AlignLeft,
 } from 'lucide-react';
 import { generateSubTasksWithAI } from '../services/geminiService';
 
@@ -54,12 +55,12 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     defaultRelationshipId || ''
   );
 
-  // Jadwal Tanggal & Jam Cepat
+  // Jadwal Tanggal & Jam
   const [selectedDatePreset, setSelectedDatePreset] = useState<'today' | 'tomorrow' | 'dayAfter' | 'custom'>('today');
   const [dueDate, setDueDate] = useState(getFormattedDate(0));
   const [dueTime, setDueTime] = useState('');
 
-  // Jadwal Detail Lanjutan (Collapsible)
+  // Opsi Tambahan / Lanjutan (Collapsible)
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [startDate, setStartDate] = useState(getFormattedDate(0));
   const [startTime, setStartTime] = useState('');
@@ -203,9 +204,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="task-fast-form">
-      {/* 1. Tipe Item: Segmented Pills Nyaman */}
-      <div className="fast-form-section">
-        <label className="fast-form-label">
+      {/* 1. Tipe Catatan: Segmented Control Bersih */}
+      <div className="fast-form-group">
+        <label className="fast-section-label">
           Jenis Catatan <span className="req-star">*</span>
         </label>
         <div className="fast-inbox-type-grid">
@@ -214,10 +215,12 @@ export const TaskForm: React.FC<TaskFormProps> = ({
             className={`fast-type-card ${inboxType === 'tugas' ? 'active tugas' : ''}`}
             onClick={() => setInboxType('tugas')}
           >
-            <CheckSquare size={16} />
+            <div className="type-icon-wrapper">
+              <CheckSquare size={16} />
+            </div>
             <div className="type-card-texts">
               <span className="type-card-name">Tugas</span>
-              <span className="type-card-hint">Pekerjaan & to-do</span>
+              <span className="type-card-hint">To-do & pekerjaan</span>
             </div>
           </button>
 
@@ -229,7 +232,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({
               setShowAdvanced(true);
             }}
           >
-            <Calendar size={16} />
+            <div className="type-icon-wrapper">
+              <Calendar size={16} />
+            </div>
             <div className="type-card-texts">
               <span className="type-card-name">Acara</span>
               <span className="type-card-hint">Agenda & rapat</span>
@@ -241,37 +246,37 @@ export const TaskForm: React.FC<TaskFormProps> = ({
             className={`fast-type-card ${inboxType === 'pengingat' ? 'active pengingat' : ''}`}
             onClick={() => setInboxType('pengingat')}
           >
-            <Bell size={16} />
+            <div className="type-icon-wrapper">
+              <Bell size={16} />
+            </div>
             <div className="type-card-texts">
               <span className="type-card-name">Pengingat</span>
-              <span className="type-card-hint">Memo & notifikasi</span>
+              <span className="type-card-hint">Memo & alarm</span>
             </div>
           </button>
         </div>
       </div>
 
-      {/* 2. Judul Task Utama */}
-      <div className="fast-form-section">
-        <div className="fast-label-row">
-          <label className="fast-form-label" htmlFor="fast-task-title">
-            {inboxType === 'kegiatan'
-              ? 'Nama Kegiatan / Acara'
-              : inboxType === 'pengingat'
-              ? 'Pengingat Untuk'
-              : 'Judul Tugas'}
-            <span className="req-star"> *</span>
-          </label>
-        </div>
+      {/* 2. Informasi Pokok: Judul & Deskripsi */}
+      <div className="fast-form-group">
+        <label className="fast-section-label" htmlFor="fast-task-title">
+          {inboxType === 'kegiatan'
+            ? 'Nama Kegiatan / Acara'
+            : inboxType === 'pengingat'
+            ? 'Pengingat Untuk'
+            : 'Judul Tugas'}
+          <span className="req-star"> *</span>
+        </label>
         <input
           id="fast-task-title"
           type="text"
           className="fast-text-input primary-title"
           placeholder={
             inboxType === 'kegiatan'
-              ? 'Contoh: Rapat evaluasi program kerja...'
+              ? 'Contoh: Rapat koordinasi evaluasi program...'
               : inboxType === 'pengingat'
-              ? 'Contoh: Ingat bayar tagihan listrik...'
-              : 'Contoh: Siapkan laporan mingguan...'
+              ? 'Contoh: Ingat bayar tagihan listrik bulanan...'
+              : 'Contoh: Siapkan proposal dan materi presentasi...'
           }
           value={title}
           onChange={(e) => {
@@ -281,17 +286,184 @@ export const TaskForm: React.FC<TaskFormProps> = ({
           autoFocus
         />
         {errorMsg && <p className="fast-error-banner">{errorMsg}</p>}
+
+        <div style={{ marginTop: '8px' }}>
+          <label className="fast-sub-label" htmlFor="fast-task-desc">
+            <AlignLeft size={12} />
+            <span>Catatan / Keterangan (Opsional)</span>
+          </label>
+          <textarea
+            id="fast-task-desc"
+            className="fast-text-area"
+            rows={2}
+            placeholder="Tambahkan detail konteks, tautan, lokasi, atau catatan penting..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* 3. Peran & Hubungan (Relasi) - Trigger Psikologis & Pembatasan 1 Tugas */}
-      <div className="fast-form-section">
+      {/* 3. Jadwal Tanggal & Waktu Cepat */}
+      <div className="fast-form-group">
+        <label className="fast-section-label">
+          <Calendar size={13} className="label-icon" />
+          <span>Waktu & Jadwal</span>
+        </label>
+
+        {/* Baris Tanggal */}
+        <div className="fast-schedule-block">
+          <div className="fast-date-row">
+            <button
+              type="button"
+              className={`fast-preset-chip ${selectedDatePreset === 'today' ? 'active' : ''}`}
+              onClick={() => handleDatePreset('today')}
+            >
+              Hari Ini
+            </button>
+            <button
+              type="button"
+              className={`fast-preset-chip ${selectedDatePreset === 'tomorrow' ? 'active' : ''}`}
+              onClick={() => handleDatePreset('tomorrow')}
+            >
+              Besok
+            </button>
+            <button
+              type="button"
+              className={`fast-preset-chip ${selectedDatePreset === 'dayAfter' ? 'active' : ''}`}
+              onClick={() => handleDatePreset('dayAfter')}
+            >
+              Lusa
+            </button>
+
+            <div className="custom-date-box">
+              <input
+                type="date"
+                className="fast-date-picker-input"
+                value={dueDate}
+                onChange={(e) => {
+                  setDueDate(e.target.value);
+                  setStartDate(e.target.value);
+                  setSelectedDatePreset('custom');
+                }}
+                title="Pilih tanggal manual"
+              />
+            </div>
+          </div>
+
+          {/* Baris Jam */}
+          <div className="fast-time-row">
+            <span className="time-preset-label">
+              <Clock size={12} /> Jam:
+            </span>
+            <div className="fast-time-chips">
+              {[
+                { label: '08:00', time: '08:00' },
+                { label: '13:00', time: '13:00' },
+                { label: '16:00', time: '16:00' },
+                { label: '19:00', time: '19:00' },
+              ].map((item) => (
+                <button
+                  key={item.time}
+                  type="button"
+                  className={`fast-time-chip ${dueTime === item.time ? 'active' : ''}`}
+                  onClick={() => handleTimePreset(dueTime === item.time ? '' : item.time)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="custom-time-box">
+              <input
+                type="time"
+                className="fast-time-picker-input"
+                value={dueTime}
+                onChange={(e) => setDueTime(e.target.value)}
+                title="Pilih jam tepat"
+              />
+              {dueTime && (
+                <button
+                  type="button"
+                  className="fast-time-clear-btn"
+                  onClick={() => setDueTime('')}
+                  title="Hapus jam"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Klasifikasi: Prioritas & Kategori */}
+      <div className="fast-form-group">
+        <div className="fast-grid-cols-2">
+          {/* Prioritas */}
+          <div className="fast-col-item">
+            <label className="fast-section-label">
+              <Flag size={13} className="label-icon" />
+              <span>Prioritas</span>
+            </label>
+            <div className="fast-priority-group">
+              <button
+                type="button"
+                className={`fast-prio-btn low ${priority === 'low' ? 'active' : ''}`}
+                onClick={() => setPriority('low')}
+              >
+                Rendah
+              </button>
+              <button
+                type="button"
+                className={`fast-prio-btn medium ${priority === 'medium' ? 'active' : ''}`}
+                onClick={() => setPriority('medium')}
+              >
+                Sedang
+              </button>
+              <button
+                type="button"
+                className={`fast-prio-btn high ${priority === 'high' ? 'active' : ''}`}
+                onClick={() => setPriority('high')}
+              >
+                Tinggi
+              </button>
+            </div>
+          </div>
+
+          {/* Kategori */}
+          <div className="fast-col-item">
+            <label className="fast-section-label" htmlFor="fast-category-select">
+              <Tag size={13} className="label-icon" />
+              <span>Kategori</span>
+            </label>
+            <select
+              id="fast-category-select"
+              className="fast-select-input"
+              value={category}
+              onChange={(e) => setCategory(e.target.value as Category)}
+            >
+              <option value="Pekerjaan">💼 Pekerjaan</option>
+              <option value="Pribadi">🏠 Pribadi</option>
+              <option value="Relasi">🤝 Relasi & Peran</option>
+              <option value="Belajar">📚 Belajar</option>
+              <option value="Kesehatan">🏃 Kesehatan</option>
+              <option value="Istirahat">☕ Istirahat</option>
+              <option value="Lainnya">✨ Lainnya</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Peran & Hubungan (Relasi Hidup) */}
+      <div className="fast-form-group">
         <div className="fast-label-row">
-          <label className="fast-form-label">
-            <HeartHandshake size={14} className="label-icon rel-icon" />
+          <label className="fast-section-label">
+            <HeartHandshake size={13} className="label-icon rel-icon" />
             <span>Peran & Hubungan (Opsional)</span>
           </label>
-          <span className="fast-label-subtext">Maks 1 aktivitas per hubungan</span>
+          <span className="fast-label-subtext">Maks 1 aktivitas per relasi</span>
         </div>
+
         <div className="relationship-chips-scroll">
           <button
             type="button"
@@ -318,7 +490,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
                 onClick={() => {
                   if (isFull && !isSelected) {
                     showToast(
-                      `Hubungan "${rel.roleName}" sudah memiliki 1 tugas aktif: "${activeTask?.title}". Selesaikan tugas tersebut terlebih dahulu.`
+                      `Hubungan "${rel.roleName}" sudah memiliki 1 tugas aktif: "${activeTask?.title}".`
                     );
                     return;
                   }
@@ -342,159 +514,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         </div>
       </div>
 
-      {/* 4. Shortcut Tanggal & Jam Cepat (1-Tap) */}
-      <div className="fast-form-section">
-        <label className="fast-form-label">
-          <Calendar size={13} className="label-icon" />
-          <span>Waktu Penyelesaian</span>
-        </label>
-
-        {/* Date Quick Presets */}
-        <div className="fast-date-presets">
-          <button
-            type="button"
-            className={`fast-preset-chip ${selectedDatePreset === 'today' ? 'active' : ''}`}
-            onClick={() => handleDatePreset('today')}
-          >
-            Hari Ini
-          </button>
-          <button
-            type="button"
-            className={`fast-preset-chip ${selectedDatePreset === 'tomorrow' ? 'active' : ''}`}
-            onClick={() => handleDatePreset('tomorrow')}
-          >
-            Besok
-          </button>
-          <button
-            type="button"
-            className={`fast-preset-chip ${selectedDatePreset === 'dayAfter' ? 'active' : ''}`}
-            onClick={() => handleDatePreset('dayAfter')}
-          >
-            Lusa
-          </button>
-          <div className="custom-date-input-box">
-            <input
-              type="date"
-              className="fast-date-picker-input"
-              value={dueDate}
-              onChange={(e) => {
-                setDueDate(e.target.value);
-                setStartDate(e.target.value);
-                setSelectedDatePreset('custom');
-              }}
-              title="Pilih tanggal manual"
-            />
-          </div>
-        </div>
-
-        {/* Time Quick Presets */}
-        <div className="fast-time-presets">
-          <span className="time-preset-label">Jam:</span>
-          {[
-            { label: '08:00', time: '08:00' },
-            { label: '13:00', time: '13:00' },
-            { label: '16:00', time: '16:00' },
-            { label: '19:00', time: '19:00' },
-          ].map((item) => (
-            <button
-              key={item.time}
-              type="button"
-              className={`fast-time-chip ${dueTime === item.time ? 'active' : ''}`}
-              onClick={() => handleTimePreset(dueTime === item.time ? '' : item.time)}
-            >
-              {item.label}
-            </button>
-          ))}
-          <input
-            type="time"
-            className="fast-time-picker-input"
-            value={dueTime}
-            onChange={(e) => setDueTime(e.target.value)}
-            title="Pilih jam tepat"
-          />
-          {dueTime && (
-            <button
-              type="button"
-              className="fast-time-clear-btn"
-              onClick={() => setDueTime('')}
-              title="Hapus jam"
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 5. Prioritas & Kategori */}
-      <div className="fast-form-row">
-        {/* Prioritas */}
-        <div className="fast-form-col">
-          <label className="fast-form-label">
-            <Flag size={13} className="label-icon" /> Prioritas
-          </label>
-          <div className="fast-priority-group">
-            <button
-              type="button"
-              className={`fast-prio-btn low ${priority === 'low' ? 'active' : ''}`}
-              onClick={() => setPriority('low')}
-            >
-              Rendah
-            </button>
-            <button
-              type="button"
-              className={`fast-prio-btn medium ${priority === 'medium' ? 'active' : ''}`}
-              onClick={() => setPriority('medium')}
-            >
-              Sedang
-            </button>
-            <button
-              type="button"
-              className={`fast-prio-btn high ${priority === 'high' ? 'active' : ''}`}
-              onClick={() => setPriority('high')}
-            >
-              Tinggi
-            </button>
-          </div>
-        </div>
-
-        {/* Kategori */}
-        <div className="fast-form-col">
-          <label className="fast-form-label" htmlFor="fast-category-select">
-            <Tag size={13} className="label-icon" /> Kategori
-          </label>
-          <select
-            id="fast-category-select"
-            className="fast-select-input"
-            value={category}
-            onChange={(e) => setCategory(e.target.value as Category)}
-          >
-            <option value="Pekerjaan">💼 Pekerjaan</option>
-            <option value="Pribadi">🏠 Pribadi</option>
-            <option value="Relasi">🤝 Relasi & Peran</option>
-            <option value="Belajar">📚 Belajar</option>
-            <option value="Kesehatan">🏃 Kesehatan</option>
-            <option value="Istirahat">☕ Istirahat</option>
-            <option value="Lainnya">✨ Lainnya</option>
-          </select>
-        </div>
-      </div>
-
-      {/* 6. Catatan / Deskripsi Singkat */}
-      <div className="fast-form-section">
-        <label className="fast-form-label" htmlFor="fast-task-desc">
-          Catatan / Rincian Singkat
-        </label>
-        <textarea
-          id="fast-task-desc"
-          className="fast-text-area"
-          rows={2}
-          placeholder="Catatan tambahan, konteks, atau lokasi..."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </div>
-
-      {/* 7. Akordeon Opsi Lanjutan & Sub-Task AI */}
+      {/* 6. Akordeon Opsi Lanjutan & Sub-Task AI */}
       <div className="fast-advanced-accordion">
         <button
           type="button"
@@ -503,18 +523,19 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         >
           <span className="adv-title">
             <Zap size={14} className="adv-icon" />
-            <span>Opsi Lanjutan & Sub-Task AI</span>
+            <span>Rincian Tambahan & AI Sub-tugas</span>
           </span>
           {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
 
         {showAdvanced && (
           <div className="fast-advanced-content">
-            {/* Durasi & Rutin */}
-            <div className="fast-form-row">
-              <div className="fast-form-col">
-                <label className="fast-form-label" htmlFor="fast-effort">
-                  Estimasi Usaha (Jam)
+            {/* Durasi & Rutinitas */}
+            <div className="fast-grid-cols-2">
+              <div className="fast-col-item">
+                <label className="fast-sub-label" htmlFor="fast-effort">
+                  <Clock size={12} />
+                  <span>Estimasi Waktu (Jam)</span>
                 </label>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <input
@@ -524,7 +545,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
                     min="0.25"
                     max="24"
                     className="fast-text-input"
-                    placeholder="Contoh: 2"
+                    placeholder="Contoh: 1.5"
                     value={effortHours}
                     onChange={(e) =>
                       setEffortHours(e.target.value ? parseFloat(e.target.value) : '')
@@ -545,9 +566,10 @@ export const TaskForm: React.FC<TaskFormProps> = ({
                 </div>
               </div>
 
-              <div className="fast-form-col">
-                <label className="fast-form-label" htmlFor="fast-recurrence">
-                  <Repeat size={13} className="label-icon" /> Rutinitas
+              <div className="fast-col-item">
+                <label className="fast-sub-label" htmlFor="fast-recurrence">
+                  <Repeat size={12} />
+                  <span>Pengulangan / Rutin</span>
                 </label>
                 <select
                   id="fast-recurrence"
@@ -571,14 +593,14 @@ export const TaskForm: React.FC<TaskFormProps> = ({
                 checked={allowConcurrent}
                 onChange={(e) => setAllowConcurrent(e.target.checked)}
               />
-              <span>Bisa dikerjakan bersamaan dengan aktivitas lain (Multitasking)</span>
+              <span>Dapat dikerjakan bersamaan dengan aktivitas lain (Multitasking)</span>
             </label>
 
             {/* Sub-Task AI Builder */}
             <div className="fast-subtasks-box">
               <div className="subtask-header-row">
                 <span className="subtask-title">
-                  <CheckCircle2 size={13} /> Sub-task ({subTasks.length})
+                  <CheckCircle2 size={13} /> Daftar Sub-tugas ({subTasks.length})
                 </span>
                 <button
                   type="button"
@@ -604,7 +626,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
                 <input
                   type="text"
                   className="fast-text-input"
-                  placeholder="Tambahkan langkah/sub-task..."
+                  placeholder="Ketik langkah / sub-tugas lalu tekan Enter..."
                   value={currentSubTaskInput}
                   onChange={(e) => setCurrentSubTaskInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -618,6 +640,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
                   type="button"
                   className="fast-btn-add-sub"
                   onClick={handleAddSubTask}
+                  title="Tambah sub-tugas"
                 >
                   <Plus size={14} />
                 </button>
@@ -634,6 +657,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
                         type="button"
                         onClick={() => handleRemoveSubTask(st.id)}
                         className="btn-del-sub"
+                        title="Hapus sub-tugas"
                       >
                         <Trash2 size={12} />
                       </button>
@@ -646,7 +670,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         )}
       </div>
 
-      {/* 8. Tombol Tindakan Footer (Batal & Simpan) */}
+      {/* 7. Sticky Footer Action (Simpan & Batal) */}
       <div className="fast-form-actions">
         {onCancel && (
           <button

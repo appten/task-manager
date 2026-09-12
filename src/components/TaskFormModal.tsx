@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { TaskForm } from './TaskForm';
-import { X, Sparkles, PlusCircle } from 'lucide-react';
+import { X, PlusCircle } from 'lucide-react';
 
 interface TaskFormModalProps {
   isOpen: boolean;
@@ -53,7 +53,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
         className="task-modal-sheet animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Handle Bar Drag Indikator Android */}
+        {/* Handle Bar Drag Indikator Mobile */}
         <div className="sheet-handle-bar" />
 
         {/* Modal Header */}
@@ -67,7 +67,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
                 Tambah Catatan Baru
               </h2>
               <p className="task-modal-subheading">
-                Input cepat & terstruktur untuk Inbox
+                Simpan tugas, kegiatan, atau pengingat ke Inbox
               </p>
             </div>
           </div>
@@ -83,7 +83,7 @@ export const TaskFormModal: React.FC<TaskFormModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body: TaskForm Cepat & Nyaman */}
+        {/* Modal Body */}
         <div className="task-modal-body">
           <TaskForm
             onSuccess={onClose}
