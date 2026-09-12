@@ -84,6 +84,11 @@ export const AccountView: React.FC = () => {
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
 
+  // Settings & Menu Modals
+  const [isStorageModalOpen, setIsStorageModalOpen] = useState(false);
+  const [isDevicesModalOpen, setIsDevicesModalOpen] = useState(false);
+  const [isManualBackupModalOpen, setIsManualBackupModalOpen] = useState(false);
+
   // Multi-Device & PWA states
   const [canInstallPwa, setCanInstallPwa] = useState(false);
   const [isPwaInstalled, setIsPwaInstalled] = useState(false);
@@ -442,7 +447,7 @@ export const AccountView: React.FC = () => {
             />
           )}
         </div>
-      </div>      {/* 2. Kartu Status Penyimpanan Data & Mode Operasi */}
+      </div>      {/* 2. Kartu Status Sinkronisasi Cepat (Akses Cepat & Ringkas) */}
       <div className="account-sync-card">
         <div className="sync-card-header">
           <div className={`sync-icon-box ${currentUser ? 'cloud-active' : 'local-only'}`}>
@@ -460,7 +465,7 @@ export const AccountView: React.FC = () => {
           </div>
           <div className="sync-header-content">
             <div className="sync-title-row">
-              <h3 className="sync-title">Penyimpanan & Sinkronisasi</h3>
+              <h3 className="sync-title">Status Sinkronisasi & Data</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span className={`network-pill ${isOnline ? 'online' : 'offline'}`}>
                   {isOnline ? <Wifi size={11} /> : <WifiOff size={11} />}
@@ -491,230 +496,45 @@ export const AccountView: React.FC = () => {
               {currentUser ? (
                 storageMode === 'cloud_priority' ? (
                   <span>
-                    Mode <strong>Prioritas Cloud</strong> aktif. Data disinkronkan langsung ke server cloud ({currentUser.email})
-                    {isAutoOfflineFallbackEnabled ? ' dengan peralihan otomatis ke lokal jika koneksi terputus.' : '.'}
+                    Sinkronisasi cloud aktif ({currentUser.email})
+                    {isAutoOfflineFallbackEnabled ? ' dengan peralihan offline otomatis.' : '.'}
                   </span>
                 ) : isAutoSyncEnabled ? (
                   <span>
-                    Data tugas tersimpan di perangkat ini dan secara otomatis dicadangkan ke akun cloud Anda (<strong>{currentUser.email}</strong>).
+                    Tersimpan di perangkat dan dicadangkan otomatis ke <strong>{currentUser.email}</strong>.
                   </span>
                 ) : (
-                  <span>
-                    Pencadangan otomatis dijeda. Catatan tugas saat ini hanya disimpan pada perangkat ini.
-                  </span>
+                  <span>Catatan tugas saat ini tersimpan di perangkat ini.</span>
                 )
               ) : (
-                <span>
-                  Semua catatan dan tugas Anda saat ini tersimpan di memori perangkat ini (mode offline). Data tetap dapat digunakan dengan nyaman tanpa koneksi internet.
-                </span>
+                <span>Mode lokal aktif. Catatan tugas tersimpan di memori perangkat ini dan dapat digunakan tanpa internet.</span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Kontrol Penyimpanan & Sinkronisasi Khusus Akun Terhubung */}
         {currentUser && (
-          <div className="sync-card-body" style={{ marginTop: '2px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
-            {/* Baris Status Sinkronisasi & Tombol Perbarui Sekarang */}
-            <div className="storage-sync-info-row">
-              <div className="storage-sync-meta">
-                <span className="storage-meta-label">Terakhir dicadangkan:</span>
-                <span className="storage-meta-time">{formatLastSync(lastCloudSyncedAt)}</span>
-              </div>
-
-              <button
-                type="button"
-                className="btn-sync-now"
-                onClick={() => triggerCloudSync()}
-                disabled={isSyncingCloud}
-                title="Cadangkan catatan tugas sekarang"
-              >
-                <RefreshCw size={13} className={isSyncingCloud ? 'spin-animation' : ''} />
-                <span>{isSyncingCloud ? 'Menyinkronkan...' : 'Sinkronkan Sekarang'}</span>
-              </button>
+          <div className="storage-sync-info-row" style={{ paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+            <div className="storage-sync-meta">
+              <span className="storage-meta-label">Terakhir dicadangkan:</span>
+              <span className="storage-meta-time">{formatLastSync(lastCloudSyncedAt)}</span>
             </div>
 
-            {/* Pilihan Mode Penyimpanan: Prioritas Cloud vs Hibrida */}
-            <div className="storage-mode-selector-wrap" style={{ marginTop: '6px' }}>
-              <span className="storage-section-subtitle">Pilihan Mode Penyimpanan:</span>
-              <div className="storage-mode-grid">
-                <button
-                  type="button"
-                  className={`storage-mode-card ${storageMode === 'cloud_priority' ? 'active' : ''}`}
-                  onClick={() => setStorageMode('cloud_priority')}
-                >
-                  <div className="mode-card-header">
-                    <Globe size={15} />
-                    <strong>Prioritas Cloud</strong>
-                    {storageMode === 'cloud_priority' && <Check size={14} className="mode-check" />}
-                  </div>
-                  <p>Sinkron otomatis tanpa ketergantungan lokal saat terhubung internet.</p>
-                </button>
-
-                <button
-                  type="button"
-                  className={`storage-mode-card ${storageMode === 'hybrid' ? 'active' : ''}`}
-                  onClick={() => setStorageMode('hybrid')}
-                >
-                  <div className="mode-card-header">
-                    <Cloud size={15} />
-                    <strong>Hibrida (Lokal & Cloud)</strong>
-                    {storageMode === 'hybrid' && <Check size={14} className="mode-check" />}
-                  </div>
-                  <p>Simpan di memori browser ini dan cadangkan ke cloud saat tersambung.</p>
-                </button>
-              </div>
-            </div>
-
-            {/* Fitur On / Off Cadangan Offline Otomatis */}
-            <div className="storage-auto-sync-box" style={{ marginTop: '8px' }}>
-              <div className="auto-sync-desc">
-                <strong>Peralihan Offline Otomatis</strong>
-                <span>Gunakan penyimpanan lokal secara otomatis saat perangkat tidak memiliki koneksi internet</span>
-              </div>
-              <label className="auto-sync-switch" style={{ margin: 0 }}>
-                <input
-                  type="checkbox"
-                  checked={isAutoOfflineFallbackEnabled}
-                  onChange={toggleAutoOfflineFallback}
-                />
-                <span className="switch-slider"></span>
-              </label>
-            </div>
-
-            {/* Fitur On / Off Sinkronisasi Otomatis */}
-            <div className="storage-auto-sync-box">
-              <div className="auto-sync-desc">
-                <strong>Sinkronisasi Otomatis ke Cloud</strong>
-                <span>Setiap perubahan tugas langsung disimpan ke cloud agar selalu aman</span>
-              </div>
-              <label className="auto-sync-switch" style={{ margin: 0 }}>
-                <input
-                  type="checkbox"
-                  checked={isAutoSyncEnabled}
-                  onChange={toggleAutoSync}
-                />
-                <span className="switch-slider"></span>
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 2.5 Kartu Perangkat Terhubung (Multi-Device Active Tracker) */}
-      {currentUser && (
-        <div className="account-sync-card account-devices-card">
-          <div className="sync-card-header">
-            <div className="sync-icon-box" style={{ background: '#f0fdf4', color: '#16a34a' }}>
-              <Laptop size={20} />
-            </div>
-            <div className="sync-header-content">
-              <div className="sync-title-row">
-                <h3 className="sync-title">Perangkat Terhubung ({activeDevices.length || 1})</h3>
-                <button
-                  type="button"
-                  className="btn-devices-refresh"
-                  onClick={() => refreshActiveDevices()}
-                  title="Segarkan status perangkat aktif"
-                >
-                  <RefreshCw size={12} />
-                  <span>Segarkan</span>
-                </button>
-              </div>
-              <div className="sync-status-text">
-                Daftar perangkat yang aktif mengakses akun <strong>{currentUser.email}</strong>. Anda dapat mencabut sesi perangkat yang tidak dikenali kapan saja.
-              </div>
-            </div>
-          </div>
-
-          <div className="device-list-wrap">
-            {activeDevices.length === 0 ? (
-              <div className="device-list-empty">
-                <span>Memuat daftar perangkat aktif...</span>
-              </div>
-            ) : (
-              activeDevices.map((device) => (
-                <div key={device.id} className={`device-item ${device.isCurrentDevice ? 'current-device' : ''}`}>
-                  <div className="device-icon-wrapper">
-                    {device.type === 'mobile' ? (
-                      <Smartphone size={18} />
-                    ) : device.type === 'tablet' ? (
-                      <Tablet size={18} />
-                    ) : (
-                      <Laptop size={18} />
-                    )}
-                  </div>
-                  <div className="device-details">
-                    <div className="device-name-row">
-                      <strong className="device-name">{device.name}</strong>
-                      {device.isCurrentDevice && (
-                        <span className="device-current-badge">
-                          <Check size={11} /> Perangkat Ini (Aktif)
-                        </span>
-                      )}
-                    </div>
-                    <div className="device-meta-row">
-                      <span>{device.browser} • {device.os}</span>
-                      <span className="device-dot">•</span>
-                      <span>Aktif: {formatLastSync(device.lastActiveAt)}</span>
-                    </div>
-                  </div>
-                  {!device.isCurrentDevice && (
-                    <button
-                      type="button"
-                      className="btn-device-revoke"
-                      onClick={() => handleRevokeDevice(device.id, device.name)}
-                      disabled={isRevokingDevice === device.id}
-                      title="Cabut sesi dari perangkat ini"
-                    >
-                      {isRevokingDevice === device.id ? 'Mencabut...' : 'Cabut Sesi'}
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 2.8 Kartu Aplikasi Web Progresif (PWA) */}
-      <div className="account-sync-card pwa-install-card">
-        <div className="sync-card-header">
-          <div className="sync-icon-box" style={{ background: '#f5f3ff', color: '#7c3aed' }}>
-            <DownloadCloud size={20} />
-          </div>
-          <div className="sync-header-content">
-            <div className="sync-title-row">
-              <h3 className="sync-title">Aplikasi Web Progresif (PWA)</h3>
-              <span className={`sync-pill ${isPwaInstalled ? 'active' : 'pwa-ready'}`}>
-                {isPwaInstalled ? 'Terpasang' : 'Tersedia'}
-              </span>
-            </div>
-            <div className="sync-status-text">
-              {isPwaInstalled ? (
-                <span>Aplikasi TEN Tasks telah terpasang dan dapat dibuka mandiri di layar utama Anda.</span>
-              ) : (
-                <span>Pasang TEN Tasks di ponsel atau desktop Anda untuk akses secepat aplikasi bawaan, tanpa address bar browser, serta kemampuan offline.</span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {!isPwaInstalled && (
-          <div className="sync-card-body" style={{ marginTop: '2px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
             <button
               type="button"
-              className="btn-install-pwa-cta"
-              onClick={handleInstallPwa}
+              className="btn-sync-now"
+              onClick={() => triggerCloudSync()}
+              disabled={isSyncingCloud}
+              title="Cadangkan catatan tugas sekarang"
             >
-              <DownloadCloud size={15} />
-              <span>Pasang TEN Tasks ke Layar Utama</span>
+              <RefreshCw size={13} className={isSyncingCloud ? 'spin-animation' : ''} />
+              <span>{isSyncingCloud ? 'Menyinkronkan...' : 'Sinkronkan Sekarang'}</span>
             </button>
           </div>
         )}
       </div>
 
-      {/* 3. Ringkasan Produktivitas (3 Angka Fungsional) */}
+      {/* 3. Ringkasan Produktivitas (3 Angka Fungsional - Akses Cepat) */}
       <div className="account-stats-grid">
         <div className="account-stat-box">
           <span className="stat-number">{totalTasks}</span>
@@ -730,130 +550,424 @@ export const AccountView: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Kartu Pencadangan & Pemulihan Berkas Manual (Offline / File JSON) */}
-      <div className="account-sync-card manual-backup-card">
-        <div className="sync-card-header">
-          <div className="sync-icon-box manual-backup-icon-box">
-            <HardDrive size={18} className="text-primary" />
-          </div>
-          <div className="sync-header-content">
-            <div className="sync-title-row">
-              <h3 className="sync-title">Pencadangan Manual (File JSON)</h3>
-              <span className="sync-pill manual-pill">Format .JSON</span>
-            </div>
-            <div className="sync-status-text">
-              Cadangkan & pulihkan tugas secara mandiri langsung ke file di perangkat Anda tanpa perlu koneksi internet.
-            </div>
-          </div>
-        </div>
-
-        <div className="sync-card-body manual-backup-body">
-          <div className="manual-backup-actions-grid">
-            <button
-              type="button"
-              className="btn-manual-backup-export"
-              onClick={handleExportBackup}
-              title="Unduh seluruh data tugas dan sasaran ke berkas .json"
-            >
-              <Download size={14} />
-              <span>Unduh Cadangan (.json)</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-manual-backup-import"
-              onClick={handleTriggerFileSelect}
-              title="Pilih berkas .json dari perangkat untuk memulihkan tugas"
-            >
-              <Upload size={14} />
-              <span>Pulihkan dari File (.json)</span>
-            </button>
-
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileSelected}
-              accept=".json,application/json"
-              style={{ display: 'none' }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 5. Kartu Informasi & Pengaturan Aplikasi */}
-      <div className="account-info-card">
-        <button
-          type="button"
-          className="info-box-row info-box-row-clickable"
-          onClick={() => setShowVersionHistory(true)}
-          aria-label="Buka riwayat versi aplikasi"
-        >
-          <span className="info-box-label">
-            <Sparkles size={15} className="text-primary" />
-            <span>Versi Aplikasi</span>
-          </span>
-          <span className="info-box-val clickable-version">
-            {APP_CURRENT_VERSION}
-            <ChevronRight size={14} className="version-chevron" />
-          </span>
-        </button>
-
-        <button
-          type="button"
-          className="info-box-row info-box-row-clickable"
-          onClick={() => setIsFeedbackModalOpen(true)}
-          aria-label="Kirim masukan atau saran aplikasi"
-        >
-          <span className="info-box-label">
-            <Info size={15} className="text-primary" />
-            <span>Kirim Masukan (Feedback)</span>
-          </span>
-          <span className="info-box-val clickable-version">
-            Beri Saran & Lapor Bug
-            <ChevronRight size={14} className="version-chevron" />
-          </span>
-        </button>
-
-        {currentUser && currentUser.role === 'admin' && (
-          <Link
-            href="/admin"
+      {/* 4. Grup Menu: Penyimpanan & Perangkat */}
+      <div className="account-menu-group">
+        <span className="account-menu-group-title">Penyimpanan & Perangkat</span>
+        <div className="account-info-card">
+          <button
+            type="button"
             className="info-box-row info-box-row-clickable"
-            aria-label="Akses panel pengelola"
+            onClick={() => setIsStorageModalOpen(true)}
+            aria-label="Atur mode penyimpanan dan offline"
           >
             <span className="info-box-label">
-              <ShieldCheck size={15} className="text-primary" />
-              <span>Panel Pengelola & Statistik</span>
+              <Globe size={15} className="text-primary" />
+              <span>Mode Penyimpanan & Offline</span>
             </span>
             <span className="info-box-val clickable-version">
-              Akses Pengelola
+              {currentUser ? (storageMode === 'cloud_priority' ? 'Prioritas Cloud' : 'Hibrida') : 'Lokal Perangkat'}
               <ChevronRight size={14} className="version-chevron" />
             </span>
-          </Link>
-        )}
+          </button>
+
+          {currentUser && (
+            <button
+              type="button"
+              className="info-box-row info-box-row-clickable"
+              onClick={() => setIsDevicesModalOpen(true)}
+              aria-label="Lihat daftar perangkat terhubung"
+            >
+              <span className="info-box-label">
+                <Laptop size={15} className="text-primary" />
+                <span>Perangkat Terhubung</span>
+              </span>
+              <span className="info-box-val clickable-version">
+                {activeDevices.length || 1} Perangkat Aktif
+                <ChevronRight size={14} className="version-chevron" />
+              </span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="info-box-row info-box-row-clickable"
+            onClick={() => setIsManualBackupModalOpen(true)}
+            aria-label="Pencadangan dan pemulihan berkas manual"
+          >
+            <span className="info-box-label">
+              <HardDrive size={15} className="text-primary" />
+              <span>Cadangan Manual (.json)</span>
+            </span>
+            <span className="info-box-val clickable-version">
+              Ekspor / Impor
+              <ChevronRight size={14} className="version-chevron" />
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="info-box-row info-box-row-clickable"
+            onClick={handleInstallPwa}
+            aria-label="Pasang aplikasi ke layar utama"
+          >
+            <span className="info-box-label">
+              <DownloadCloud size={15} className="text-primary" />
+              <span>Aplikasi Web (PWA)</span>
+            </span>
+            <span className="info-box-val clickable-version">
+              {isPwaInstalled ? 'Sudah Terpasang' : 'Pasang ke Layar Utama'}
+              <ChevronRight size={14} className="version-chevron" />
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* 6. Zona Bahaya: Reset Seluruh Data Lokal */}
-      <div className="account-danger-card">
-        <div className="danger-card-top">
-          <div className="danger-card-icon-wrap">
-            <AlertTriangle size={16} />
-          </div>
-          <div className="danger-card-info">
-            <h4 className="danger-card-title">Zona Bahaya</h4>
-            <p className="danger-card-desc">
-              Hapus seluruh daftar tugas, riwayat penyelesaian, sasaran hidup tahunan, serta pengaturan di browser ini.
-            </p>
+      {/* 5. Grup Menu: Aplikasi & Bantuan */}
+      <div className="account-menu-group">
+        <span className="account-menu-group-title">Aplikasi & Bantuan</span>
+        <div className="account-info-card">
+          <button
+            type="button"
+            className="info-box-row info-box-row-clickable"
+            onClick={() => setShowVersionHistory(true)}
+            aria-label="Buka riwayat versi aplikasi"
+          >
+            <span className="info-box-label">
+              <Sparkles size={15} className="text-primary" />
+              <span>Versi Aplikasi</span>
+            </span>
+            <span className="info-box-val clickable-version">
+              {APP_CURRENT_VERSION}
+              <ChevronRight size={14} className="version-chevron" />
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="info-box-row info-box-row-clickable"
+            onClick={() => setIsFeedbackModalOpen(true)}
+            aria-label="Kirim masukan atau saran aplikasi"
+          >
+            <span className="info-box-label">
+              <Info size={15} className="text-primary" />
+              <span>Kirim Masukan (Feedback)</span>
+            </span>
+            <span className="info-box-val clickable-version">
+              Beri Saran & Lapor Bug
+              <ChevronRight size={14} className="version-chevron" />
+            </span>
+          </button>
+
+          {currentUser && currentUser.role === 'admin' && (
+            <Link
+              href="/dashboard"
+              className="info-box-row info-box-row-clickable"
+              aria-label="Akses dashboard token pengelola"
+            >
+              <span className="info-box-label">
+                <ShieldCheck size={15} className="text-primary" />
+                <span>Panel Pengelola & Statistik</span>
+              </span>
+              <span className="info-box-val clickable-version">
+                Akses Pengelola
+                <ChevronRight size={14} className="version-chevron" />
+              </span>
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* 6. Grup Menu: Zona Bahaya (Reset Data) */}
+      <div className="account-menu-group">
+        <span className="account-menu-group-title" style={{ color: '#ef4444' }}>Zona Bahaya</span>
+        <div className="account-info-card danger-info-group">
+          <button
+            type="button"
+            className="info-box-row info-box-row-clickable"
+            onClick={handleOpenResetModal}
+            aria-label="Hapus semua data aplikasi"
+          >
+            <span className="info-box-label">
+              <Trash2 size={15} style={{ color: '#dc2626' }} />
+              <span style={{ color: '#dc2626' }}>Hapus Semua Data Aplikasi</span>
+            </span>
+            <span className="info-box-val" style={{ color: '#ef4444', fontWeight: 600 }}>
+              Reset Memori
+              <ChevronRight size={14} className="version-chevron" style={{ color: '#ef4444' }} />
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Input Berkas JSON Tersembunyi */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelected}
+        accept=".json,application/json"
+        style={{ display: 'none' }}
+      />
+
+      {/* =========================================================================
+          MODAL: PENGATURAN MODE PENYIMPANAN & OFFLINE
+          ========================================================================= */}
+      {isStorageModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsStorageModalOpen(false)}>
+          <div className="modal-container auth-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div className="modal-header">
+              <div className="modal-title-group">
+                <Globe size={18} className="text-primary" />
+                <h3 className="modal-title">Mode Penyimpanan & Offline</h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setIsStorageModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="auth-form" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: 0, lineHeight: 1.45 }}>
+                Atur bagaimana TEN Tasks mengelola catatan tugas Anda antara server cloud dan penyimpanan lokal.
+              </p>
+
+              {/* Selector Mode */}
+              <div className="storage-mode-grid" style={{ gridTemplateColumns: '1fr' }}>
+                <button
+                  type="button"
+                  className={`storage-mode-card ${storageMode === 'cloud_priority' ? 'active' : ''}`}
+                  onClick={() => setStorageMode('cloud_priority')}
+                >
+                  <div className="mode-card-header">
+                    <Globe size={15} />
+                    <strong>Prioritas Cloud</strong>
+                    {storageMode === 'cloud_priority' && <Check size={14} className="mode-check" />}
+                  </div>
+                  <p>Sinkron otomatis langsung ke akun cloud Anda saat tersambung internet.</p>
+                </button>
+
+                <button
+                  type="button"
+                  className={`storage-mode-card ${storageMode === 'hybrid' ? 'active' : ''}`}
+                  onClick={() => setStorageMode('hybrid')}
+                >
+                  <div className="mode-card-header">
+                    <Cloud size={15} />
+                    <strong>Hibrida (Lokal & Cloud)</strong>
+                    {storageMode === 'hybrid' && <Check size={14} className="mode-check" />}
+                  </div>
+                  <p>Simpan di memori browser perangkat ini dan cadangkan ke cloud saat online.</p>
+                </button>
+              </div>
+
+              {/* Switch Peralihan Offline Otomatis */}
+              <div className="storage-auto-sync-box" style={{ marginTop: '2px' }}>
+                <div className="auto-sync-desc">
+                  <strong>Peralihan Offline Otomatis</strong>
+                  <span>Gunakan penyimpanan lokal otomatis saat koneksi internet terputus</span>
+                </div>
+                <label className="auto-sync-switch" style={{ margin: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={isAutoOfflineFallbackEnabled}
+                    onChange={toggleAutoOfflineFallback}
+                  />
+                  <span className="switch-slider"></span>
+                </label>
+              </div>
+
+              {/* Switch Sinkronisasi Otomatis */}
+              {currentUser && (
+                <div className="storage-auto-sync-box">
+                  <div className="auto-sync-desc">
+                    <strong>Sinkronisasi Otomatis</strong>
+                    <span>Setiap pembaruan tugas langsung dikirim ke akun cloud</span>
+                  </div>
+                  <label className="auto-sync-switch" style={{ margin: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={isAutoSyncEnabled}
+                      onChange={toggleAutoSync}
+                    />
+                    <span className="switch-slider"></span>
+                  </label>
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="btn-weight-close"
+                onClick={() => setIsStorageModalOpen(false)}
+                style={{ width: '100%', padding: '10px', marginTop: '6px', textAlign: 'center' }}
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn-danger-reset-trigger"
-          onClick={handleOpenResetModal}
-        >
-          <Trash2 size={13} />
-          <span>Hapus Semua Data Aplikasi</span>
-        </button>
-      </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: PERANGKAT TERHUBUNG
+          ========================================================================= */}
+      {isDevicesModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsDevicesModalOpen(false)}>
+          <div className="modal-container auth-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <div className="modal-title-group">
+                <Laptop size={18} className="text-primary" />
+                <h3 className="modal-title">Perangkat Terhubung ({activeDevices.length || 1})</h3>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-devices-refresh"
+                  onClick={() => refreshActiveDevices()}
+                  title="Segarkan status perangkat aktif"
+                >
+                  <RefreshCw size={12} />
+                  <span>Segarkan</span>
+                </button>
+                <button
+                  type="button"
+                  className="modal-close-btn"
+                  onClick={() => setIsDevicesModalOpen(false)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="auth-form" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                Daftar perangkat yang aktif mengakses akun <strong>{currentUser?.email}</strong>. Anda dapat mencabut sesi perangkat yang tidak dikenali kapan saja.
+              </p>
+
+              <div className="device-list-wrap" style={{ maxHeight: '340px', overflowY: 'auto' }}>
+                {activeDevices.length === 0 ? (
+                  <div className="device-list-empty">
+                    <span>Memuat daftar perangkat aktif...</span>
+                  </div>
+                ) : (
+                  activeDevices.map((device) => (
+                    <div key={device.id} className={`device-item ${device.isCurrentDevice ? 'current-device' : ''}`}>
+                      <div className="device-icon-wrapper">
+                        {device.type === 'mobile' ? (
+                          <Smartphone size={18} />
+                        ) : device.type === 'tablet' ? (
+                          <Tablet size={18} />
+                        ) : (
+                          <Laptop size={18} />
+                        )}
+                      </div>
+                      <div className="device-details">
+                        <div className="device-name-row">
+                          <strong className="device-name">{device.name}</strong>
+                          {device.isCurrentDevice && (
+                            <span className="device-current-badge">
+                              <Check size={11} /> Perangkat Ini (Aktif)
+                            </span>
+                          )}
+                        </div>
+                        <div className="device-meta-row">
+                          <span>{device.browser} • {device.os}</span>
+                          <span className="device-dot">•</span>
+                          <span>Aktif: {formatLastSync(device.lastActiveAt)}</span>
+                        </div>
+                      </div>
+                      {!device.isCurrentDevice && (
+                        <button
+                          type="button"
+                          className="btn-device-revoke"
+                          onClick={() => handleRevokeDevice(device.id, device.name)}
+                          disabled={isRevokingDevice === device.id}
+                          title="Cabut sesi dari perangkat ini"
+                        >
+                          {isRevokingDevice === device.id ? 'Mencabut...' : 'Cabut Sesi'}
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="btn-weight-close"
+                onClick={() => setIsDevicesModalOpen(false)}
+                style={{ width: '100%', padding: '10px', marginTop: '4px', textAlign: 'center' }}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: PENCADANGAN MANUAL (.JSON)
+          ========================================================================= */}
+      {isManualBackupModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsManualBackupModalOpen(false)}>
+          <div className="modal-container auth-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div className="modal-header">
+              <div className="modal-title-group">
+                <HardDrive size={18} className="text-primary" />
+                <h3 className="modal-title">Pencadangan Manual (.json)</h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setIsManualBackupModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="auth-form" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                Simpan atau pulihkan catatan tugas dan sasaran secara mandiri langsung ke berkas .json di memori perangkat ini tanpa perlu internet.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn-manual-backup-export"
+                  onClick={handleExportBackup}
+                  style={{ width: '100%', justifyContent: 'center' }}
+                >
+                  <Download size={15} />
+                  <span>Unduh Cadangan (.json)</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-manual-backup-import"
+                  onClick={() => {
+                    handleTriggerFileSelect();
+                    setIsManualBackupModalOpen(false);
+                  }}
+                  style={{ width: '100%', justifyContent: 'center' }}
+                >
+                  <Upload size={15} />
+                  <span>Pulihkan dari Berkas (.json)</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="btn-weight-close"
+                onClick={() => setIsManualBackupModalOpen(false)}
+                style={{ width: '100%', padding: '10px', marginTop: '4px', textAlign: 'center' }}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           MODAL: KONFIRMASI LOGOUT DENGAN PILIHAN DATA LOKAL

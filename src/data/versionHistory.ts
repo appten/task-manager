@@ -11,13 +11,37 @@ export interface VersionRelease {
   groupedChanges: VersionCategoryGroup[];
 }
 
-export const APP_CURRENT_VERSION = 'v1.4.0';
+export const APP_CURRENT_VERSION = 'v1.5.0';
 
 export const VERSION_HISTORY: VersionRelease[] = [
   {
+    version: 'v1.5.0',
+    releaseDate: '12 September 2026',
+    isLatest: true,
+    tagline: 'Pelacak Sesi Multi-Perangkat, Mode Cloud/Offline, PWA & Tata Letak Menu Akun Ringkas',
+    groupedChanges: [
+      {
+        category: 'Fitur Baru',
+        items: [
+          'Pelacak Sesi Multi-Perangkat (Multi-Device Active Tracker): Menampilkan seluruh perangkat yang sedang login ke akun SSO TEN (PC, Laptop, HP, Tablet) lengkap dengan status aktif dan kemampuan mencabut sesi perangkat tak dikenal dari jarak jauh.',
+          'Pilihan Mode Penyimpanan Fleksibel: Pengguna dapat memilih mode "Prioritas Cloud" (sinkron otomatis langsung ke server) atau "Hibrida" (tersimpan di lokal dan dicadangkan ke cloud).',
+          'Peralihan Otomatis ke Mode Offline: Sistem otomatis mendeteksi status internet dan mengaktifkan mode offline lokal saat koneksi terputus tanpa mengganggu aktivitas pencatatan.',
+          'Progressive Web App (PWA): Dukungan penuh instalasi mandiri di layar utama ponsel dan desktop dengan service worker caching statis, logo modern resolusi tinggi, dan tombol pasang satu klik.',
+        ],
+      },
+      {
+        category: 'Penyempurnaan',
+        items: [
+          'Tata Letak Menu Akun Ringkas & Teratur: Pengaturan lanjutan dikelompokkan ke dalam daftar menu navigasi yang rapi dan terstruktur, menjaga akses cepat untuk sinkronisasi dan profil tanpa scroll berlebihan.',
+          'Pengaman Data & Rekonsiliasi Dua Arah: Melindungi catatan tugas dari penimpaan sepihak saat login multi-akun dan menyediakan opsi pembersihan tuntas saat logout.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v1.4.0',
     releaseDate: '9 September 2026',
-    isLatest: true,
+    isLatest: false,
     tagline: 'Sistem Akun Cloud Penuh, Pemulihan Sandi Mandiri & Sinkronisasi Multi-Device',
     groupedChanges: [
       {
