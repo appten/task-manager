@@ -27,20 +27,15 @@ export const TenLoginPopupButton: React.FC<TenLoginPopupButtonProps> = ({
     const handleAuthMessage = (event: MessageEvent) => {
       if (event.data?.type === 'TEN_SSO_LOGIN_SUCCESS') {
         setIsLoading(false);
-        if (event.data?.user?.name) {
-          showToast(`Berhasil masuk sebagai ${event.data.user.name}`);
-        }
         if (onSuccess) {
           onSuccess();
-        } else {
-          window.location.reload();
         }
       }
     };
 
     window.addEventListener('message', handleAuthMessage);
     return () => window.removeEventListener('message', handleAuthMessage);
-  }, [onSuccess, showToast]);
+  }, [onSuccess]);
 
   const handleLoginPopup = () => {
     setIsLoading(true);
@@ -51,9 +46,10 @@ export const TenLoginPopupButton: React.FC<TenLoginPopupButtonProps> = ({
     const top = window.screenY + (window.outerHeight - height) / 2;
 
     const clientId = 'ten_app_eaffqk';
-    const targetRedirect = `${window.location.origin}${
-      callbackUrl.startsWith('/') ? callbackUrl : `/${callbackUrl}`
-    }`;
+    const targetRedirect =
+      window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? `${window.location.origin}/auth/callback`
+        : 'https://task.ten.my.id/auth/callback';
     const state = Math.random().toString(36).substring(2, 15);
     try {
       sessionStorage.setItem('ten_sso_state', state);

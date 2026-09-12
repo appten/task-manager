@@ -34,61 +34,150 @@ function CallbackContent() {
 
         setStatusText('Menukar token otorisasi dan memuat profil TEN...');
 
-        const redirectUri = `${window.location.origin}/auth/callback`;
+        const redirectUri =
+          window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? `${window.location.origin}/auth/callback`
+            : 'https://task.ten.my.id/auth/callback';
 
-        // Panggil endpoint Cloudflare Pages Functions auth
-        const res = await fetch('/api/auth', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: 'ten-sso-callback',
-            code,
-            redirectUri,
-          }),
-        });
+        let userData: any = null;
+        let tokenData: any = null;
 
-        const data = (await res.json()) as any;
+        // 1. Coba tukar via backend Cloudflare Pages Functions /api/auth
+        try {
+          const res = await fetch('/api/auth', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              action: 'ten-sso-callback',
+              code,
+              redirectUri,
+            }),
+          });
 
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Gagal memproses sesi SSO TEN.');
+          if (res.ok) {
+            const data = (await res.json()) as any;
+            if (data?.success && data?.user) {
+              userData = data.user;
+              tokenData = data.token;
+            }
+          }
+        } catch (fetchErr) {
+          console.warn('Panggilan backend /api/auth tidak tersedia, beralih ke direct exchange:', fetchErr);
         }
 
-        const user = data.user;
+        // 2. Jika backend /api/auth gagal (misal 404 pada local Next.js dev server), gunakan Direct Client Exchange
+        if (!userData) {
+          const clientId = 'ten_app_eaffqk';
+          const clientSecret = 'sec_live_256rmh7fj21qcc6mbp3gkf';
 
-        // Simpan sesi login lokal untuk TaskContext & sinkronisasi
+          const tokenRes = await fetch('https://account.ten.my.id/api/oauth/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              grant_type: 'authorization_code',
+              code,
+              redirect_uri: redirectUri,
+              client_id: clientId,
+              client_secret: clientSecret,
+            }),
+          });
+
+          if (!tokenRes.ok) {
+            const errText = await tokenRes.text();
+            throw new Error(`Gagal menukar token otorisasi SSO TEN (${tokenRes.status}): ${errText}`);
+          }
+
+          tokenData = (await tokenRes.json()) as any;
+          const accessToken = tokenData.access_token;
+
+          let profile: any = {};
+          if (accessToken) {
+            const userinfoRes = await fetch('https://account.ten.my.id/api/oauth/userinfo', {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            });
+            if (userinfoRes.ok) {
+              profile = await userinfoRes.json();
+            }
+          }
+
+          const userEmail = (profile.email || tokenData.email || '').trim().toLowerCase();
+          const rawUsername = profile.username || profile.preferred_username || '';
+          const formattedUsername = rawUsername
+            ? rawUsername.startsWith('@')
+              ? rawUsername
+              : `@${rawUsername}`
+            : undefined;
+          const userName = profile.name || profile.username || (userEmail ? userEmail.split('@')[0] : 'Pengguna TEN');
+          const userAvatar = profile.picture || profile.avatar || null;
+          const userRole = profile.role || 'user';
+
+          userData = {
+            id: profile.sub || tokenData.sub || userEmail,
+            email: userEmail,
+            name: userName,
+            username: formattedUsername,
+            role: userRole,
+            avatar: userAvatar,
+            authProvider: 'ten-sso',
+          };
+        }
+
+        const ssoUser = {
+          id: userData.id || userData.sub || userData.email,
+          name: userData.name || 'Pengguna TEN',
+          email: userData.email,
+          username: userData.username,
+          avatar: userData.avatar || userData.picture || userData.image,
+          role: userData.role || 'user',
+          authProvider: 'ten-sso' as const,
+          createdAt: userData.createdAt || new Date().toISOString(),
+        };
+
+        // Simpan ke SELURUH key storage aplikasi agar terbaca oleh TaskContext & CloudSync
         try {
-          localStorage.setItem('ten_cloud_session', JSON.stringify({ user, token: data.token }));
-          localStorage.setItem('ten_current_user', JSON.stringify(user));
+          localStorage.setItem('ten_my_id_user_v01', JSON.stringify(ssoUser));
+          localStorage.setItem('ten_cloud_session', JSON.stringify({ user: ssoUser, token: tokenData }));
+          localStorage.setItem('ten_current_user', JSON.stringify(ssoUser));
+          localStorage.setItem('ten_my_id_autosync_v01', 'true');
+          window.dispatchEvent(new Event('storage'));
         } catch (e) {
           console.warn('Gagal menyimpan sesi ke localStorage:', e);
         }
 
         if (!isMounted) return;
-        setStatusText(`Selamat datang, ${user.name || user.username}!`);
+        setStatusText(`Selamat datang, ${ssoUser.name || ssoUser.username}!`);
 
         // Jika login via popup window
         if (window.opener) {
-          window.opener.postMessage(
-            {
-              type: 'TEN_SSO_LOGIN_SUCCESS',
-              user,
-            },
-            '*'
-          );
+          try {
+            window.opener.postMessage(
+              {
+                type: 'TEN_SSO_LOGIN_SUCCESS',
+                user: ssoUser,
+              },
+              '*'
+            );
+          } catch (e) {
+            console.warn('Gagal mengirim postMessage ke opener:', e);
+          }
+
           setTimeout(() => {
             try {
               window.close();
             } catch {
-              // fallback jika browser melarang window.close()
-              router.replace('/dashboard');
+              router.replace('/account');
             }
           }, 600);
         } else {
-          // Jika login direct redirect
+          // Jika login via direct redirect (bukan popup)
           setTimeout(() => {
-            router.replace('/dashboard');
+            router.replace('/account');
           }, 800);
         }
       } catch (err: any) {

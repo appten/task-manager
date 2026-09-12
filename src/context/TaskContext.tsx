@@ -238,6 +238,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Mode Jadwal Paralel (Versi Ori vs Versi AI - 1x Klik Berpindah)
   const [activeScheduleVersion, setActiveScheduleVersion] = useState<'ori' | 'ai'>('ori');
 
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage((prev) => (prev === message ? null : prev));
+    }, 2800);
+  }, []);
+
   // Load from localStorage on mount
   useEffect(() => {
     try {
@@ -317,7 +324,32 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Load saved User Profile (Cloudflare KV Sync)
-      const savedUser = cloudSyncService.getCurrentUser();
+      // Load saved User Profile (Cloudflare KV Sync / SSO TEN)
+      let savedUser = cloudSyncService.getCurrentUser();
+      if (!savedUser) {
+        try {
+          const raw = localStorage.getItem('ten_cloud_session') || localStorage.getItem('ten_current_user');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const u = parsed?.user || parsed;
+            if (u && u.email) {
+              savedUser = {
+                id: u.id || u.sub || u.email,
+                name: u.name || 'Pengguna TEN',
+                email: u.email,
+                username: u.username,
+                avatar: u.avatar || u.picture || u.image,
+                role: u.role === 'admin' ? 'admin' : 'user',
+                authProvider: 'ten-sso',
+                createdAt: u.createdAt || new Date().toISOString(),
+              };
+              cloudSyncService.setCurrentUser(savedUser);
+            }
+          }
+        } catch (e) {
+          console.warn('Gagal membaca fallback user:', e);
+        }
+      }
       if (savedUser) {
         setCurrentUser(savedUser);
       }
@@ -348,36 +380,42 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Sinkronisasi sesi SSO TEN dengan currentUser aplikasi
+  // Sinkronisasi sesi SSO TEN dengan currentUser aplikasi secara reaktif
   useEffect(() => {
-    const checkAndSyncSession = () => {
+    const syncSessionFromStorage = () => {
       try {
-        const rawCloud = localStorage.getItem('ten_cloud_session');
+        const u = cloudSyncService.getCurrentUser();
+        if (u) {
+          setCurrentUser((prev) => {
+            if (
+              prev &&
+              prev.email === u.email &&
+              prev.name === u.name &&
+              prev.username === u.username
+            ) {
+              return prev;
+            }
+            return u;
+          });
+          return;
+        }
+
+        const rawCloud = localStorage.getItem('ten_cloud_session') || localStorage.getItem('ten_current_user');
         if (rawCloud) {
           const parsed = JSON.parse(rawCloud);
-          if (parsed?.user) {
-            const u = parsed.user;
+          const rawUser = parsed?.user || parsed;
+          if (rawUser && rawUser.email) {
             const ssoUser: UserProfile = {
-              id: u.id || u.sub || u.email,
-              name: u.name || 'Pengguna TEN',
-              email: u.email || '',
-              username: u.username,
-              avatar: u.avatar || u.picture || u.image,
-              role: (u.role === 'admin' ? 'admin' : 'user') as any,
+              id: rawUser.id || rawUser.sub || rawUser.email,
+              name: rawUser.name || 'Pengguna TEN',
+              email: rawUser.email || '',
+              username: rawUser.username,
+              avatar: rawUser.avatar || rawUser.picture || rawUser.image,
+              role: (rawUser.role === 'admin' ? 'admin' : 'user') as any,
               authProvider: 'ten-sso',
-              createdAt: u.createdAt || new Date().toISOString(),
+              createdAt: rawUser.createdAt || new Date().toISOString(),
             };
-            setCurrentUser((prev) => {
-              if (
-                prev &&
-                prev.email === ssoUser.email &&
-                prev.name === ssoUser.name &&
-                prev.username === ssoUser.username
-              ) {
-                return prev;
-              }
-              return ssoUser;
-            });
+            setCurrentUser(ssoUser);
             cloudSyncService.setCurrentUser(ssoUser);
           }
         }
@@ -386,8 +424,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    checkAndSyncSession();
+    syncSessionFromStorage();
 
+    // Dengarkan pesan sukses dari popup login SSO TEN
     const handleAuthMessage = (event: MessageEvent) => {
       if (event.data?.type === 'TEN_SSO_LOGIN_SUCCESS' && event.data?.user) {
         const u = event.data.user;
@@ -403,12 +442,28 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
         setCurrentUser(ssoUser);
         cloudSyncService.setCurrentUser(ssoUser);
+        setIsAutoSyncEnabled(true);
+        try {
+          localStorage.setItem('ten_my_id_autosync_v01', 'true');
+        } catch {}
+        showToast(`Selamat datang, ${ssoUser.name || ssoUser.username}! Akun terhubung via SSO TEN.`);
+      }
+    };
+
+    // Dengarkan perubahan storage dari tab/jendela lain
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'ten_my_id_user_v01' || e.key === 'ten_cloud_session' || e.key === 'ten_current_user') {
+        syncSessionFromStorage();
       }
     };
 
     window.addEventListener('message', handleAuthMessage);
-    return () => window.removeEventListener('message', handleAuthMessage);
-  }, []);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('message', handleAuthMessage);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [showToast]);
 
   // Auto-sync debounced ke Task_KV ketika tasks berubah jika currentUser & isAutoSyncEnabled aktif
   useEffect(() => {
@@ -463,13 +518,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
   }, [activeScheduleVersion, isHydrated]);
-
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message);
-    setTimeout(() => {
-      setToastMessage((prev) => (prev === message ? null : prev));
-    }, 2800);
-  }, []);
 
   // Fitur 5 Tugas Fokus Today
   const todayTasks = tasks.filter((t) => t.isToday).slice(0, 5);
