@@ -14,20 +14,22 @@ export default function AccountPage() {
     <div className="mobile-viewport-wrapper">
       <Toast />
       <StatusBar />
-      <header className="android-app-bar" style={{ gap: '12px' }}>
+      <header className="page-subnav-header">
         <button
           type="button"
-          className="android-icon-btn"
+          className="btn-subnav-back"
           onClick={() => router.push('/')}
           aria-label="Kembali ke Beranda"
           title="Kembali ke Beranda"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={18} />
+          <span>Kembali</span>
         </button>
-        <div>
-          <h1 className="app-bar-title">Akun & Sinkronisasi</h1>
-          <div className="app-bar-subtitle">Pengaturan profil & pencadangan cloud</div>
+        <div className="subnav-title-group">
+          <h2 className="subnav-page-title">Akun & Pengaturan</h2>
+          <span className="subnav-badge-caption">Profil & Pencadangan Cloud</span>
         </div>
+        <div style={{ width: '68px' }} />
       </header>
       <main className="app-screen">
         <div className="scrollable-content" style={{ paddingBottom: '30px' }}>

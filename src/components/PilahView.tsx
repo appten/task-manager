@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useTask } from '../context/TaskContext';
 import { Task, TaskAnalysisItem } from '../types/task';
 import { AISettingsModal } from './AISettingsModal';
+import { CircadianEnergyCard } from './CircadianEnergyCard';
 import {
   ListFilter,
   Sparkles,
@@ -99,25 +100,25 @@ export const PilahView: React.FC = () => {
   // Format ringkas durasi estimasi (contoh: "45 menit" -> "45m", "2 jam" -> "2j")
   const formatCompactDuration = (durationStr?: string): string => {
     if (!durationStr) return '30m';
-    const s = durationStr.toLowerCase();
-    if (s.includes('menit')) {
-      const num = s.replace(/[^0-9]/g, '');
-      return num ? `${num}m` : durationStr;
+    const lower = durationStr.toLowerCase();
+    if (lower.includes('menit')) {
+      const num = lower.replace(/[^0-9]/g, '');
+      return num ? `${num}m` : '30m';
     }
-    if (s.includes('jam')) {
-      const num = s.replace(/[^0-9.]/g, '');
-      return num ? `${num}j` : durationStr;
+    if (lower.includes('jam')) {
+      const num = lower.replace(/[^0-9.]/g, '');
+      return num ? `${num}j` : '1j';
     }
     return durationStr;
   };
 
   return (
     <div className="pilah-view-container animate-fade-in">
-      {/* 1. Header Menu Pilah */}
-      <div className="pilah-clean-header">
+      {/* 1. Header Menu Pilah Ringkas */}
+      <div className="pilah-clean-header compact">
         <div className="pilah-header-lead">
           <div className="pilah-icon-badge">
-            <ListFilter size={18} />
+            <ListFilter size={16} />
           </div>
           <div className="pilah-header-texts">
             <div className="pilah-title-row">
@@ -129,48 +130,48 @@ export const PilahView: React.FC = () => {
                 title="Pengaturan Model AI & Mode Offline"
                 aria-label="Pengaturan AI"
               >
-                <Settings size={15} />
+                <Settings size={14} />
               </button>
             </div>
-            <p className="pilah-subheading">
-              Analisis cerdas tugas Inbox untuk menentukan 5 prioritas utama yang diselesaikan hari ini.
-            </p>
           </div>
         </div>
 
-        {/* Status Bar Today & Tombol Analisis */}
-        <div className="pilah-action-bar">
+        {/* Status Bar Today & Tombol Analisis Ringkas */}
+        <div className="pilah-action-bar compact">
           <div className="pilah-today-status-chip">
-            <Star size={13} className="text-amber" fill="#f59e0b" />
-            <span>Fokus Today: <strong>{todayTasks.filter((t) => !t.isCompleted).length}/5</strong></span>
+            <Star size={12} className="text-amber" fill="#f59e0b" />
+            <span>Today: <strong>{todayTasks.filter((t) => !t.isCompleted).length}/5</strong></span>
           </div>
 
           <button
             type="button"
-            className="pilah-btn-analyze"
+            className="pilah-btn-analyze compact"
             onClick={runTaskAnalysis}
             disabled={isAnalyzingAI}
             title="Jalankan evaluasi analisis cerdas untuk tugas-tugas Inbox"
           >
             {isAnalyzingAI ? (
               <>
-                <Loader2 size={13} className="spin" />
+                <Loader2 size={12} className="spin" />
                 <span>Menganalisis...</span>
               </>
             ) : aiAnalysis ? (
               <>
-                <RotateCcw size={13} />
-                <span>Perbarui Analisis</span>
+                <RotateCcw size={12} />
+                <span>Perbarui</span>
               </>
             ) : (
               <>
-                <Sparkles size={13} />
+                <Sparkles size={12} />
                 <span>Mulai Analisis</span>
               </>
             )}
           </button>
         </div>
       </div>
+
+      {/* 2. Kartu Analisis Keadaan Energi Saat Ini */}
+      <CircadianEnergyCard />
 
       {/* 2. Filter Tab Ringkas */}
       <div className="pilah-filter-bar">
@@ -247,129 +248,129 @@ export const PilahView: React.FC = () => {
             return (
               <div
                 key={task.id}
-                className={`pilah-task-card ${isToday ? 'is-selected-today' : ''}`}
+                className={`pilah-task-card compact ${isToday ? 'is-selected-today' : ''}`}
               >
-                {/* Header Kartu: Checkbox, Judul, Kategori & Tombol Today */}
-                <div className="pilah-card-header">
+                <div className="pilah-card-main-row">
+                  {/* Lingkaran Selesai Ringkas */}
                   <button
                     type="button"
-                    className="pilah-checkbox-btn"
+                    className="pilah-checkbox-btn compact"
                     onClick={() => toggleTaskStatus(task.id)}
                     title="Tandai selesai"
                   >
                     <div className="pilah-circle-ring" />
                   </button>
 
-                  <div className="pilah-title-wrap">
-                    <div className="pilah-tag-row">
-                      <span className={`pilah-type-badge ${task.inboxType || 'tugas'}`}>
-                        {task.inboxType === 'kegiatan' ? 'Acara' : task.inboxType === 'pengingat' ? 'Pengingat' : 'Tugas'}
-                      </span>
-                      {task.priority === 'high' && (
-                        <span className="pilah-prio-badge high">Prioritas Tinggi</span>
-                      )}
-                      {(task.dueDate || task.startDate) && (
-                        <span className="pilah-date-badge">
-                          <Calendar size={10} />
-                          <span>{formatReadableDate(task.dueDate || task.startDate)}</span>
-                          {task.startTime && <span> {task.startTime}</span>}
+                  <div className="pilah-card-info-col">
+                    {/* Baris 1: Judul Tugas + Metadata Ringkas */}
+                    <div className="pilah-card-top-line">
+                      <h3 className="pilah-task-title compact" title={task.title}>
+                        {task.title}
+                      </h3>
+                      <div className="pilah-meta-chips-inline">
+                        <span className={`pilah-type-badge ${task.inboxType || 'tugas'}`}>
+                          {task.inboxType === 'kegiatan' ? 'Acara' : task.inboxType === 'pengingat' ? 'Pengingat' : 'Tugas'}
                         </span>
-                      )}
+                        {task.priority === 'high' && (
+                          <span className="pilah-prio-badge high">P1</span>
+                        )}
+                        {(task.dueDate || task.startDate) && (
+                          <span className="pilah-date-badge">
+                            <Calendar size={10} />
+                            <span>{formatReadableDate(task.dueDate || task.startDate)}</span>
+                            {task.startTime && <span> {task.startTime}</span>}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <h3 className="pilah-task-title">{task.title}</h3>
+
+                    {/* Baris 2: Skor Goal, Bobot, Durasi, dan Tombol Today */}
+                    <div className="pilah-bottom-action-line">
+                      <div className="pilah-compact-scores-inline">
+                        {/* 1. Skor Goal */}
+                        <button
+                          type="button"
+                          className={`pilah-compact-chip goal-chip ${
+                            isGoalPositive ? 'positive' : isGoalNegative ? 'negative' : 'neutral'
+                          }`}
+                          onClick={() => {
+                            if (!analysis) {
+                              showToast('Klik "Mulai Analisis" untuk evaluasi cerdas lengkap!');
+                              return;
+                            }
+                            setActiveModal({ type: 'goal', item: analysis, task });
+                          }}
+                          title={`Goal: ${goalDisplay} • Klik untuk alasan`}
+                        >
+                          <Target size={11} className="chip-icon" />
+                          <span className="chip-val">{goalDisplay}</span>
+                        </button>
+
+                        {/* 2. Skor Bobot */}
+                        <button
+                          type="button"
+                          className={`pilah-compact-chip weight-chip ${
+                            isWeightHeavy ? 'heavy' : isWeightLight ? 'light' : 'medium'
+                          }`}
+                          onClick={() => {
+                            if (!analysis) {
+                              showToast('Klik "Mulai Analisis" untuk evaluasi cerdas lengkap!');
+                              return;
+                            }
+                            setActiveModal({ type: 'weight', item: analysis, task });
+                          }}
+                          title={`Bobot: ${weightScore}/100 • Klik untuk alasan`}
+                        >
+                          <Scale size={11} className="chip-icon" />
+                          <span className="chip-val">{weightScore}</span>
+                        </button>
+
+                        {/* 3. Durasi */}
+                        <button
+                          type="button"
+                          className="pilah-compact-chip duration-chip"
+                          onClick={() => {
+                            if (!analysis) {
+                              showToast('Klik "Mulai Analisis" untuk evaluasi cerdas lengkap!');
+                              return;
+                            }
+                            setActiveModal({ type: 'duration', item: analysis, task });
+                          }}
+                          title={`Durasi: ${compactDuration} • Klik untuk alasan`}
+                        >
+                          <Clock size={11} className="chip-icon" />
+                          <span className="chip-val">{compactDuration}</span>
+                        </button>
+                      </div>
+
+                      {/* Tombol Pilih / Hapus dari Today (Maks 5) */}
+                      <button
+                        type="button"
+                        className={`pilah-today-toggle-btn compact ${isToday ? 'active' : ''} ${isNotToday ? 'disabled-event' : ''}`}
+                        onClick={() => {
+                          if (isNotToday && !isToday) {
+                            showToast(`Item terjadwal pada ${formatReadableDate(taskDate)}. Hanya item hari ini yang bisa masuk ke Today.`);
+                            return;
+                          }
+                          toggleTodayTask(task.id);
+                        }}
+                        title={
+                          isNotToday && !isToday
+                            ? `Terjadwal untuk ${formatReadableDate(taskDate)} (hanya item hari ini yang bisa masuk ke Today)`
+                            : isToday
+                            ? 'Keluarkan dari Today'
+                            : 'Pilih masuk ke fokus Today'
+                        }
+                      >
+                        <Star
+                          size={13}
+                          fill={isToday ? '#f59e0b' : 'none'}
+                          color={isNotToday && !isToday ? '#cbd5e1' : isToday ? '#d97706' : '#94a3b8'}
+                        />
+                        <span className="today-btn-label">{isToday ? 'Di Today' : '+ Today'}</span>
+                      </button>
+                    </div>
                   </div>
-
-                  {/* Tombol Pilih / Hapus dari Today (Maks 5) */}
-                  <button
-                    type="button"
-                    className={`pilah-today-toggle-btn ${isToday ? 'active' : ''} ${isNotToday ? 'disabled-event' : ''}`}
-                    onClick={() => {
-                      if (isNotToday && !isToday) {
-                        showToast(`Item terjadwal pada ${formatReadableDate(taskDate)}. Hanya item hari ini yang bisa masuk ke Today.`);
-                        return;
-                      }
-                      toggleTodayTask(task.id);
-                    }}
-                    title={
-                      isNotToday && !isToday
-                        ? `Terjadwal untuk ${formatReadableDate(taskDate)} (hanya item hari ini yang bisa masuk ke Today)`
-                        : isToday
-                        ? 'Keluarkan dari Today'
-                        : 'Pilih masuk ke fokus Today'
-                    }
-                  >
-                    <Star
-                      size={15}
-                      fill={isToday ? '#f59e0b' : 'none'}
-                      color={isNotToday && !isToday ? '#cbd5e1' : isToday ? '#d97706' : '#94a3b8'}
-                    />
-                    <span className="today-btn-label">{isToday ? 'Di Today' : '+ Today'}</span>
-                  </button>
-                </div>
-
-                {/* 4. Deskripsi Penilaian Umum Langsung di Bawah Tugas */}
-                <div className="pilah-general-reason-box">
-                  <p className="pilah-general-reason-text">
-                    {generalReason}
-                  </p>
-                </div>
-
-                {/* Bagian Skor dan Durasi: HANYA ICON DAN NILAI SAJA AGAR RINGKAS */}
-                <div className="pilah-compact-scores-row">
-                  {/* 1. Skor Kesesuaian Goal Pengguna (-100 s/d +100) */}
-                  <button
-                    type="button"
-                    className={`pilah-compact-chip goal-chip ${
-                      isGoalPositive ? 'positive' : isGoalNegative ? 'negative' : 'neutral'
-                    }`}
-                    onClick={() => {
-                      if (!analysis) {
-                        showToast('Klik "Mulai Analisis" untuk evaluasi cerdas lengkap!');
-                        return;
-                      }
-                      setActiveModal({ type: 'goal', item: analysis, task });
-                    }}
-                    title={`Skor Goal: ${goalDisplay} (-100 s/d +100) • Klik untuk melihat alasan`}
-                  >
-                    <Target size={12} className="chip-icon" />
-                    <span className="chip-val">{goalDisplay}</span>
-                  </button>
-
-                  {/* 2. Skor Bobot / Beban Penyelesaian (0 s/d 100) */}
-                  <button
-                    type="button"
-                    className={`pilah-compact-chip weight-chip ${
-                      isWeightHeavy ? 'heavy' : isWeightLight ? 'light' : 'medium'
-                    }`}
-                    onClick={() => {
-                      if (!analysis) {
-                        showToast('Klik "Mulai Analisis" untuk evaluasi cerdas lengkap!');
-                        return;
-                      }
-                      setActiveModal({ type: 'weight', item: analysis, task });
-                    }}
-                    title={`Skor Bobot: ${weightScore}/100 • Klik untuk melihat alasan`}
-                  >
-                    <Scale size={12} className="chip-icon" />
-                    <span className="chip-val">{weightScore}</span>
-                  </button>
-
-                  {/* 3. Estimasi Waktu Penyelesaian (Menit / Jam) */}
-                  <button
-                    type="button"
-                    className="pilah-compact-chip duration-chip"
-                    onClick={() => {
-                      if (!analysis) {
-                        showToast('Klik "Mulai Analisis" untuk evaluasi cerdas lengkap!');
-                        return;
-                      }
-                      setActiveModal({ type: 'duration', item: analysis, task });
-                    }}
-                    title={`Estimasi Waktu: ${compactDuration} • Klik untuk melihat alasan`}
-                  >
-                    <Clock size={12} className="chip-icon" />
-                    <span className="chip-val">{compactDuration}</span>
-                  </button>
                 </div>
               </div>
             );

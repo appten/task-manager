@@ -20,13 +20,12 @@ export const STORAGE_CUSTOM_KEY = 'ten_custom_ai_key';
 export const STORAGE_CUSTOM_MODEL = 'ten_custom_ai_model';
 
 export const DEFAULT_GEMINI_MODELS = [
-  'gemini-flash-lite-latest',
-  'gemini-3.5-flash-lite',
-  'gemini-flash-latest',
-  'gemini-3.8-flash',
   'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
 ];
-export const DEFAULT_GEMINI_MODEL = 'gemini-flash-lite-latest';
+export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 
 export const getUniversalAIConfig = (): UniversalAIConfig => {
   if (typeof window === 'undefined') {
@@ -140,10 +139,10 @@ export const executeUniversalAICall = async (
     throw new Error('Mode Offline Aktif: Seluruh analisis dijalankan via Algoritma Lokal di perangkat.');
   }
 
-  const timeoutMs = options?.timeoutMs ?? 25000;
-  const fetchSignal =
+  const timeoutMs = options?.timeoutMs ?? 35000;
+  const createSignal = (ms: number) =>
     typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
-      ? AbortSignal.timeout(timeoutMs)
+      ? AbortSignal.timeout(ms)
       : undefined;
 
   // 1. MODE BAWAAN PENGEMBANG (Default Gemini dengan Auto-Fallback jika 429/503)
@@ -162,7 +161,7 @@ export const executeUniversalAICall = async (
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          signal: fetchSignal,
+          signal: createSignal(Math.min(timeoutMs, 35000)),
           body: JSON.stringify({
             contents: [
               {
@@ -171,7 +170,7 @@ export const executeUniversalAICall = async (
             ],
             generationConfig: {
               temperature: 0.2,
-              maxOutputTokens: 2048,
+              maxOutputTokens: 4096,
               ...(expectJson ? { responseMimeType: 'application/json' } : {}),
             },
           }),
@@ -198,8 +197,8 @@ export const executeUniversalAICall = async (
           engineName: `Google Gemini (${model})`,
         };
       } catch (err: any) {
-        if (err.name === 'TimeoutError') {
-          throw err;
+        if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+          console.warn(`Model ${model} timeout, mencoba model berikutnya...`);
         }
         lastError = err;
       }
@@ -220,7 +219,7 @@ export const executeUniversalAICall = async (
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      signal: fetchSignal,
+      signal: createSignal(timeoutMs),
       body: JSON.stringify({
         contents: [
           {
@@ -229,7 +228,7 @@ export const executeUniversalAICall = async (
         ],
         generationConfig: {
           temperature: 0.2,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
           ...(expectJson ? { responseMimeType: 'application/json' } : {}),
         },
       }),
@@ -283,13 +282,13 @@ export const executeUniversalAICall = async (
     model,
     messages,
     temperature: 0.2,
-    max_tokens: 2048,
+    max_tokens: 4096,
   };
 
   const res = await fetch(endpointUrl, {
     method: 'POST',
     headers,
-    signal: fetchSignal,
+    signal: createSignal(timeoutMs),
     body: JSON.stringify(payload),
   });
 
@@ -999,7 +998,10 @@ WAJIB hasilkan output HANYA dalam format JSON murni yang ringkas & padat (maksim
 }`;
 
   try {
-    const { text, engineName } = await executeUniversalAICall(prompt, { expectJson: true });
+    const { text, engineName } = await executeUniversalAICall(prompt, {
+      expectJson: true,
+      timeoutMs: 50000,
+    });
     const parsed = extractJsonFromText(text);
 
     // Pastikan tiap taskAnalysis memiliki data lengkap

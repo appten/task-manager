@@ -267,8 +267,35 @@ export const TodayTaskRow: React.FC<TodayTaskRowProps> = ({ task, slotNumber, is
           </div>
         </div>
 
-        {/* Sisi Kanan: Aksi Cepat */}
+        {/* Sisi Kanan: Aksi Cepat & Stopwatch */}
         <div className="today-row-actions">
+          {/* Tombol Mulai/Jeda Record Time Cepat */}
+          {!task.isCompleted && (
+            <button
+              type="button"
+              className={`today-quick-timer-btn ${task.isTimerRunning ? 'running' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (task.isTimerRunning) {
+                  pauseTaskTimer(task.id);
+                } else {
+                  startTaskTimer(task.id);
+                }
+              }}
+              title={
+                task.isTimerRunning
+                  ? 'Jeda rekam waktu pengerjaan'
+                  : 'Mulai rekam waktu pengerjaan tugas ini'
+              }
+            >
+              {task.isTimerRunning ? (
+                <Pause size={12} fill="currentColor" />
+              ) : (
+                <Play size={12} fill="currentColor" />
+              )}
+            </button>
+          )}
+
           {/* Menu Opsi Titik Tiga */}
           {!isCommitted && (
             <div className="today-more-wrap">

@@ -19,6 +19,9 @@ import {
   Tag,
   Lock,
   Check,
+  Play,
+  Pause,
+  Square,
 } from 'lucide-react';
 
 export const TaskDetailModal: React.FC = () => {
@@ -31,6 +34,9 @@ export const TaskDetailModal: React.FC = () => {
     toggleSubTaskStatus,
     toggleTodayTask,
     deleteTask,
+    startTaskTimer,
+    pauseTaskTimer,
+    stopTaskTimer,
     showToast,
   } = useTask();
 
@@ -50,6 +56,50 @@ export const TaskDetailModal: React.FC = () => {
   if (!currentTask) return null;
 
   const isTaskLockedInToday = isTodayCommitted && currentTask.isToday;
+
+  // Live Stopwatch State untuk Perekaman Waktu Pengerjaan
+  const [liveElapsedSeconds, setLiveElapsedSeconds] = useState<number>(() => {
+    const base = currentTask.timeSpentSeconds || 0;
+    if (currentTask.isTimerRunning && currentTask.timerStartedAt) {
+      const currentSession = Math.max(
+        0,
+        Math.floor((Date.now() - new Date(currentTask.timerStartedAt).getTime()) / 1000)
+      );
+      return base + currentSession;
+    }
+    return base;
+  });
+
+  useEffect(() => {
+    if (!currentTask.isTimerRunning || !currentTask.timerStartedAt) {
+      setLiveElapsedSeconds(currentTask.timeSpentSeconds || 0);
+      return;
+    }
+
+    const updateTimer = () => {
+      const base = currentTask.timeSpentSeconds || 0;
+      const currentSession = Math.max(
+        0,
+        Math.floor((Date.now() - new Date(currentTask.timerStartedAt!).getTime()) / 1000)
+      );
+      setLiveElapsedSeconds(base + currentSession);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [currentTask.isTimerRunning, currentTask.timerStartedAt, currentTask.timeSpentSeconds]);
+
+  const formatStopwatchDigits = (totalSec: number) => {
+    const hours = Math.floor(totalSec / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+    const seconds = totalSec % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    if (hours > 0) {
+      return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    }
+    return `${pad(minutes)}:${pad(seconds)}`;
+  };
 
   const handleEdit = () => {
     if (isTaskLockedInToday) {
@@ -279,24 +329,61 @@ export const TaskDetailModal: React.FC = () => {
             </div>
           )}
 
-          {/* Durasi & Waktu Fokus */}
-          <div className="detail-item-row">
-            <div className="detail-item-icon">
+          {/* Perekaman Waktu Pengerjaan (Stopwatch Interaktif) */}
+          <div className="detail-item-row detail-stopwatch-row">
+            <div className="detail-item-icon text-indigo-500">
               <Clock size={15} />
             </div>
-            <div className="detail-item-content">
-              <span className="detail-item-label">Waktu Pengerjaan & Fokus</span>
-              <div className="detail-meta-text-wrap">
-                {currentTask.estimatedTime && (
-                  <span>Estimasi: <strong>{currentTask.estimatedTime}</strong></span>
+            <div className="detail-item-content" style={{ width: '100%' }}>
+              <div className="detail-stopwatch-header">
+                <span className="detail-item-label">Catatan Waktu & Stopwatch Pengerjaan</span>
+                {currentTask.isTimerRunning && (
+                  <span className="detail-timer-live-badge animate-pulse">Sedang Merekam</span>
                 )}
-                {currentTask.timeSpentSeconds && currentTask.timeSpentSeconds > 0 ? (
-                  <span>
-                    Stopwatch tercatat: <strong>{formatRecordedDuration(currentTask.timeSpentSeconds)}</strong>
-                  </span>
-                ) : (
-                  <span>Stopwatch: Belum ada waktu tercatat</span>
-                )}
+              </div>
+
+              <div className="detail-stopwatch-widget">
+                <div className="stopwatch-digits-display">
+                  <span className="stopwatch-digits">{formatStopwatchDigits(liveElapsedSeconds)}</span>
+                  {currentTask.estimatedTime && (
+                    <span className="stopwatch-estimate-tag">Estimasi: {currentTask.estimatedTime}</span>
+                  )}
+                </div>
+
+                <div className="stopwatch-buttons-group">
+                  {currentTask.isTimerRunning ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-timer-action pause"
+                        onClick={() => pauseTaskTimer(currentTask.id)}
+                        title="Jeda perekaman waktu"
+                      >
+                        <Pause size={13} fill="currentColor" />
+                        <span>Jeda</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-timer-action stop"
+                        onClick={() => stopTaskTimer(currentTask.id)}
+                        title="Selesai dan simpan catatan waktu"
+                      >
+                        <Square size={13} fill="currentColor" />
+                        <span>Simpan</span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn-timer-action play"
+                      onClick={() => startTaskTimer(currentTask.id)}
+                      title="Mulai rekam waktu pengerjaan"
+                    >
+                      <Play size={13} fill="currentColor" />
+                      <span>{liveElapsedSeconds > 0 ? 'Lanjutkan Record Time' : 'Mulai Record Time'}</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

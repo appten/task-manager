@@ -5,6 +5,7 @@ import { useTask } from '../context/TaskContext';
 import { InboxTaskRow } from './InboxTaskRow';
 import { TaskFormModal } from './TaskFormModal';
 import { RelationshipRolesCard } from './RelationshipRolesCard';
+import { HabitTrackerView } from './HabitTrackerView';
 import { InboxType } from '../types/task';
 import {
   Search,
@@ -18,6 +19,7 @@ import {
   Clock,
   Inbox as InboxIcon,
   Users,
+  Flame,
 } from 'lucide-react';
 
 export const InboxView: React.FC = () => {
@@ -31,8 +33,8 @@ export const InboxView: React.FC = () => {
     showToast,
   } = useTask();
 
-  // State sub-tab di Inbox: 'inbox' (default) atau 'pengingat' (Fitur Peran)
-  const [inboxTab, setInboxTab] = useState<'inbox' | 'pengingat'>('inbox');
+  // State sub-tab di Inbox: 'inbox', 'habit', atau 'pengingat'
+  const [inboxTab, setInboxTab] = useState<'inbox' | 'habit' | 'pengingat'>('inbox');
 
   // State untuk Relasi yang sedang dibuka form-nya
   const [selectedRelForModal, setSelectedRelForModal] = useState<string | undefined>(undefined);
@@ -258,6 +260,17 @@ export const InboxView: React.FC = () => {
 
         <button
           type="button"
+          className={`inbox-subtab-btn ${inboxTab === 'habit' ? 'active' : ''}`}
+          onClick={() => setInboxTab('habit')}
+          title="Pelacak Habit & Rutinitas Konsisten (Maks 3)"
+        >
+          <Flame size={14} color="#f97316" fill="#f97316" />
+          <span>Habit</span>
+          <span className="inbox-subtab-badge beta">Beta</span>
+        </button>
+
+        <button
+          type="button"
           className={`inbox-subtab-btn ${inboxTab === 'pengingat' ? 'active' : ''}`}
           onClick={() => setInboxTab('pengingat')}
           title="Pengingat Peran & Jaga Hubungan"
@@ -287,6 +300,9 @@ export const InboxView: React.FC = () => {
             setIsTaskFormOpen(true);
           }}
         />
+      ) : inboxTab === 'habit' ? (
+        /* Tab Habit: Manajemen Kebiasaan Konsisten (Maksimal 3 Habit & 1 Aktivitas Mingguan) */
+        <HabitTrackerView />
       ) : (
         /* Tab Inbox: Kontrol Pencarian, Filter Chips, & List Tugas Inbox */
         <>

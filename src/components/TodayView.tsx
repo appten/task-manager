@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTask } from '../context/TaskContext';
 import { TodayTaskRow } from './TodayTaskRow';
 import { TodayHistoryView } from './TodayHistoryView';
+import { TodayEnergyAnalysisCard } from './TodayEnergyAnalysisCard';
 import {
   Sun,
   PlusCircle,
@@ -62,7 +63,7 @@ export const TodayView: React.FC = () => {
   const todayFormatted = new Date().toLocaleDateString('id-ID', {
     weekday: 'long',
     day: 'numeric',
-    month: 'long',
+    month: 'short',
     year: 'numeric',
   });
 
@@ -73,27 +74,21 @@ export const TodayView: React.FC = () => {
 
   return (
     <div className="today-view-container">
-      {/* Banner Header Today */}
-      <div className="today-hero-card">
+      {/* Banner Header Today Ringkas */}
+      <div className="today-hero-card compact">
         <div className="today-hero-header">
           <div className="today-hero-badge">
-            <Sun size={14} className="today-sun-icon" />
-            <span>Fokus Hari Ini</span>
+            <Sun size={13} className="today-sun-icon" />
+            <span>Fokus Today</span>
           </div>
           <span className="today-date-text">{todayFormatted}</span>
         </div>
 
-        <h2 className="today-hero-title">Prioritas Utama Hari Ini</h2>
-        <p className="today-hero-subtitle">
-          Pilih maksimal 5 tugas terpenting dari Inbox agar fokus dan tidak terbebani.
-        </p>
-
-        {/* Progress Bar Today */}
-        <div className="today-progress-section">
+        {/* Progress Bar & Quick Stats Inline Ringkas */}
+        <div className="today-progress-section compact">
           <div className="today-progress-labels">
             <span>
-              Progres: <strong>{completedTodayCount}</strong> dari{' '}
-              <strong>{todayTasks.length}</strong> tugas selesai
+              Progres: <strong>{completedTodayCount}</strong>/{todayTasks.length} Tuntas
             </span>
             <span className="today-progress-percent">{progressPercent}%</span>
           </div>
@@ -105,22 +100,25 @@ export const TodayView: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Stats Pills */}
-        <div className="today-stats-pills">
+        {/* Quick Stats Pills Ringkas */}
+        <div className="today-stats-pills compact">
           <div className="today-pill">
-            <Flame size={12} color="#f97316" />
-            <span>{todayTasks.length}/5 Slot Terisi</span>
+            <Flame size={11} color="#f97316" />
+            <span>{todayTasks.length}/5 Slot</span>
           </div>
           <div className="today-pill">
-            <CheckCircle2 size={12} color="#10b981" />
-            <span>{completedTodayCount} Tuntas</span>
+            <CheckCircle2 size={11} color="#10b981" />
+            <span>{completedTodayCount} Selesai</span>
           </div>
           <div className="today-pill">
-            <Clock size={12} color="#3b82f6" />
+            <Clock size={11} color="#3b82f6" />
             <span>{todayTasks.length - completedTodayCount} Berjalan</span>
           </div>
         </div>
       </div>
+
+      {/* Kartu Analisis Energi vs Tugas Today */}
+      <TodayEnergyAnalysisCard />
 
       {/* Daftar 5 Slot Tugas */}
       <div className="today-slots-wrapper">
