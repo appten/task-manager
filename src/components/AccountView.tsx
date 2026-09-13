@@ -29,6 +29,7 @@ import {
   WifiOff,
   Globe,
   DownloadCloud,
+  History,
 } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
 import { VersionHistoryView } from './VersionHistoryView';
@@ -60,6 +61,7 @@ export const AccountView: React.FC = () => {
     clearAllTasksAndStartFresh,
     exportBackupData,
     importBackupData,
+    setIsHistoryModalOpen,
     showToast,
   } = useTask();
 
@@ -544,9 +546,36 @@ export const AccountView: React.FC = () => {
           <span className="stat-number">{todayTasks.length}</span>
           <span className="stat-label">Fokus Today</span>
         </div>
-        <div className="account-stat-box">
-          <span className="stat-number">{completedTasks}</span>
-          <span className="stat-label">Selesai</span>
+        <div
+          className="account-stat-box clickable-stat-box"
+          onClick={() => setIsHistoryModalOpen(true)}
+          title="Klik untuk membuka riwayat tugas selesai"
+          style={{ cursor: 'pointer' }}
+        >
+          <span className="stat-number" style={{ color: '#16a34a' }}>{completedTasks}</span>
+          <span className="stat-label" style={{ color: '#16a34a', fontWeight: 600 }}>Selesai ›</span>
+        </div>
+      </div>
+
+      {/* Menu Akses Riwayat Tugas Selesai */}
+      <div className="account-menu-group">
+        <span className="account-menu-group-title">Aktivitas & Riwayat</span>
+        <div className="account-info-card">
+          <button
+            type="button"
+            className="info-box-row info-box-row-clickable"
+            onClick={() => setIsHistoryModalOpen(true)}
+            aria-label="Buka riwayat tugas selesai"
+          >
+            <span className="info-box-label">
+              <History size={16} className="text-primary" />
+              <span>Riwayat Tugas Selesai</span>
+            </span>
+            <span className="info-box-val clickable-version">
+              {completedTasks > 0 ? `${completedTasks} Tugas Tuntas` : 'Kosong'}
+              <ChevronRight size={14} className="version-chevron" />
+            </span>
+          </button>
         </div>
       </div>
 

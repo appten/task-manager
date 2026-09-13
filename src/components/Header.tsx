@@ -2,7 +2,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTask } from '../context/TaskContext';
 import { StatusBar } from './StatusBar';
-import { CheckCheck, History, Target } from 'lucide-react';
+import { CheckCheck, Target, User } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const router = useRouter();
@@ -10,6 +10,7 @@ export const Header: React.FC = () => {
     tasks,
     todayTasks,
     activeTab,
+    setActiveTab,
     currentUser,
   } = useTask();
 
@@ -35,6 +36,11 @@ export const Header: React.FC = () => {
           title: 'Pilah Tugas',
           subtitle: 'Analisis beban & ritme sirkadian',
         };
+      case 'laporan':
+        return {
+          title: 'Laporan Produktivitas',
+          subtitle: 'Statistik penyelesaian & performa',
+        };
       case 'account':
         return {
           title: 'Akun & Sinkronisasi',
@@ -50,6 +56,13 @@ export const Header: React.FC = () => {
   };
 
   const headerInfo = getHeaderInfo();
+
+  const handleAvatarClick = () => {
+    setActiveTab('account');
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      router.push('/');
+    }
+  };
 
   return (
     <>
@@ -78,18 +91,30 @@ export const Header: React.FC = () => {
           >
             <Target size={19} />
           </button>
-          {/* Tombol Halaman Riwayat Tugas Selesai */}
+
+          {/* Avatar Akun (Menggantikan Riwayat Tugas) */}
           <button
-            className="android-icon-btn history-btn-action"
-            onClick={() => router.push('/history')}
-            title="Halaman Riwayat Tugas Selesai"
-            aria-label="Riwayat Tugas Selesai"
+            type="button"
+            className={`header-avatar-btn ${activeTab === 'account' ? 'active-account' : ''}`}
+            onClick={handleAvatarClick}
+            title={currentUser ? `Akun: ${currentUser.name}` : 'Buka Menu Akun'}
+            aria-label="Menu Akun"
           >
-            <History size={19} />
-            {tasks.filter((t) => t.isCompleted).length > 0 && (
-              <span className="navbar-badge-dot">
-                {tasks.filter((t) => t.isCompleted).length}
+            {currentUser?.avatar ? (
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="header-avatar-img"
+              />
+            ) : currentUser?.name ? (
+              <span className="header-avatar-text">
+                {currentUser.name.charAt(0).toUpperCase()}
               </span>
+            ) : (
+              <User size={17} />
+            )}
+            {currentUser && (
+              <span className="header-avatar-online-dot" />
             )}
           </button>
         </div>

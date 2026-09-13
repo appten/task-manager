@@ -183,10 +183,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
   })();
 
   const taskDate = task.startDate || task.dueDate;
-  const isScheduledEventNotToday =
-    task.inboxType === 'kegiatan' &&
-    Boolean(task.startTime || task.endTime || task.dueTime) &&
-    Boolean(taskDate && taskDate !== todayDateStr);
+  const isScheduledNotToday = Boolean(taskDate && taskDate !== todayDateStr);
 
   return (
     <div
@@ -418,15 +415,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
               <button
                 type="button"
                 className={`meta-today-btn-clean ${task.isToday ? 'active' : ''} ${
-                  isScheduledEventNotToday ? 'disabled-event' : ''
+                  isScheduledNotToday ? 'disabled-event' : ''
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleTodayTask(task.id);
                 }}
                 title={
-                  isScheduledEventNotToday
-                    ? `Acara terjadwal untuk ${formatReadableDate(taskDate)} (hanya acara hari ini yang bisa masuk ke Today)`
+                  isScheduledNotToday
+                    ? `${
+                        task.inboxType === 'kegiatan'
+                          ? 'Acara'
+                          : task.inboxType === 'pengingat'
+                          ? 'Pengingat'
+                          : 'Tugas'
+                      } terjadwal untuk ${formatReadableDate(taskDate || '')} (hanya item hari ini yang bisa masuk ke Today)`
                     : task.isToday
                     ? 'Keluarkan dari Today'
                     : 'Pilih ke Today (Maks 5)'
@@ -436,7 +439,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
                   size={10}
                   fill={task.isToday ? '#f59e0b' : 'none'}
                   color={
-                    isScheduledEventNotToday
+                    isScheduledNotToday
                       ? '#94a3b8'
                       : task.isToday
                       ? '#d97706'
@@ -446,7 +449,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
                 <span>
                   {task.isToday
                     ? 'Today'
-                    : isScheduledEventNotToday
+                    : isScheduledNotToday
                     ? 'Terjadwal'
                     : '+ Today'}
                 </span>

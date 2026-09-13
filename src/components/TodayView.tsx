@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTask } from '../context/TaskContext';
 import { TodayTaskRow } from './TodayTaskRow';
 import { TodayHistoryView } from './TodayHistoryView';
@@ -13,13 +13,50 @@ import {
   Flame,
   Clock,
   History,
+  Lock,
+  Unlock,
+  ShieldCheck,
+  X,
 } from 'lucide-react';
 
 export const TodayView: React.FC = () => {
-  const { todayTasks, setActiveTab } = useTask();
+  const { todayTasks, setActiveTab, showToast } = useTask();
 
   // State untuk membuka view Riwayat Today
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // State Komitmen Today
+  const todayDateKey = new Date().toISOString().slice(0, 10);
+  const [isCommitted, setIsCommitted] = useState(false);
+  const [showCommitModal, setShowCommitModal] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`ten_today_committed_${todayDateKey}`);
+      if (saved === 'true') {
+        setIsCommitted(true);
+      }
+    } catch {}
+  }, [todayDateKey]);
+
+  const handleConfirmCommit = () => {
+    setIsCommitted(true);
+    setShowCommitModal(false);
+    try {
+      localStorage.setItem(`ten_today_committed_${todayDateKey}`, 'true');
+    } catch {}
+    showToast('Komitmen terkunci! Fokus penuh tuntaskan tugas hari ini 🎯');
+  };
+
+  const handleConfirmUnlock = () => {
+    setIsCommitted(false);
+    setShowUnlockModal(false);
+    try {
+      localStorage.removeItem(`ten_today_committed_${todayDateKey}`);
+    } catch {}
+    showToast('Kunci komitmen dibuka. Anda dapat menyesuaikan kembali tugas.');
+  };
 
   const maxSlots = 5;
   const completedTodayCount = todayTasks.filter((t) => t.isCompleted).length;
@@ -172,6 +209,173 @@ export const TodayView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Tombol & Status Komitmen Today */}
+      {todayTasks.length > 0 && (
+        <div className="today-commitment-section">
+          {!isCommitted ? (
+            <button
+              type="button"
+              className="today-btn-commit"
+              onClick={() => setShowCommitModal(true)}
+            >
+              <Lock size={15} />
+              <span>Komitmen Selesaikan Hari Ini ({todayTasks.length} Tugas)</span>
+            </button>
+          ) : (
+            <div className="today-commitment-locked-card animate-fade-in">
+              <div className="locked-card-left">
+                <div className="locked-icon-badge">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <h4 className="locked-title">Komitmen Hari Ini Terkunci 🔒</h4>
+                  <p className="locked-desc">
+                    Fokus penuh tuntaskan {todayTasks.length} tugas yang telah Anda ikrarkan hari ini.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-unlock-commitment"
+                onClick={() => setShowUnlockModal(true)}
+                title="Buka kunci komitmen jika ada perubahan mendesak"
+              >
+                <Unlock size={12} />
+                <span>Buka Kunci</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Kunci Komitmen */}
+      {showCommitModal && (
+        <div
+          className="pilah-modal-overlay animate-fade-in"
+          onClick={() => setShowCommitModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="pilah-modal-card animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '400px' }}
+          >
+            <div className="pilah-modal-header">
+              <div className="modal-header-lead">
+                <div className="modal-icon-badge" style={{ background: '#fef3c7', color: '#d97706' }}>
+                  <Lock size={16} />
+                </div>
+                <div>
+                  <h3 className="modal-title">Kunci Komitmen Today?</h3>
+                  <p className="modal-subtitle">{todayTasks.length} Tugas Diprioritaskan</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="modal-btn-close"
+                onClick={() => setShowCommitModal(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="pilah-modal-body">
+              <p style={{ fontSize: '13px', color: '#334155', lineHeight: '1.5', margin: 0 }}>
+                Dengan menekan <strong>Komitmen</strong>, Anda menegaskan tekad untuk memusatkan energi
+                dan menyelesaikan {todayTasks.length} tugas yang terpilih hari ini tanpa terdistraksi tugas baru.
+              </p>
+              <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '10px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>Daftar Tugas yang Dikomitmenkan:</span>
+                <ul style={{ margin: '6px 0 0 0', paddingLeft: '18px', fontSize: '12px', color: '#0f172a' }}>
+                  {todayTasks.map((t) => (
+                    <li key={t.id} style={{ marginBottom: '2px' }}>{t.title}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="pilah-modal-footer" style={{ gap: '8px' }}>
+              <button
+                type="button"
+                className="fast-desc-hide-btn"
+                onClick={() => setShowCommitModal(false)}
+                style={{ padding: '7px 14px' }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="modal-btn-confirm"
+                onClick={handleConfirmCommit}
+                style={{ background: '#d97706', color: '#ffffff' }}
+              >
+                Ya, Saya Berkomitmen! 🚀
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Buka Kunci */}
+      {showUnlockModal && (
+        <div
+          className="pilah-modal-overlay animate-fade-in"
+          onClick={() => setShowUnlockModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="pilah-modal-card animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '380px' }}
+          >
+            <div className="pilah-modal-header">
+              <div className="modal-header-lead">
+                <div className="modal-icon-badge" style={{ background: '#f1f5f9', color: '#475569' }}>
+                  <Unlock size={16} />
+                </div>
+                <div>
+                  <h3 className="modal-title">Buka Kunci Komitmen?</h3>
+                  <p className="modal-subtitle">Penyesuaian Tugas Today</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="modal-btn-close"
+                onClick={() => setShowUnlockModal(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="pilah-modal-body">
+              <p style={{ fontSize: '12.5px', color: '#475569', lineHeight: '1.5', margin: 0 }}>
+                Apakah Anda perlu mengubah atau menukar daftar tugas Today? Anda dapat mengunci komitmen kembali kapan saja.
+              </p>
+            </div>
+
+            <div className="pilah-modal-footer" style={{ gap: '8px' }}>
+              <button
+                type="button"
+                className="fast-desc-hide-btn"
+                onClick={() => setShowUnlockModal(false)}
+                style={{ padding: '7px 14px' }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="modal-btn-confirm"
+                onClick={handleConfirmUnlock}
+              >
+                Buka Kunci
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Info Tip Filosofi Rule of 5 */}
       <div className="today-philosophy-card">

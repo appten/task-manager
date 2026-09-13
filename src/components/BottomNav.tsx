@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTask } from '../context/TaskContext';
-import { Inbox, Sun, CalendarDays, ListFilter, User, Star } from 'lucide-react';
+import { Inbox, Sun, CalendarDays, ListFilter, BarChart3, Star } from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
   const { activeTab, setActiveTab, tasks, todayTasks } = useTask();
@@ -84,17 +84,17 @@ export const BottomNav: React.FC = () => {
         <span className="android-nav-label">Kalender</span>
       </button>
 
-      {/* 5. Menu Akun (Di kanan Kalender) */}
+      {/* 5. Menu Laporan (Menggantikan posisi Akun) */}
       <button
         type="button"
-        className={`android-nav-item ${activeTab === 'account' ? 'active' : ''}`}
-        onClick={() => setActiveTab('account')}
-        aria-label="Menu Akun"
+        className={`android-nav-item ${activeTab === 'laporan' ? 'active' : ''}`}
+        onClick={() => setActiveTab('laporan')}
+        aria-label="Menu Laporan Produktivitas"
       >
         <div className="nav-icon-wrapper">
-          <User size={19} strokeWidth={activeTab === 'account' ? 2.4 : 1.8} />
+          <BarChart3 size={19} strokeWidth={activeTab === 'laporan' ? 2.4 : 1.8} />
         </div>
-        <span className="android-nav-label">Akun</span>
+        <span className="android-nav-label">Laporan</span>
       </button>
     </nav>
   );

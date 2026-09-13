@@ -234,6 +234,16 @@ export const PilahView: React.FC = () => {
             const isWeightHeavy = weightScore >= 75;
             const isWeightLight = weightScore <= 40;
 
+            const todayDateStr = (() => {
+              const d = new Date();
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              return `${y}-${m}-${day}`;
+            })();
+            const taskDate = task.startDate || task.dueDate;
+            const isNotToday = Boolean(taskDate && taskDate !== todayDateStr);
+
             return (
               <div
                 key={task.id}
@@ -272,14 +282,26 @@ export const PilahView: React.FC = () => {
                   {/* Tombol Pilih / Hapus dari Today (Maks 5) */}
                   <button
                     type="button"
-                    className={`pilah-today-toggle-btn ${isToday ? 'active' : ''}`}
-                    onClick={() => toggleTodayTask(task.id)}
-                    title={isToday ? 'Keluarkan dari Today' : 'Pilih masuk ke fokus Today'}
+                    className={`pilah-today-toggle-btn ${isToday ? 'active' : ''} ${isNotToday ? 'disabled-event' : ''}`}
+                    onClick={() => {
+                      if (isNotToday && !isToday) {
+                        showToast(`Item terjadwal pada ${formatReadableDate(taskDate)}. Hanya item hari ini yang bisa masuk ke Today.`);
+                        return;
+                      }
+                      toggleTodayTask(task.id);
+                    }}
+                    title={
+                      isNotToday && !isToday
+                        ? `Terjadwal untuk ${formatReadableDate(taskDate)} (hanya item hari ini yang bisa masuk ke Today)`
+                        : isToday
+                        ? 'Keluarkan dari Today'
+                        : 'Pilih masuk ke fokus Today'
+                    }
                   >
                     <Star
                       size={15}
                       fill={isToday ? '#f59e0b' : 'none'}
-                      color={isToday ? '#d97706' : '#94a3b8'}
+                      color={isNotToday && !isToday ? '#cbd5e1' : isToday ? '#d97706' : '#94a3b8'}
                     />
                     <span className="today-btn-label">{isToday ? 'Di Today' : '+ Today'}</span>
                   </button>

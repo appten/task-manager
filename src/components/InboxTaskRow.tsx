@@ -191,10 +191,7 @@ export const InboxTaskRow: React.FC<InboxTaskRowProps> = ({ task }) => {
   })();
 
   const taskDate = task.startDate || task.dueDate;
-  const isScheduledEventNotToday =
-    task.inboxType === 'kegiatan' &&
-    Boolean(task.startTime || task.endTime || task.dueTime) &&
-    Boolean(taskDate && taskDate !== todayDateStr);
+  const isScheduledNotToday = Boolean(taskDate && taskDate !== todayDateStr);
 
   return (
     <div
@@ -362,15 +359,21 @@ export const InboxTaskRow: React.FC<InboxTaskRowProps> = ({ task }) => {
           <button
             type="button"
             className={`inbox-star-btn ${task.isToday ? 'active' : ''} ${
-              isScheduledEventNotToday ? 'disabled-event' : ''
+              isScheduledNotToday ? 'disabled-event' : ''
             }`}
             onClick={(e) => {
               e.stopPropagation();
               toggleTodayTask(task.id);
             }}
             title={
-              isScheduledEventNotToday
-                ? `Acara terjadwal untuk ${formatReadableDate(taskDate)} (hanya acara hari ini yang bisa masuk ke Today)`
+              isScheduledNotToday
+                ? `${
+                    task.inboxType === 'kegiatan'
+                      ? 'Acara'
+                      : task.inboxType === 'pengingat'
+                      ? 'Pengingat'
+                      : 'Tugas'
+                  } terjadwal untuk ${formatReadableDate(taskDate)} (hanya item hari ini yang bisa masuk ke Today)`
                 : task.isToday
                 ? 'Keluarkan dari Today'
                 : 'Pilih ke Fokus Today (Maks 5)'
@@ -380,7 +383,7 @@ export const InboxTaskRow: React.FC<InboxTaskRowProps> = ({ task }) => {
               size={15}
               fill={task.isToday ? '#f59e0b' : 'none'}
               color={
-                isScheduledEventNotToday
+                isScheduledNotToday
                   ? '#cbd5e1'
                   : task.isToday
                   ? '#d97706'

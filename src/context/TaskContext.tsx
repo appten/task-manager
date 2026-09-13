@@ -873,17 +873,21 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const task = tasks.find((t) => t.id === taskId);
       if (!task) return false;
 
-      // Aturan Konsistensi: Inbox berjenis acara/kegiatan yang sudah terjadwal (memiliki waktu mulai/selesai)
-      // dilarang masuk ke Today jika tanggal acaranya bukan hari ini!
+      // Aturan: Tugas / Acara / Pengingat yang memiliki tanggal/waktu dan tanggalnya bukan hari ini
+      // dilarang masuk ke Today!
       const todayStr = getTodayDateString();
       const taskDate = task.startDate || task.dueDate;
-      const isKegiatan = task.inboxType === 'kegiatan';
-      const hasScheduledTime = Boolean(task.startTime || task.endTime || task.dueTime);
 
-      if (isKegiatan && hasScheduledTime && taskDate && taskDate !== todayStr) {
+      if (taskDate && taskDate !== todayStr) {
         const readableDate = formatReadableDateShort(taskDate);
+        const typeLabel =
+          task.inboxType === 'kegiatan'
+            ? 'Acara / kegiatan'
+            : task.inboxType === 'pengingat'
+            ? 'Pengingat'
+            : 'Tugas';
         showToast(
-          `Acara/kegiatan ini terjadwal pada ${readableDate}. Hanya acara yang berlangsung hari ini yang dapat dimasukkan ke Today.`
+          `${typeLabel} ini terjadwal pada ${readableDate}. Hanya item untuk hari ini yang dapat dimasukkan ke Today.`
         );
         return false;
       }

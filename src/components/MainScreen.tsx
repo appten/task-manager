@@ -9,8 +9,10 @@ import { TodayView } from './TodayView';
 import { CalendarView } from './CalendarView';
 import { AIView } from './AIView';
 import { PilahView } from './PilahView';
+import { LaporanView } from './LaporanView';
 import { AccountView } from './AccountView';
 import { EditTaskModal } from './EditTaskModal';
+import { CompletedHistoryModal } from './CompletedHistoryModal';
 import { WelcomeDemoModal } from './WelcomeDemoModal';
 import { Toast } from './Toast';
 import { TabType } from '../types/task';
@@ -44,6 +46,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ initialTab }) => {
           {activeTab === 'ai' && <AIView />}
           {activeTab === 'today' && <TodayView />}
           {activeTab === 'calendar' && <CalendarView />}
+          {activeTab === 'laporan' && <LaporanView />}
           {activeTab === 'account' && <AccountView />}
         </div>
       </main>
@@ -53,6 +56,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({ initialTab }) => {
 
       {/* Edit Task Modal / Sheet */}
       <EditTaskModal />
+
+      {/* Completed History Modal */}
+      <CompletedHistoryModal />
 
       {/* Welcome Demo Notification Modal */}
       <WelcomeDemoModal />

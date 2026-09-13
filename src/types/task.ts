@@ -91,7 +91,7 @@ export interface LifeRelationship {
   suggestedTasks?: string[]; // Rekomendasi aktivitas pemantik
 }
 
-export type TabType = 'inbox' | 'calendar' | 'today' | 'ai' | 'pilah' | 'account';
+export type TabType = 'inbox' | 'calendar' | 'today' | 'ai' | 'pilah' | 'account' | 'laporan';
 
 export type FilterStatus = 'all' | 'active' | 'completed';
 
