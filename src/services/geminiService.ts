@@ -662,31 +662,58 @@ export const generateLocalCircadianAnalysis = (
       t.effortHours && t.effortHours >= 3 ? 'Tinggi' : t.effortHours && t.effortHours >= 1 ? 'Sedang' : 'Ringan';
     const estimatedDuration = t.estimatedTime || (t.effortHours ? `${t.effortHours} jam` : '30 - 45 menit');
 
-    let goalScore = 55;
+    // Alasan Estimasi Durasi
+    let estimatedDurationReason = '';
+    if (t.effortHours) {
+      estimatedDurationReason = `Estimasi ${estimatedDuration} disesuaikan dengan alokasi target pengerjaan (${t.effortHours} jam) serta kompleksitas ${t.subTasks?.length || 0} sub-tugas yang terdaftar.`;
+    } else if (t.inboxType === 'kegiatan') {
+      estimatedDurationReason = `Estimasi ${estimatedDuration} dialokasikan untuk durasi agenda pertemuan/acara agar tidak berbenturan dengan aktivitas berikutnya.`;
+    } else if (t.inboxType === 'pengingat') {
+      estimatedDurationReason = `Estimasi ${estimatedDuration} cukup untuk tinjauan cepat atau tindak lanjut memo pengingat tanpa menyita waktu fokus utama.`;
+    } else {
+      estimatedDurationReason = `Estimasi ${estimatedDuration} adalah durasi jendela fokus optimal untuk menuntaskan tugas kategori ${t.category || 'pekerjaan'} secara berkesinambungan.`;
+    }
+
+    // Skor Kesesuaian Goal Pengguna (Skala -100 s/d +100)
+    let goalScore = 40;
+    let matchGoalKeyword = false;
     if (userGoal && userGoal.trim()) {
       const goalWords = userGoal.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
       const taskText = `${t.title} ${t.description || ''} ${t.category || ''}`.toLowerCase();
       if (goalWords.some((kw) => taskText.includes(kw))) {
-        goalScore += 25;
+        goalScore += 45;
+        matchGoalKeyword = true;
       }
     }
-    if (t.priority === 'high') goalScore += 20;
-    if (t.priority === 'low') goalScore -= 25;
-    if (t.isToday) goalScore += 10;
-    if (isRecurring) goalScore += 5;
-    if (t.inboxType === 'kegiatan') goalScore += 5;
-    if (isPastOverdueTask) goalScore -= 25;
+    if (t.priority === 'high') goalScore += 25;
+    if (t.priority === 'low') goalScore -= 20;
+    if (t.isToday) goalScore += 15;
+    if (isRecurring) goalScore += 10;
+    if (isPastOverdueTask) goalScore -= 30;
     if (isFutureTask) goalScore -= 10;
-    if (timeWindowStatus === 'locked_until_start') goalScore -= 5;
-    goalScore = Math.min(95, Math.max(15, goalScore));
+    goalScore = Math.min(100, Math.max(-100, goalScore));
 
     let goalImpact: 'Mendekatkan' | 'Netral' | 'Menjauhkan' = 'Netral';
-    if (goalScore >= 65) {
+    if (goalScore >= 50) {
       goalImpact = 'Mendekatkan';
-    } else if (goalScore <= 35) {
+    } else if (goalScore <= -10) {
       goalImpact = 'Menjauhkan';
     } else {
       goalImpact = 'Netral';
+    }
+
+    // Alasan Keselarasan Goal
+    let goalAlignmentReason = '';
+    if (goalScore >= 70) {
+      goalAlignmentReason = matchGoalKeyword
+        ? `Skor ${goalScore > 0 ? `+${goalScore}` : goalScore}: Sangat selaras dan berkorelasi langsung dengan sasaran hidup Anda ("${userGoal}").`
+        : `Skor +${goalScore}: Memiliki dampak positif signifikan terhadap pencapaian target produktivitas dan fokus prioritas utama.`;
+    } else if (goalScore >= 20) {
+      goalAlignmentReason = `Skor +${goalScore}: Tugas pendukung yang menjaga ritme operasional harian tetap teratur dan stabil.`;
+    } else if (goalScore >= 0) {
+      goalAlignmentReason = `Skor 0: Bernilai netral, merupakan rutinitas umum yang tidak langsung mempengaruhi percepatan target utama.`;
+    } else {
+      goalAlignmentReason = `Skor ${goalScore}: Berpotensi mengalihkan fokus atau terlambat dari tenggat waktu target pencapaian penting.`;
     }
 
     // Perhitungan Skor Bobot Pengerjaan (Rentang 0 s/d 100)
@@ -704,19 +731,19 @@ export const generateLocalCircadianAnalysis = (
     else if (t.isToday) weightScore += 8;
     else if (isFutureTask) weightScore -= 15;
 
-    if (goalScore >= 70) weightScore += 10;
-    else if (goalScore <= 35) weightScore -= 5;
+    if (goalScore >= 50) weightScore += 10;
+    else if (goalScore <= -10) weightScore -= 5;
 
-    weightScore = Math.min(100, Math.max(10, weightScore));
+    weightScore = Math.min(100, Math.max(0, weightScore));
 
     // Alasan Bobot Pengerjaan
     let weightReason = '';
-    if (weightScore >= 80) {
-      weightReason = `Skor ${weightScore}/100: Memiliki prioritas tinggi dengan beban konsentrasi besar dan urgensi batas waktu penting.`;
-    } else if (weightScore >= 55) {
-      weightReason = `Skor ${weightScore}/100: Memiliki bobot pengerjaan moderat, efisien dikerjakan dalam alur produktif harian.`;
+    if (weightScore >= 75) {
+      weightReason = `Skor ${weightScore}/100 (Berat): Membutuhkan konsentrasi mendalam, energi kognitif tinggi, dan memiliki batas waktu krusial.`;
+    } else if (weightScore >= 45) {
+      weightReason = `Skor ${weightScore}/100 (Sedang): Memiliki beban kerja proporsional yang dapat dieksekusi efisien dalam sesi fokus normal.`;
     } else {
-      weightReason = `Skor ${weightScore}/100: Tugas ringan dan santai dengan beban eksekusi cepat tanpa menyita energi kognitif berlebih.`;
+      weightReason = `Skor ${weightScore}/100 (Ringan): Tugas ringan tanpa beban stres kognitif tinggi, dapat diselesaikan dengan cepat.`;
     }
 
     const typeLabel = t.inboxType === 'kegiatan' ? 'Kegiatan/Acara' : t.inboxType === 'pengingat' ? 'Pengingat' : 'Tugas';
@@ -746,12 +773,14 @@ export const generateLocalCircadianAnalysis = (
       urgencyLevel,
       effortLevel,
       estimatedDuration,
+      estimatedDurationReason,
       biologicalFit: isFutureTask
         ? `Dijadwalkan untuk ${dateContextLabel}. Simpan energi untuk tugas hari ini.`
         : isLockedNow
         ? `Terkunci hingga ${t.startTime}. Alokasikan energi untuk tugas lain saat ini.`
         : `${timeSuitabilityNote} Cocok dengan ritme energi saat ini.`,
       goalAlignmentScore: goalScore,
+      goalAlignmentReason,
       goalImpact,
       weightScore,
       weightReason,
@@ -952,12 +981,14 @@ WAJIB hasilkan output HANYA dalam format JSON murni yang ringkas & padat (maksim
       "urgencyLevel": "Segera" | "Rutin" | "Nanti",
       "effortLevel": "Ringan" | "Sedang" | "Tinggi",
       "estimatedDuration": "misal 30 menit",
+      "estimatedDurationReason": "Alasan estimasi durasi pengerjaan tersebut",
       "biologicalFit": "Kesesuaian jam biologis",
       "goalAlignmentScore": 85,
+      "goalAlignmentReason": "Alasan penilaian skor keselarasan terhadap sasaran tujuan hidup pengguna",
       "goalImpact": "Mendekatkan",
       "weightScore": 85,
       "weightReason": "Alasan spesifik mengapa tugas ini diberi skor bobot tersebut berdasarkan beban fokus, kesulitan, dan urgensi",
-      "reason": "Alasan rekomendasi yang sadar tanggal dan jam mulai/selesai",
+      "reason": "Deskripsi penilaian umum rekomendasi yang sadar tanggal dan jam mulai/selesai",
       "dateContextLabel": "misal Hari ini (08 Sep) / Besok (09 Sep) / Terlewat",
       "timeWindowStatus": "ready_now" | "locked_until_start" | "nearing_deadline" | "flexible",
       "timeWindowDescription": "Deskripsi jendela waktu dan tanggalnya",
@@ -971,7 +1002,7 @@ WAJIB hasilkan output HANYA dalam format JSON murni yang ringkas & padat (maksim
     const { text, engineName } = await executeUniversalAICall(prompt, { expectJson: true });
     const parsed = extractJsonFromText(text);
 
-    // Pastikan tiap taskAnalysis memiliki weightScore (0-100) dan weightReason
+    // Pastikan tiap taskAnalysis memiliki data lengkap
     const rawAnalysis = Array.isArray(parsed.tasksAnalysis) ? parsed.tasksAnalysis : [];
     const enrichedAnalysis = rawAnalysis.map((item: any) => {
       let ws = typeof item.weightScore === 'number' ? Math.round(item.weightScore) : 50;
@@ -981,10 +1012,27 @@ WAJIB hasilkan output HANYA dalam format JSON murni yang ringkas & padat (maksim
           ? item.weightReason
           : `Skor ${ws}/100: Bobot pengerjaan dihitung berdasarkan prioritas, tingkat kesulitan, dan urgensi waktu tugas.`;
 
+      let gs = typeof item.goalAlignmentScore === 'number' ? Math.round(item.goalAlignmentScore) : 50;
+      gs = Math.min(100, Math.max(-100, gs));
+      const gr =
+        item.goalAlignmentReason && typeof item.goalAlignmentReason === 'string'
+          ? item.goalAlignmentReason
+          : `Skor ${gs > 0 ? `+${gs}` : gs}: Evaluasi dampak tugas terhadap sasaran produktivitas hidup pengguna.`;
+
+      const ed = item.estimatedDuration || '30 menit';
+      const edr =
+        item.estimatedDurationReason && typeof item.estimatedDurationReason === 'string'
+          ? item.estimatedDurationReason
+          : `Estimasi ${ed} dialokasikan berdasarkan kompleksitas dan kategori tugas.`;
+
       return {
         ...item,
+        goalAlignmentScore: gs,
+        goalAlignmentReason: gr,
         weightScore: ws,
         weightReason: wr,
+        estimatedDuration: ed,
+        estimatedDurationReason: edr,
       };
     });
 

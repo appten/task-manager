@@ -15588,3 +15588,861 @@ body {
 .danger-info-group .info-box-row:hover {
   background: #fef2f2;
 }
+
+/* ==========================================================================
+   VERSION-01: TASK FORM, INBOX AGE, & PILAH VIEW ENHANCEMENTS
+   ========================================================================== */
+
+/* 1. TaskForm Small Toggles & Timestamps */
+.fast-desc-toggle-wrapper {
+  margin-top: 6px;
+}
+
+.fast-small-toggle-btn {
+  background: transparent;
+  border: 1px dashed #cbd5e1;
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.fast-small-toggle-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.fast-desc-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fast-desc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fast-desc-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fast-desc-hide-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.fast-desc-hide-btn:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+/* Flexible Timestamps Grid */
+.fast-schedule-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.fast-quick-presets {
+  display: flex;
+  gap: 4px;
+}
+
+.fast-quick-preset-chip {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.fast-quick-preset-chip:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.fast-timestamp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .fast-timestamp-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fast-timestamp-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timestamp-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.timestamp-inputs-row {
+  display: flex;
+  gap: 6px;
+}
+
+.timestamp-date-col {
+  flex: 1.2;
+}
+
+.timestamp-time-col {
+  flex: 0.9;
+}
+
+.timestamp-input-caption {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.time-input-with-clear {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fast-timestamp-hint {
+  display: block;
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+/* Subtasks and Optional Items */
+.fast-subtasks-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fast-subtasks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fast-subtasks-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fast-optional-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fast-optional-item {
+  width: 100%;
+}
+
+.fast-toggle-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.toggle-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggle-card-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.prio-val-text.high {
+  color: #dc2626;
+}
+
+.prio-val-text.medium {
+  color: #d97706;
+}
+
+.prio-val-text.low {
+  color: #16a34a;
+}
+
+.fast-effort-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.effort-num-input {
+  max-width: 90px;
+}
+
+/* 2. Inbox Age Badge */
+.inbox-meta-badge.age-badge {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 5px;
+  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3.5px;
+}
+
+/* 3. Pilah Menu & Cards */
+.pilah-view-container {
+  padding: 12px 14px 28px 14px;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pilah-clean-header {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pilah-header-lead {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.pilah-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pilah-header-texts {
+  flex: 1;
+}
+
+.pilah-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pilah-heading {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.pilah-subheading {
+  font-size: 12px;
+  color: #64748b;
+  margin: 3px 0 0 0;
+  line-height: 1.4;
+}
+
+.pilah-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.pilah-today-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 20px;
+}
+
+.pilah-btn-analyze {
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.pilah-btn-analyze:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.pilah-btn-analyze:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.pilah-filter-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.pilah-filter-btn {
+  background: #f1f5f9;
+  border: 1px solid transparent;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.pilah-filter-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.pilah-filter-btn.active {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.pilah-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.pilah-task-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pilah-task-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.pilah-task-card.is-selected-today {
+  border-color: #f59e0b;
+  background: #fffdfa;
+}
+
+.pilah-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.pilah-checkbox-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  margin-top: 1px;
+}
+
+.pilah-circle-ring {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  transition: all 0.15s ease;
+}
+
+.pilah-checkbox-btn:hover .pilah-circle-ring {
+  border-color: #10b981;
+}
+
+.pilah-title-wrap {
+  flex: 1;
+}
+
+.pilah-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.pilah-type-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1.5px 5.5px;
+  border-radius: 4px;
+}
+
+.pilah-type-badge.tugas {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.pilah-type-badge.kegiatan {
+  background: #fdf4ff;
+  color: #c026d3;
+}
+
+.pilah-type-badge.pengingat {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.pilah-prio-badge.high {
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1.5px 5.5px;
+  border-radius: 4px;
+}
+
+.pilah-date-badge {
+  font-size: 10px;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pilah-task-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.pilah-today-toggle-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.pilah-today-toggle-btn:hover {
+  border-color: #f59e0b;
+  color: #d97706;
+}
+
+.pilah-today-toggle-btn.active {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+/* Deskripsi Penilaian Umum Langsung di Bawah Tugas */
+.pilah-general-reason-box {
+  background: #f8fafc;
+  border-left: 3px solid #6366f1;
+  padding: 5px 9px;
+  border-radius: 0 6px 6px 0;
+}
+
+.pilah-general-reason-text {
+  font-size: 11.5px;
+  color: #334155;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Baris Skor & Durasi Ringkas (Hanya Icon + Nilai) */
+.pilah-compact-scores-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 2px;
+}
+
+.pilah-compact-chip {
+  border: none;
+  border-radius: 6px;
+  padding: 2.5px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 3.5px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.pilah-compact-chip:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.96);
+}
+
+.pilah-compact-chip .chip-icon {
+  flex-shrink: 0;
+}
+
+.pilah-compact-chip.goal-chip.positive {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.pilah-compact-chip.goal-chip.negative {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.pilah-compact-chip.goal-chip.neutral {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.pilah-compact-chip.weight-chip.heavy {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+}
+
+.pilah-compact-chip.weight-chip.medium {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.pilah-compact-chip.weight-chip.light {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.pilah-compact-chip.duration-chip {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+/* Modal Alasan Skor & Durasi */
+.pilah-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.pilah-modal-card {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pilah-modal-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-icon-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modal-icon-badge.goal {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.modal-icon-badge.weight {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.modal-icon-badge.duration {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.modal-subtitle {
+  font-size: 11.5px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modal-btn-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.modal-btn-close:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.pilah-modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-metric-highlight {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metric-caption {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.metric-score-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.metric-scale-text {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.modal-reason-box {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.reason-box-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reason-box-content {
+  font-size: 12.5px;
+  color: #1e293b;
+  line-height: 1.5;
+  margin: 0;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 10px;
+  border-left: 3px solid #6366f1;
+}
+
+.modal-goal-context-box {
+  background: #faf5ff;
+  border: 1px solid #f3e8ff;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.context-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #7e22ce;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.context-text {
+  font-size: 11.5px;
+  color: #581c87;
+  margin: 0;
+  font-style: italic;
+}
+
+.pilah-modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-btn-confirm {
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.modal-btn-confirm:hover {
+  background: #1e293b;
+}
+
+.pilah-empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pilah-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.pilah-empty-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  max-width: 320px;
+  line-height: 1.45;
+}
+

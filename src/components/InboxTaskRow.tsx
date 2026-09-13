@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Task } from '../types/task';
 import { useTask } from '../context/TaskContext';
 import { generateSubTasksAndEstimateWithAI } from '../services/geminiService';
+import { formatInboxAge } from '../data/seedTasks';
 import {
   Check,
   Calendar,
@@ -271,6 +272,14 @@ export const InboxTaskRow: React.FC<InboxTaskRowProps> = ({ task }) => {
               <span className="inbox-meta-badge priority-high" title="Prioritas Tinggi">
                 <span className="priority-dot" />
                 <span>Penting</span>
+              </span>
+            )}
+
+            {/* Indikator Lama Item Mengendap di Inbox Belum Terselesaikan */}
+            {task.createdAt && !task.isCompleted && (
+              <span className="inbox-meta-badge age-badge" title={`Dicatat pada ${task.createdAt.slice(0, 16).replace('T', ' ')}`}>
+                <Clock size={10} />
+                <span>{formatInboxAge(task.createdAt)}</span>
               </span>
             )}
 

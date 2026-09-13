@@ -8,6 +8,7 @@ import { InboxView } from './InboxView';
 import { TodayView } from './TodayView';
 import { CalendarView } from './CalendarView';
 import { AIView } from './AIView';
+import { PilahView } from './PilahView';
 import { AccountView } from './AccountView';
 import { EditTaskModal } from './EditTaskModal';
 import { WelcomeDemoModal } from './WelcomeDemoModal';
@@ -39,7 +40,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({ initialTab }) => {
       <main className="app-screen">
         <div className="scrollable-content">
           {activeTab === 'inbox' && <InboxView />}
-          {(activeTab === 'pilah' || activeTab === 'ai') && <AIView />}
+          {activeTab === 'pilah' && <PilahView />}
+          {activeTab === 'ai' && <AIView />}
           {activeTab === 'today' && <TodayView />}
           {activeTab === 'calendar' && <CalendarView />}
           {activeTab === 'account' && <AccountView />}

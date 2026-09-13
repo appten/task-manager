@@ -11,13 +11,40 @@ export interface VersionRelease {
   groupedChanges: VersionCategoryGroup[];
 }
 
-export const APP_CURRENT_VERSION = 'v1.5.0';
+export const APP_CURRENT_VERSION = 'v1.6.0';
 
 export const VERSION_HISTORY: VersionRelease[] = [
   {
+    version: 'v1.6.0',
+    releaseDate: '14 September 2026',
+    isLatest: true,
+    tagline: 'Form Input Lengkap Fleksibel, Pelacak Usia Inbox, & Menu Pilah Mandiri dengan Skor Clickable Reason',
+    groupedChanges: [
+      {
+        category: 'Fitur Baru',
+        items: [
+          'Form Input Lengkap Inbox Dinamis: Desain minimalis terfokus dengan teks kecil interaktif untuk keterangan, sub-tugas, prioritas, kategori, dan estimasi waktu pengerjaan.',
+          'Timestamp Mulai & Selesai Fleksibel: Dukungan pencatatan waktu mulai dan selesai mandiri dengan opsi hanya mengisi tanggal saja tanpa jam (jam bersifat opsional).',
+          'Posisi Pengulangan Tepat Setelah Waktu: Pemilihan jadwal rutin (Harian, Hari Kerja, Mingguan, Bulanan) terintegrasi langsung setelah konfigurasi waktu.',
+          'Pelacak Usia Inbox Otomatis: Pencatatan waktu input presisi yang menampilkan hitungan lama tugas mengendap di Inbox tanpa selesai ("Baru saja", "3j di inbox", "2 hari di inbox").',
+          'Menu Pilah Mandiri untuk Fokus Today: Tampilan komprehensif memilah tugas Inbox untuk dipilih ke Today dengan evaluasi analitis independen.',
+          'Evaluasi Cerdas dengan Alasan Interaktif: Skor kesesuaian goal (-100 s/d +100), skor bobot kesulitan (0 s/d 100), dan estimasi waktu pengerjaan disajikan ringkas (icon + nilai) yang dapat diklik untuk menelaah detail alasan lengkap.',
+          'Deskripsi Penilaian Umum Langsung: Setiap kartu tugas pada menu Pilah dilengkapi ulasan analisis umum 1-2 kalimat tepat di bawah nama tugas.',
+        ],
+      },
+      {
+        category: 'Penyempurnaan',
+        items: [
+          'Pemisahan Form Peran & Hubungan: Opsi pemilihan relasi peran disederhanakan dari form utama agar form input inbox tetap fokus dan cepat.',
+          'Integrasi Navigasi Pilah & Today: Pemilihan tugas langsung ke fokus Today (maksimal 5 tugas harian) dengan 1 klik dari menu Pilah.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v1.5.0',
     releaseDate: '12 September 2026',
-    isLatest: true,
+    isLatest: false,
     tagline: 'Pelacak Sesi Multi-Perangkat, Mode Cloud/Offline, PWA & Tata Letak Menu Akun Ringkas',
     groupedChanges: [
       {

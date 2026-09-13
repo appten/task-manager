@@ -30,6 +30,27 @@ export const getTaskAgeInDays = (createdAt: string): number => {
   }
 };
 
+// Hitung berapa lama item telah berada di Inbox tanpa terselesaikan
+export const formatInboxAge = (createdAt?: string): string => {
+  if (!createdAt) return 'Baru saja';
+  try {
+    const createdTime = new Date(createdAt).getTime();
+    const nowTime = Date.now();
+    const diffMs = Math.max(0, nowTime - createdTime);
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMinutes < 2) return 'Baru saja';
+    if (diffMinutes < 60) return `${diffMinutes}m di inbox`;
+    if (diffHours < 24) return `${diffHours}j di inbox`;
+    if (diffDays === 1) return '1 hari di inbox';
+    return `${diffDays} hari di inbox`;
+  } catch {
+    return 'Baru saja';
+  }
+};
+
 // Format tanggal & jam diterima
 export const formatReceivedTime = (createdAt: string): string => {
   try {

@@ -107,9 +107,11 @@ export interface TaskAnalysisItem {
   estimatedDuration: string;
   biologicalFit: string;
   goalAlignmentScore?: number; // Skor -100 s/d 100
+  goalAlignmentReason?: string; // Alasan penilaian skor kesesuaian goal pengguna
   goalImpact?: 'Mendekatkan' | 'Netral' | 'Menjauhkan';
   weightScore?: number; // Skor bobot pengerjaan (rentang 0 s/d 100)
   weightReason?: string; // Alasan AI memberikan skor bobot pengerjaan
+  estimatedDurationReason?: string; // Alasan estimasi waktu pengerjaan
   reason: string;
   recurrence?: RecurrenceType;
   dateContextLabel?: string;
