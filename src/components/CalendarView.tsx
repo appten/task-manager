@@ -14,6 +14,11 @@ import {
   Check,
   List,
   CalendarDays,
+  X,
+  Sparkles,
+  Pencil,
+  ExternalLink,
+  AlertCircle,
 } from 'lucide-react';
 import { getFormattedDate } from '../data/seedTasks';
 import { Task } from '../types/task';
@@ -161,6 +166,7 @@ export const CalendarView: React.FC = () => {
     setActiveTab,
     setIsTaskFormOpen,
     setEditingTask,
+    setViewingTask,
     toggleTaskStatus,
     activeScheduleVersion,
     setActiveScheduleVersion,
@@ -169,6 +175,8 @@ export const CalendarView: React.FC = () => {
 
   const [dailyViewMode, setDailyViewMode] = useState<'timeline' | 'list'>('timeline');
   const [calendarSpan, setCalendarSpan] = useState<'month' | 'week'>('week');
+  const [selectedSummaryTask, setSelectedSummaryTask] = useState<Task | null>(null);
+  const [selectedSummaryBlock, setSelectedSummaryBlock] = useState<RenderSessionBlock | null>(null);
 
   // Current real-time clock for today indicator
   const [nowTime, setNowTime] = useState<Date>(new Date());
@@ -701,8 +709,11 @@ export const CalendarView: React.FC = () => {
                 <div
                   key={ut.id}
                   className="unscheduled-chip"
-                  onClick={() => setEditingTask(ut)}
-                  title="Klik untuk set jam atau gunakan 'Susun Jadwal AI'"
+                  onClick={() => {
+                    setSelectedSummaryTask(ut);
+                    setSelectedSummaryBlock(null);
+                  }}
+                  title="Klik untuk melihat ringkasan tugas"
                 >
                   <span>{ut.title}</span>
                   {ut.effortHours && <span className="chip-effort">{ut.effortHours}j</span>}
@@ -820,7 +831,12 @@ export const CalendarView: React.FC = () => {
                       left: block.totalCols > 1 ? `calc(${leftPercent}% + 2px)` : '0%',
                       width: block.totalCols > 1 ? `calc(${widthPercent}% - 4px)` : '100%',
                     }}
-                    onClick={() => originalTask && setEditingTask(originalTask)}
+                    onClick={() => {
+                      if (originalTask) {
+                        setSelectedSummaryTask(originalTask);
+                        setSelectedSummaryBlock(block);
+                      }
+                    }}
                     title={`${block.taskTitle} (${block.startTime} - ${block.endTime})`}
                   >
                     <div className="timeline-block-header">
@@ -889,6 +905,220 @@ export const CalendarView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal Ringkasan Minimalis Terkait Tugas di Timeline */}
+      {selectedSummaryTask && (
+        <div
+          className="modal-overlay animate-fade-in"
+          onClick={() => setSelectedSummaryTask(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="modal-container task-minimalist-summary-modal animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '420px', padding: '16px 18px', borderRadius: '16px' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background:
+                      selectedSummaryTask.inboxType === 'kegiatan'
+                        ? '#dbeafe'
+                        : selectedSummaryTask.inboxType === 'pengingat'
+                        ? '#fef3c7'
+                        : '#f1f5f9',
+                    color:
+                      selectedSummaryTask.inboxType === 'kegiatan'
+                        ? '#1d4ed8'
+                        : selectedSummaryTask.inboxType === 'pengingat'
+                        ? '#b45309'
+                        : '#334155',
+                  }}
+                >
+                  {selectedSummaryTask.inboxType === 'kegiatan'
+                    ? '📅 Acara'
+                    : selectedSummaryTask.inboxType === 'pengingat'
+                    ? '⏰ Pengingat'
+                    : '📝 Tugas'}
+                </span>
+                {selectedSummaryTask.category && (
+                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                    #{selectedSummaryTask.category}
+                  </span>
+                )}
+                {selectedSummaryBlock?.sessionLabel && (
+                  <span
+                    style={{
+                      fontSize: '10.5px',
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      padding: '2px 6px',
+                      borderRadius: '5px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {selectedSummaryBlock.sessionLabel}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setSelectedSummaryTask(null)}
+                style={{ padding: '4px' }}
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            {/* Judul & Status */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginTop: '12px' }}>
+              <button
+                type="button"
+                className={`timeline-mini-checkbox ${selectedSummaryTask.isCompleted ? 'checked' : ''}`}
+                style={{ width: '22px', height: '22px', borderRadius: '6px', marginTop: '2px' }}
+                onClick={() => toggleTaskStatus(selectedSummaryTask.id)}
+              >
+                {selectedSummaryTask.isCompleted && <Check size={12} strokeWidth={3} />}
+              </button>
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    color: selectedSummaryTask.isCompleted ? '#94a3b8' : '#0f172a',
+                    textDecoration: selectedSummaryTask.isCompleted ? 'line-through' : 'none',
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {selectedSummaryTask.title}
+                </h3>
+              </div>
+            </div>
+
+            {/* Waktu & Jadwal Minimalis */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '10px',
+                padding: '8px 12px',
+                marginTop: '12px',
+                fontSize: '12px',
+                color: '#334155',
+              }}
+            >
+              <Clock size={14} className="text-primary" />
+              <span>
+                <strong>
+                  {selectedSummaryBlock
+                    ? `${selectedSummaryBlock.startTime} - ${selectedSummaryBlock.endTime}`
+                    : selectedSummaryTask.startTime
+                    ? `${selectedSummaryTask.startTime} - ${selectedSummaryTask.endTime || 'Selesai'}`
+                    : selectedSummaryTask.dueTime
+                    ? `Tenggat ${selectedSummaryTask.dueTime}`
+                    : 'Belum diatur jam'}
+                </strong>
+              </span>
+              {selectedSummaryTask.dueDate && (
+                <span style={{ color: '#64748b', marginLeft: 'auto', fontSize: '11px' }}>
+                  {selectedSummaryTask.dueDate}
+                </span>
+              )}
+            </div>
+
+            {/* Catatan AI Cerdas / Reschedule */}
+            {(selectedSummaryTask.schedulingNote || selectedSummaryBlock?.note) && (
+              <div
+                style={{
+                  background: '#f5f3ff',
+                  border: '1px solid #ddd6fe',
+                  borderRadius: '10px',
+                  padding: '9px 12px',
+                  marginTop: '10px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                }}
+              >
+                <Sparkles size={14} style={{ color: '#7c3aed', flexShrink: 0, marginTop: '2px' }} />
+                <p style={{ margin: 0, fontSize: '11.5px', color: '#5b21b6', lineHeight: 1.4 }}>
+                  {selectedSummaryBlock?.note || selectedSummaryTask.schedulingNote}
+                </p>
+              </div>
+            )}
+
+            {/* Keterangan Singkat jika ada */}
+            {selectedSummaryTask.description && (
+              <p
+                style={{
+                  fontSize: '12px',
+                  color: '#475569',
+                  margin: '10px 0 0 0',
+                  lineHeight: 1.4,
+                  background: '#ffffff',
+                  padding: '6px 8px',
+                  borderRadius: '6px',
+                  border: '1px dashed #cbd5e1',
+                }}
+              >
+                {selectedSummaryTask.description}
+              </p>
+            )}
+
+            {/* Footer Aksi Minimalis */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginTop: '16px',
+                paddingTop: '12px',
+                borderTop: '1px solid #f1f5f9',
+                gap: '8px',
+              }}
+            >
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ padding: '7px 12px', fontSize: '12px', gap: '5px' }}
+                onClick={() => {
+                  const taskToEdit = selectedSummaryTask;
+                  setSelectedSummaryTask(null);
+                  setEditingTask(taskToEdit);
+                }}
+              >
+                <Pencil size={13} />
+                <span>Edit</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ padding: '7px 14px', fontSize: '12px', gap: '5px' }}
+                onClick={() => {
+                  const taskToView = selectedSummaryTask;
+                  setSelectedSummaryTask(null);
+                  setViewingTask(taskToView);
+                }}
+              >
+                <ExternalLink size={13} />
+                <span>Rincian Lengkap</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

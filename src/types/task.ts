@@ -49,6 +49,7 @@ export interface Task {
   scheduledSessions?: ScheduledSession[]; // Sesi-sesi waktu teralokasi bebas bentrok
   schedulingNote?: string; // Catatan alasan pembagian jadwal dari AI
   isAiScheduled?: boolean; // Penanda jadwal telah dioptimasi oleh AI
+  isRescheduledDueToPassedTime?: boolean; // Penanda bahwa tugas dijadwalkan ulang cerdas karena jam terlewati
 
   // Fitur Pemulihan Energi & Istirahat (Break & Recovery)
   isBreakTask?: boolean; // Penanda apakah tugas ini adalah jeda istirahat / hidrasi / makan

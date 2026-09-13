@@ -58,10 +58,7 @@ export const Header: React.FC = () => {
   const headerInfo = getHeaderInfo();
 
   const handleAvatarClick = () => {
-    setActiveTab('account');
-    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-      router.push('/');
-    }
+    router.push('/account');
   };
 
   return (

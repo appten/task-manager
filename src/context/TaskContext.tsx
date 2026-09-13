@@ -80,6 +80,8 @@ interface TaskContextType {
   setSelectedDate: (date: string) => void;
   editingTask: Task | null;
   setEditingTask: (task: Task | null) => void;
+  viewingTask: Task | null;
+  setViewingTask: (task: Task | null) => void;
   toastMessage: string | null;
   showToast: (message: string) => void;
   // Fitur Menu Today (Maksimal 5 tugas terpilih dari Inbox)
@@ -237,6 +239,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<string>(getFormattedDate(0));
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -1659,7 +1662,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (nonBreakTasks.length === 0) {
         return dayTasks;
       }
-      return scheduleDailyTasksSmartly(nonBreakTasks);
+
+      const todayDateKey = getFormattedDate(0);
+      const isToday = dateStr === todayDateKey;
+      const now = new Date();
+      const currentMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : undefined;
+
+      return scheduleDailyTasksSmartly(nonBreakTasks, 7 * 60, 22 * 60, true, currentMinutes);
     },
     [tasks, activeScheduleVersion]
   );
@@ -2189,6 +2198,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSelectedDate,
         editingTask,
         setEditingTask,
+        viewingTask,
+        setViewingTask,
         toastMessage,
         showToast,
         todayTasks,

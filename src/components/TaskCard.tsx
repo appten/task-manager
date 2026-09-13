@@ -42,6 +42,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
     stopTaskTimer,
     resetTaskTimer,
     setEditingTask,
+    setViewingTask,
     deleteTask,
     addAISubTasksAndEstimate,
     userGoal,
@@ -216,10 +217,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
           )}
           <div
             className={`task-title ${task.isCompleted ? 'completed-title' : ''}`}
-            onClick={() => {
-              if (totalSubtasksCount > 0) setIsSubtasksOpen((prev) => !prev);
-              else if (task.description) setShowDesc((prev) => !prev);
-            }}
+            onClick={() => setViewingTask(task)}
+            title="Klik untuk melihat rincian tugas"
             style={{ cursor: 'pointer' }}
           >
             {task.title}

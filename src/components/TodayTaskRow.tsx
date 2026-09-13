@@ -27,9 +27,10 @@ import {
 interface TodayTaskRowProps {
   task: Task;
   slotNumber: number;
+  isCommitted?: boolean;
 }
 
-export const TodayTaskRow: React.FC<TodayTaskRowProps> = ({ task, slotNumber }) => {
+export const TodayTaskRow: React.FC<TodayTaskRowProps> = ({ task, slotNumber, isCommitted = false }) => {
   const {
     toggleTaskStatus,
     toggleSubTaskStatus,
@@ -38,6 +39,7 @@ export const TodayTaskRow: React.FC<TodayTaskRowProps> = ({ task, slotNumber }) 
     pauseTaskTimer,
     stopTaskTimer,
     setEditingTask,
+    setViewingTask,
     deleteTask,
     addAISubTasksAndEstimate,
     userGoal,
@@ -182,11 +184,9 @@ export const TodayTaskRow: React.FC<TodayTaskRowProps> = ({ task, slotNumber }) 
         <div className="today-row-content">
           <div
             className={`today-row-title ${task.isCompleted ? 'title-done' : ''}`}
-            onClick={() => {
-              if (totalSubtasksCount > 0) setIsSubtasksOpen((prev) => !prev);
-              else if (task.description) setShowDesc((prev) => !prev);
-              else setEditingTask(task);
-            }}
+            onClick={() => setViewingTask(task)}
+            title="Klik untuk melihat rincian tugas"
+            style={{ cursor: 'pointer' }}
           >
             {task.title}
           </div>
@@ -270,132 +270,134 @@ export const TodayTaskRow: React.FC<TodayTaskRowProps> = ({ task, slotNumber }) 
         {/* Sisi Kanan: Aksi Cepat */}
         <div className="today-row-actions">
           {/* Menu Opsi Titik Tiga */}
-          <div className="today-more-wrap">
-            <button
-              ref={buttonRef}
-              type="button"
-              className="today-more-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!isMenuOpen && buttonRef.current) {
-                  const rect = buttonRef.current.getBoundingClientRect();
-                  const navEl = document.querySelector('.android-bottom-nav-container');
-                  const scrollContainer = buttonRef.current.closest('.scrollable-content');
-                  const wrapper = buttonRef.current.closest('.mobile-viewport-wrapper');
+          {!isCommitted && (
+            <div className="today-more-wrap">
+              <button
+                ref={buttonRef}
+                type="button"
+                className="today-more-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isMenuOpen && buttonRef.current) {
+                    const rect = buttonRef.current.getBoundingClientRect();
+                    const navEl = document.querySelector('.android-bottom-nav-container');
+                    const scrollContainer = buttonRef.current.closest('.scrollable-content');
+                    const wrapper = buttonRef.current.closest('.mobile-viewport-wrapper');
 
-                  let bottomBoundary = window.innerHeight;
-                  if (navEl) {
-                    bottomBoundary = navEl.getBoundingClientRect().top;
-                  } else if (scrollContainer) {
-                    bottomBoundary = scrollContainer.getBoundingClientRect().bottom;
-                  } else if (wrapper) {
-                    bottomBoundary = wrapper.getBoundingClientRect().bottom - 68;
+                    let bottomBoundary = window.innerHeight;
+                    if (navEl) {
+                      bottomBoundary = navEl.getBoundingClientRect().top;
+                    } else if (scrollContainer) {
+                      bottomBoundary = scrollContainer.getBoundingClientRect().bottom;
+                    } else if (wrapper) {
+                      bottomBoundary = wrapper.getBoundingClientRect().bottom - 68;
+                    }
+
+                    const spaceBelow = bottomBoundary - rect.bottom;
+                    setOpenUpward(spaceBelow < 225);
                   }
+                  setIsMenuOpen((prev) => !prev);
+                }}
+                title="Opsi tugas"
+              >
+                <MoreVertical size={15} />
+              </button>
 
-                  const spaceBelow = bottomBoundary - rect.bottom;
-                  setOpenUpward(spaceBelow < 225);
-                }
-                setIsMenuOpen((prev) => !prev);
-              }}
-              title="Opsi tugas"
-            >
-              <MoreVertical size={15} />
-            </button>
-
-            {isMenuOpen && (
-              <>
-                <div
-                  className="more-menu-backdrop"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMenuOpen(false);
-                  }}
-                />
-                <div
-                  className={`more-menu-popover ${openUpward ? 'open-upward' : ''}`}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {/* Timer Play / Pause */}
-                  <button
-                    type="button"
-                    className={`more-menu-item ${
-                      task.isTimerRunning ? 'timer-active-item' : 'timer-play-item'
-                    }`}
+              {isMenuOpen && (
+                <>
+                  <div
+                    className="more-menu-backdrop"
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsMenuOpen(false);
-                      if (task.isTimerRunning) {
-                        pauseTaskTimer(task.id);
-                      } else {
-                        startTaskTimer(task.id);
-                      }
                     }}
+                  />
+                  <div
+                    className={`more-menu-popover ${openUpward ? 'open-upward' : ''}`}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    {task.isTimerRunning ? (
-                      <>
-                        <Pause size={13} className="text-amber" />
-                        <span>Jeda Timer</span>
-                      </>
-                    ) : (
-                      <>
-                        <Play size={13} className="text-emerald fill-emerald" />
-                        <span>Mulai Timer</span>
-                      </>
-                    )}
-                  </button>
+                    {/* Timer Play / Pause */}
+                    <button
+                      type="button"
+                      className={`more-menu-item ${
+                        task.isTimerRunning ? 'timer-active-item' : 'timer-play-item'
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsMenuOpen(false);
+                        if (task.isTimerRunning) {
+                          pauseTaskTimer(task.id);
+                        } else {
+                          startTaskTimer(task.id);
+                        }
+                      }}
+                    >
+                      {task.isTimerRunning ? (
+                        <>
+                          <Pause size={13} className="text-amber" />
+                          <span>Jeda Timer</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play size={13} className="text-emerald fill-emerald" />
+                          <span>Mulai Timer</span>
+                        </>
+                      )}
+                    </button>
 
-                  {/* 1x Klik AI Subtugas */}
-                  <button
-                    type="button"
-                    className="more-menu-item ai-item"
-                    onClick={handleGenerateAIWithEstimate}
-                    disabled={isGeneratingAI}
-                  >
-                    {isGeneratingAI ? (
-                      <Loader2 size={13} className="spin" />
-                    ) : (
-                      <Sparkles size={13} />
-                    )}
-                    <span>{isGeneratingAI ? 'Menganalisis...' : 'AI Sub-tugas'}</span>
-                  </button>
+                    {/* 1x Klik AI Subtugas */}
+                    <button
+                      type="button"
+                      className="more-menu-item ai-item"
+                      onClick={handleGenerateAIWithEstimate}
+                      disabled={isGeneratingAI}
+                    >
+                      {isGeneratingAI ? (
+                        <Loader2 size={13} className="spin" />
+                      ) : (
+                        <Sparkles size={13} />
+                      )}
+                      <span>{isGeneratingAI ? 'Menganalisis...' : 'AI Sub-tugas'}</span>
+                    </button>
 
-                  {/* Keluarkan dari Today */}
-                  <button
-                    type="button"
-                    className="more-menu-item"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsMenuOpen(false);
-                      toggleTodayTask(task.id);
-                    }}
-                  >
-                    <XCircle size={13} />
-                    <span>Hapus Today</span>
-                  </button>
+                    {/* Keluarkan dari Today */}
+                    <button
+                      type="button"
+                      className="more-menu-item"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsMenuOpen(false);
+                        toggleTodayTask(task.id);
+                      }}
+                    >
+                      <XCircle size={13} />
+                      <span>Hapus Today</span>
+                    </button>
 
-                  {/* Edit */}
-                  <button
-                    type="button"
-                    className="more-menu-item"
-                    onClick={handleEdit}
-                  >
-                    <Pencil size={13} />
-                    <span>Edit</span>
-                  </button>
+                    {/* Edit */}
+                    <button
+                      type="button"
+                      className="more-menu-item"
+                      onClick={handleEdit}
+                    >
+                      <Pencil size={13} />
+                      <span>Edit</span>
+                    </button>
 
-                  {/* Hapus */}
-                  <button
-                    type="button"
-                    className="more-menu-item delete-item"
-                    onClick={handleDelete}
-                  >
-                    <Trash2 size={13} />
-                    <span>Hapus</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+                    {/* Hapus */}
+                    <button
+                      type="button"
+                      className="more-menu-item delete-item"
+                      onClick={handleDelete}
+                    >
+                      <Trash2 size={13} />
+                      <span>Hapus</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

@@ -14,7 +14,6 @@ import {
   Clock,
   History,
   Lock,
-  Unlock,
   ShieldCheck,
   X,
 } from 'lucide-react';
@@ -29,7 +28,6 @@ export const TodayView: React.FC = () => {
   const todayDateKey = new Date().toISOString().slice(0, 10);
   const [isCommitted, setIsCommitted] = useState(false);
   const [showCommitModal, setShowCommitModal] = useState(false);
-  const [showUnlockModal, setShowUnlockModal] = useState(false);
 
   useEffect(() => {
     try {
@@ -46,16 +44,7 @@ export const TodayView: React.FC = () => {
     try {
       localStorage.setItem(`ten_today_committed_${todayDateKey}`, 'true');
     } catch {}
-    showToast('Komitmen terkunci! Fokus penuh tuntaskan tugas hari ini 🎯');
-  };
-
-  const handleConfirmUnlock = () => {
-    setIsCommitted(false);
-    setShowUnlockModal(false);
-    try {
-      localStorage.removeItem(`ten_today_committed_${todayDateKey}`);
-    } catch {}
-    showToast('Kunci komitmen dibuka. Anda dapat menyesuaikan kembali tugas.');
+    showToast('Komitmen terkunci permanen! Fokus penuh tuntaskan tugas hari ini 🎯');
   };
 
   const maxSlots = 5;
@@ -180,11 +169,29 @@ export const TodayView: React.FC = () => {
                     key={task.id}
                     task={task}
                     slotNumber={slotNumber}
+                    isCommitted={isCommitted}
                   />
                 );
               }
 
               // Slot Kosong Bersih & Rapi
+              if (isCommitted) {
+                return (
+                  <div
+                    key={`empty-slot-${slotNumber}`}
+                    className="today-empty-slot-clean locked-slot"
+                    style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                    title="Komitmen hari ini sudah terkunci"
+                  >
+                    <div className="empty-slot-number-pill">#{slotNumber}</div>
+                    <div className="empty-slot-text">
+                      <span className="empty-slot-label">Slot #{slotNumber} Kosong</span>
+                      <span className="empty-slot-hint">Komitmen sudah dikunci 🔒</span>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={`empty-slot-${slotNumber}`}
@@ -231,19 +238,10 @@ export const TodayView: React.FC = () => {
                 <div>
                   <h4 className="locked-title">Komitmen Hari Ini Terkunci 🔒</h4>
                   <p className="locked-desc">
-                    Fokus penuh tuntaskan {todayTasks.length} tugas yang telah Anda ikrarkan hari ini.
+                    Komitmen telah dikunci secara permanen untuk hari ini. Fokus penuh tuntaskan {todayTasks.length} tugas yang telah Anda pilih.
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                className="btn-unlock-commitment"
-                onClick={() => setShowUnlockModal(true)}
-                title="Buka kunci komitmen jika ada perubahan mendesak"
-              >
-                <Unlock size={12} />
-                <span>Buka Kunci</span>
-              </button>
             </div>
           )}
         </div>
@@ -286,7 +284,14 @@ export const TodayView: React.FC = () => {
                 Dengan menekan <strong>Komitmen</strong>, Anda menegaskan tekad untuk memusatkan energi
                 dan menyelesaikan {todayTasks.length} tugas yang terpilih hari ini tanpa terdistraksi tugas baru.
               </p>
-              <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '10px', border: '1px solid #e2e8f0' }}>
+
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '9px 12px', marginTop: '10px' }}>
+                <span style={{ fontSize: '11.5px', color: '#b91c1c', fontWeight: 600, display: 'block', lineHeight: 1.4 }}>
+                  ⚠️ Perhatian: Sekali dikunci, komitmen hari ini TIDAK DAPAT diubah atau dibuka kembali. Anda hanya dapat melihat rincian, menyelesaikannya, dan menjalankan stopwatch timer.
+                </span>
+              </div>
+
+              <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '10px', border: '1px solid #e2e8f0', marginTop: '10px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>Daftar Tugas yang Dikomitmenkan:</span>
                 <ul style={{ margin: '6px 0 0 0', paddingLeft: '18px', fontSize: '12px', color: '#0f172a' }}>
                   {todayTasks.map((t) => (
@@ -311,66 +316,7 @@ export const TodayView: React.FC = () => {
                 onClick={handleConfirmCommit}
                 style={{ background: '#d97706', color: '#ffffff' }}
               >
-                Ya, Saya Berkomitmen! 🚀
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Konfirmasi Buka Kunci */}
-      {showUnlockModal && (
-        <div
-          className="pilah-modal-overlay animate-fade-in"
-          onClick={() => setShowUnlockModal(false)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className="pilah-modal-card animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '380px' }}
-          >
-            <div className="pilah-modal-header">
-              <div className="modal-header-lead">
-                <div className="modal-icon-badge" style={{ background: '#f1f5f9', color: '#475569' }}>
-                  <Unlock size={16} />
-                </div>
-                <div>
-                  <h3 className="modal-title">Buka Kunci Komitmen?</h3>
-                  <p className="modal-subtitle">Penyesuaian Tugas Today</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="modal-btn-close"
-                onClick={() => setShowUnlockModal(false)}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="pilah-modal-body">
-              <p style={{ fontSize: '12.5px', color: '#475569', lineHeight: '1.5', margin: 0 }}>
-                Apakah Anda perlu mengubah atau menukar daftar tugas Today? Anda dapat mengunci komitmen kembali kapan saja.
-              </p>
-            </div>
-
-            <div className="pilah-modal-footer" style={{ gap: '8px' }}>
-              <button
-                type="button"
-                className="fast-desc-hide-btn"
-                onClick={() => setShowUnlockModal(false)}
-                style={{ padding: '7px 14px' }}
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                className="modal-btn-confirm"
-                onClick={handleConfirmUnlock}
-              >
-                Buka Kunci
+                Ya, Kunci Komitmen! 🚀
               </button>
             </div>
           </div>

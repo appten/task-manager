@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   User,
   Shield,
@@ -38,6 +39,7 @@ import { TenLoginPopupButton } from './TenLoginPopupButton';
 import { APP_CURRENT_VERSION } from '../data/versionHistory';
 
 export const AccountView: React.FC = () => {
+  const router = useRouter();
   const {
     tasks,
     todayTasks,
@@ -548,8 +550,8 @@ export const AccountView: React.FC = () => {
         </div>
         <div
           className="account-stat-box clickable-stat-box"
-          onClick={() => setIsHistoryModalOpen(true)}
-          title="Klik untuk membuka riwayat tugas selesai"
+          onClick={() => router.push('/history')}
+          title="Klik untuk membuka halaman riwayat tugas selesai"
           style={{ cursor: 'pointer' }}
         >
           <span className="stat-number" style={{ color: '#16a34a' }}>{completedTasks}</span>
@@ -564,8 +566,8 @@ export const AccountView: React.FC = () => {
           <button
             type="button"
             className="info-box-row info-box-row-clickable"
-            onClick={() => setIsHistoryModalOpen(true)}
-            aria-label="Buka riwayat tugas selesai"
+            onClick={() => router.push('/history')}
+            aria-label="Buka halaman riwayat tugas selesai"
           >
             <span className="info-box-label">
               <History size={16} className="text-primary" />

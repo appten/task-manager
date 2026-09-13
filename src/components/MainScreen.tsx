@@ -12,6 +12,7 @@ import { PilahView } from './PilahView';
 import { LaporanView } from './LaporanView';
 import { AccountView } from './AccountView';
 import { EditTaskModal } from './EditTaskModal';
+import { TaskDetailModal } from './TaskDetailModal';
 import { CompletedHistoryModal } from './CompletedHistoryModal';
 import { WelcomeDemoModal } from './WelcomeDemoModal';
 import { Toast } from './Toast';
@@ -56,6 +57,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({ initialTab }) => {
 
       {/* Edit Task Modal / Sheet */}
       <EditTaskModal />
+
+      {/* Task Detail (List View) Modal */}
+      <TaskDetailModal />
 
       {/* Completed History Modal */}
       <CompletedHistoryModal />

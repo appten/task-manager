@@ -41,6 +41,7 @@ export const InboxTaskRow: React.FC<InboxTaskRowProps> = ({ task }) => {
     pauseTaskTimer,
     stopTaskTimer,
     setEditingTask,
+    setViewingTask,
     deleteTask,
     addAISubTasksAndEstimate,
     userGoal,
@@ -215,11 +216,9 @@ export const InboxTaskRow: React.FC<InboxTaskRowProps> = ({ task }) => {
         <div className="inbox-row-content">
           <div
             className={`inbox-row-title ${task.isCompleted ? 'title-done' : ''}`}
-            onClick={() => {
-              if (totalSubtasksCount > 0) setIsSubtasksOpen((prev) => !prev);
-              else if (task.description) setShowDesc((prev) => !prev);
-              else setEditingTask(task);
-            }}
+            onClick={() => setViewingTask(task)}
+            title="Klik untuk melihat rincian tugas"
+            style={{ cursor: 'pointer' }}
           >
             {task.title}
           </div>

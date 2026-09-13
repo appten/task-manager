@@ -126,7 +126,8 @@ export const scheduleDailyTasksSmartly = (
   tasksForDay: Task[],
   workDayStart: number = 7 * 60, // 07:00
   workDayEnd: number = 22 * 60, // 22:00
-  autoInjectBreaks: boolean = true
+  autoInjectBreaks: boolean = true,
+  currentMinutes?: number
 ): Task[] => {
   if (!tasksForDay || tasksForDay.length === 0) return [];
 
@@ -392,7 +393,27 @@ export const scheduleDailyTasksSmartly = (
 
   unallocatedTasks.forEach((task) => {
     const durationNeeded = getTaskDurationMinutes(task);
-    const freeSlot = findFreeSlotInRange(workDayStart, Math.min(30, durationNeeded), workDayStart, workDayEnd);
+    
+    // AI Cerdas: Jika hari ini dan waktu sekarang sudah melewati jam mulai serta tugas belum selesai,
+    // maka jadwalkan ulang otomatis mencari waktu luang berikutnya di hari ini.
+    let searchStart = workDayStart;
+    let isRescheduled = false;
+
+    if (typeof currentMinutes === 'number' && !task.isCompleted) {
+      const roundedNow = Math.ceil(currentMinutes / 5) * 5;
+      if (roundedNow > workDayStart) {
+        searchStart = roundedNow;
+        isRescheduled = true;
+      }
+    }
+
+    let freeSlot = findFreeSlotInRange(searchStart, Math.min(30, durationNeeded), searchStart, workDayEnd);
+
+    // Jika tidak ditemukan slot kosong setelah waktu sekarang, coba cari slot di sisa hari kerja
+    if (!freeSlot && searchStart > workDayStart) {
+      freeSlot = findFreeSlotInRange(workDayStart, Math.min(30, durationNeeded), workDayStart, workDayEnd);
+      isRescheduled = false;
+    }
 
     if (freeSlot) {
       const sStart = freeSlot.start;
@@ -405,12 +426,17 @@ export const scheduleDailyTasksSmartly = (
           id: `sess-${task.id}-auto`,
           startTime: task.startTime,
           endTime: task.endTime,
-          label: `Alokasi AI (${minutesToReadable(sEnd - sStart)})`,
+          label: isRescheduled
+            ? `Reschedule AI (${minutesToReadable(sEnd - sStart)})`
+            : `Alokasi AI (${minutesToReadable(sEnd - sStart)})`,
           date: task.dueDate,
         },
       ];
       task.isAiScheduled = true;
-      task.schedulingNote = `AI mengalokasikan slot optimal ${task.startTime} - ${task.endTime} tanpa menabrak jam istirahat.`;
+      task.isRescheduledDueToPassedTime = isRescheduled;
+      task.schedulingNote = isRescheduled
+        ? `AI Cerdas: Waktu sebelumnya telah terlewati dan tugas belum selesai. Dijadwalkan ulang otomatis ke waktu luang berikutnya pukul ${task.startTime} - ${task.endTime}.`
+        : `AI mengalokasikan slot optimal ${task.startTime} - ${task.endTime} tanpa menabrak jam istirahat.`;
 
       if (!task.allowConcurrent) {
         lockedIntervals.push({
