@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTask } from '../context/TaskContext';
 import { InboxTaskRow } from './InboxTaskRow';
 import { TaskFormModal } from './TaskFormModal';
 import { RelationshipRolesCard } from './RelationshipRolesCard';
-import { HabitTrackerView } from './HabitTrackerView';
+import { RoutineTrackerView } from './RoutineTrackerView';
 import { InboxType } from '../types/task';
 import {
   Search,
@@ -20,11 +20,13 @@ import {
   Inbox as InboxIcon,
   Users,
   Flame,
+  RotateCw,
 } from 'lucide-react';
 
 export const InboxView: React.FC = () => {
   const {
     tasks,
+    routines,
     searchQuery,
     setSearchQuery,
     isTaskFormOpen,
@@ -33,8 +35,8 @@ export const InboxView: React.FC = () => {
     showToast,
   } = useTask();
 
-  // State sub-tab di Inbox: 'inbox', 'habit', atau 'pengingat'
-  const [inboxTab, setInboxTab] = useState<'inbox' | 'habit' | 'pengingat'>('inbox');
+  // State sub-tab di Inbox: 'inbox', 'rutinitas', atau 'pengingat'
+  const [inboxTab, setInboxTab] = useState<'inbox' | 'rutinitas' | 'pengingat'>('inbox');
 
   // State untuk Relasi yang sedang dibuka form-nya
   const [selectedRelForModal, setSelectedRelForModal] = useState<string | undefined>(undefined);
@@ -73,6 +75,28 @@ export const InboxView: React.FC = () => {
   const tugasCount = activeTasks.filter((t) => t.inboxType === 'tugas').length;
   const acaraCount = activeTasks.filter((t) => t.inboxType === 'kegiatan').length;
   const pengingatCount = activeTasks.filter((t) => t.inboxType === 'pengingat').length;
+
+  // Hitung jumlah rutinitas aktif hari ini yang belum diceklist
+  const todayDateString = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }, []);
+
+  const currentDow = useMemo(() => new Date().getDay(), []);
+
+  const pendingTodayRoutinesCount = useMemo(() => {
+    return routines.filter((routine) => {
+      const isScheduledToday =
+        routine.scheduleType === 'daily' ||
+        (routine.selectedDays ? routine.selectedDays.includes(currentDow) : true);
+      const inDateRange = todayDateString >= routine.startDate && todayDateString <= routine.endDate;
+      const isCompletedToday = routine.completedDates?.includes(todayDateString);
+      return isScheduledToday && inDateRange && !isCompletedToday;
+    }).length;
+  }, [routines, todayDateString, currentDow]);
 
   // Handle Quick Add instan (Tekan Enter atau klik +)
   const handleQuickAdd = (e: React.FormEvent) => {
@@ -245,28 +269,35 @@ export const InboxView: React.FC = () => {
         )}
       </form>
 
-      {/* 2. Dua Tab Navigasi di bawah Quick Input: Tab Inbox & Tab Pengingat (Fitur Peran) */}
+      {/* 2. Sub-Tab Navigasi di bawah Quick Input: Tab All Inbox, Rutinitas, dan Pengingat */}
       <div className="inbox-subtabs-bar">
         <button
           type="button"
           className={`inbox-subtab-btn ${inboxTab === 'inbox' ? 'active' : ''}`}
           onClick={() => setInboxTab('inbox')}
-          title="Tampilkan daftar tugas Inbox"
+          title="Tampilkan daftar seluruh tugas Inbox"
         >
           <InboxIcon size={14} />
-          <span>Inbox</span>
+          <span>All Inbox</span>
           <span className="inbox-subtab-badge">{activeCount}</span>
         </button>
 
         <button
           type="button"
-          className={`inbox-subtab-btn ${inboxTab === 'habit' ? 'active' : ''}`}
-          onClick={() => setInboxTab('habit')}
-          title="Pelacak Habit & Rutinitas Konsisten (Maks 3)"
+          className={`inbox-subtab-btn ${inboxTab === 'rutinitas' ? 'active' : ''}`}
+          onClick={() => setInboxTab('rutinitas')}
+          title="Pelacak Rutinitas & Absensi Ceklist Harian"
         >
-          <Flame size={14} color="#f97316" fill="#f97316" />
-          <span>Habit</span>
-          <span className="inbox-subtab-badge beta">Beta</span>
+          <RotateCw size={14} className="text-primary" />
+          <span>Rutinitas</span>
+          {pendingTodayRoutinesCount > 0 && (
+            <span
+              className="inbox-subtab-badge rutinitas-pending"
+              title={`${pendingTodayRoutinesCount} rutinitas belum diceklist hari ini`}
+            >
+              {pendingTodayRoutinesCount}
+            </span>
+          )}
         </button>
 
         <button
@@ -300,9 +331,9 @@ export const InboxView: React.FC = () => {
             setIsTaskFormOpen(true);
           }}
         />
-      ) : inboxTab === 'habit' ? (
-        /* Tab Habit: Manajemen Kebiasaan Konsisten (Maksimal 3 Habit & 1 Aktivitas Mingguan) */
-        <HabitTrackerView />
+      ) : inboxTab === 'rutinitas' ? (
+        /* Tab Rutinitas: Manajemen Rutinitas & Absensi Ceklist Tanggal */
+        <RoutineTrackerView />
       ) : (
         /* Tab Inbox: Kontrol Pencarian, Filter Chips, & List Tugas Inbox */
         <>

@@ -21,6 +21,7 @@ import {
   Bell,
   CheckSquare,
   Repeat,
+  RotateCw,
   Play,
   Pause,
   Square,
@@ -325,7 +326,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
             )}
 
             {/* 1. Badge Jenis Inbox */}
-            {task.inboxType === 'kegiatan' ? (
+            {task.inboxType === 'rutinitas' ? (
+              <span className="meta-item meta-inbox-badge rutinitas" title="Kategori: Rutinitas">
+                <RotateCw size={10} />
+                <span>Rutinitas</span>
+              </span>
+            ) : task.inboxType === 'kegiatan' ? (
               <span className="meta-item meta-inbox-badge kegiatan" title="Kategori: Kegiatan / Acara">
                 <Calendar size={10} />
                 <span>Acara</span>
@@ -423,7 +429,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, todayRank, hideTodayTo
                 title={
                   isScheduledNotToday
                     ? `${
-                        task.inboxType === 'kegiatan'
+                        task.inboxType === 'rutinitas'
+                          ? 'Rutinitas'
+                          : task.inboxType === 'kegiatan'
                           ? 'Acara'
                           : task.inboxType === 'pengingat'
                           ? 'Pengingat'

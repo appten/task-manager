@@ -11,6 +11,7 @@ import {
   RecurrenceType,
   LifeRelationship,
 } from '../types/task';
+import { RoutineItem } from '../types/routine';
 import { INITIAL_TASKS, getFormattedDate } from '../data/seedTasks';
 import { DEFAULT_RELATIONSHIPS } from '../data/seedRelationships';
 import { analyzeTasksWithCircadianAI } from '../services/geminiService';
@@ -158,6 +159,12 @@ interface TaskContextType {
   hasAiProposal: (dateStr: string) => boolean;
   activeScheduleModes: Record<string, 'original' | 'ai'>;
   toggleScheduleMode: (dateStr: string, mode: 'original' | 'ai') => void;
+
+  // Fitur Rutinitas & Absensi Ceklist
+  routines: RoutineItem[];
+  addRoutine: (newRoutine: Omit<RoutineItem, 'id' | 'createdAt' | 'completedDates'>) => void;
+  deleteRoutine: (id: string) => void;
+  toggleRoutineCheckToday: (routineId: string) => void;
 }
 
 const STORAGE_KEY = 'ten_my_id_tasks_v01';
@@ -166,6 +173,7 @@ const STORAGE_GOAL_KEY = 'ten_my_id_user_goal_v01';
 const STORAGE_ORIGINAL_KEY = 'ten_my_id_original_schedules_v01';
 const STORAGE_VERSION_KEY = 'ten_my_id_active_schedule_version_v01';
 const STORAGE_RELATIONSHIPS_KEY = 'ten_my_id_relationships_v01';
+const STORAGE_ROUTINES_KEY = 'ten_routines_v1';
 
 const DEFAULT_LIFE_GOAL = 'Merilis produk digital berdampak, menjaga kesehatan fisik prima, dan mandiri finansial di tahun 2026';
 
@@ -283,6 +291,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Mode Jadwal Paralel (Versi Ori vs Versi AI - 1x Klik Berpindah)
   const [activeScheduleVersion, setActiveScheduleVersion] = useState<'ori' | 'ai'>('ori');
 
+  // State Rutinitas
+  const [routines, setRoutines] = useState<RoutineItem[]>([]);
+
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
     setTimeout(() => {
@@ -340,6 +351,38 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } else {
         setTasks(isDemoDismissed ? [] : INITIAL_TASKS);
+      }
+
+      // Load saved routines
+      const savedRoutines = localStorage.getItem(STORAGE_ROUTINES_KEY);
+      if (savedRoutines) {
+        try {
+          setRoutines(JSON.parse(savedRoutines));
+        } catch {}
+      } else {
+        const nextMonth = new Date();
+        nextMonth.setDate(nextMonth.getDate() + 21);
+        const ny = nextMonth.getFullYear();
+        const nm = String(nextMonth.getMonth() + 1).padStart(2, '0');
+        const nd = String(nextMonth.getDate()).padStart(2, '0');
+        const nextMonthStr = `${ny}-${nm}-${nd}`;
+        const initialRoutines: RoutineItem[] = [
+          {
+            id: 'routine-seed-1',
+            title: 'Review Evaluasi & Rencana Prioritas',
+            description: 'Memeriksa capaian harian dan menyusun fokus tugas berikutnya agar terarah.',
+            startDate: todayStr,
+            endDate: nextMonthStr,
+            scheduleType: 'daily',
+            recurrence: 'daily',
+            completedDates: [],
+            createdAt: new Date().toISOString(),
+          },
+        ];
+        setRoutines(initialRoutines);
+        try {
+          localStorage.setItem(STORAGE_ROUTINES_KEY, JSON.stringify(initialRoutines));
+        } catch {}
       }
 
       // Load saved AI Analysis
@@ -846,6 +889,80 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [tasks, isHydrated]);
 
+  // Sync routines to localStorage
+  useEffect(() => {
+    if (isHydrated && routines.length > 0) {
+      try {
+        localStorage.setItem(STORAGE_ROUTINES_KEY, JSON.stringify(routines));
+      } catch (e) {
+        console.error('Gagal menyimpan routines ke localStorage:', e);
+      }
+    }
+  }, [routines, isHydrated]);
+
+  // Sinkronisasi otomatis: jika ada rutinitas yang aktif hari ini, munculkan sebagai tugas di tasks (bisa dipilah / dijadikan Today)
+  useEffect(() => {
+    if (!isHydrated || routines.length === 0) return;
+    const todayStr = getTodayDateString();
+    const currentDow = new Date().getDay();
+
+    setTasks((prevTasks) => {
+      let hasChanges = false;
+      const updatedTasks = [...prevTasks];
+
+      routines.forEach((routine) => {
+        const isScheduledToday =
+          routine.scheduleType === 'daily' ||
+          (routine.selectedDays ? routine.selectedDays.includes(currentDow) : true);
+        const inDateRange = todayStr >= routine.startDate && todayStr <= routine.endDate;
+
+        const isCompletedToday = routine.completedDates.includes(todayStr);
+        const taskId = `routine-today-${routine.id}`;
+        const existingIdx = updatedTasks.findIndex(
+          (t) => t.id === taskId || (t.routineId && t.routineId === routine.id && (t.startDate === todayStr || t.dueDate === todayStr))
+        );
+
+        if (isScheduledToday && inDateRange) {
+          if (existingIdx >= 0) {
+            const existing = updatedTasks[existingIdx];
+            if (existing.isCompleted !== isCompletedToday || existing.title !== routine.title) {
+              updatedTasks[existingIdx] = {
+                ...existing,
+                title: routine.title,
+                description: routine.description,
+                isCompleted: isCompletedToday,
+                inboxType: 'rutinitas',
+                dueDate: todayStr,
+              };
+              hasChanges = true;
+            }
+          } else {
+            // Rutinitas aktif masuk ke inbox/tasks agar bisa dipilah dan masuk ke today
+            const newTask: Task = {
+              id: taskId,
+              routineId: routine.id,
+              title: routine.title,
+              description: routine.description,
+              inboxType: 'rutinitas',
+              dueDate: todayStr,
+              startDate: todayStr,
+              endDate: todayStr,
+              isCompleted: isCompletedToday,
+              category: 'Pribadi',
+              priority: 'medium',
+              subTasks: [],
+              createdAt: routine.createdAt || new Date().toISOString(),
+            };
+            updatedTasks.unshift(newTask);
+            hasChanges = true;
+          }
+        }
+      });
+
+      return hasChanges ? updatedTasks : prevTasks;
+    });
+  }, [routines, isHydrated]);
+
   // Sync originalSchedules to localStorage
   useEffect(() => {
     if (isHydrated && Object.keys(originalSchedules).length > 0) {
@@ -1254,6 +1371,30 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updated = prev.map((task) => {
         if (task.id === taskId) {
           const nextStatus = !task.isCompleted;
+
+          // Sinkronisasi dengan absensi rutinitas jika tugas ini berasal dari rutinitas
+          if (task.routineId) {
+            const rId = task.routineId;
+            const todayStr = getTodayDateString();
+            setRoutines((prevRoutines) => {
+              const nextRoutines = prevRoutines.map((r) => {
+                if (r.id !== rId) return r;
+                const alreadyDone = r.completedDates.includes(todayStr);
+                let nextDates = r.completedDates;
+                if (nextStatus && !alreadyDone) {
+                  nextDates = [...r.completedDates, todayStr];
+                } else if (!nextStatus && alreadyDone) {
+                  nextDates = r.completedDates.filter((d) => d !== todayStr);
+                }
+                return { ...r, completedDates: nextDates };
+              });
+              try {
+                localStorage.setItem(STORAGE_ROUTINES_KEY, JSON.stringify(nextRoutines));
+              } catch {}
+              return nextRoutines;
+            });
+          }
+
           const updatedSubTasks = task.subTasks.map((st) => ({
             ...st,
             isCompleted: nextStatus,
@@ -1366,6 +1507,134 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
     );
   }, []);
+
+  // Fitur Rutinitas: Tambah, Hapus, dan Absensi Ceklist Hari Ini
+  const addRoutine = useCallback(
+    (newRoutineData: Omit<RoutineItem, 'id' | 'createdAt' | 'completedDates'>) => {
+      const todayStr = getTodayDateString();
+      const currentDow = new Date().getDay();
+
+      const newRoutine: RoutineItem = {
+        ...newRoutineData,
+        id: `routine-${Date.now()}`,
+        completedDates: [],
+        createdAt: new Date().toISOString(),
+      };
+
+      setRoutines((prev) => {
+        const next = [...prev, newRoutine];
+        try {
+          localStorage.setItem(STORAGE_ROUTINES_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      // Jika rutinitas aktif hari ini, masukkan juga ke daftar tugas agar langsung muncul di Pilah
+      const isScheduledToday =
+        newRoutine.scheduleType === 'daily' ||
+        (newRoutine.selectedDays ? newRoutine.selectedDays.includes(currentDow) : true);
+      const inDateRange = todayStr >= newRoutine.startDate && todayStr <= newRoutine.endDate;
+
+      if (isScheduledToday && inDateRange) {
+        const newTask: Task = {
+          id: `routine-today-${newRoutine.id}`,
+          routineId: newRoutine.id,
+          title: newRoutine.title,
+          description: newRoutine.description,
+          inboxType: 'rutinitas',
+          dueDate: todayStr,
+          startDate: todayStr,
+          endDate: todayStr,
+          isCompleted: false,
+          category: 'Pribadi',
+          priority: 'medium',
+          subTasks: [],
+          createdAt: newRoutine.createdAt,
+        };
+        setTasks((prev) => [newTask, ...prev]);
+      }
+
+      showToast(`Rutinitas "${newRoutine.title}" berhasil dibuat! 🚀`);
+    },
+    [showToast]
+  );
+
+  const deleteRoutine = useCallback(
+    (id: string) => {
+      setRoutines((prev) => {
+        const next = prev.filter((r) => r.id !== id);
+        try {
+          localStorage.setItem(STORAGE_ROUTINES_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      setTasks((prev) => prev.filter((t) => t.routineId !== id && t.id !== `routine-today-${id}`));
+      showToast('Rutinitas berhasil dihapus');
+    },
+    [showToast]
+  );
+
+  const toggleRoutineCheckToday = useCallback(
+    (routineId: string) => {
+      const todayStr = getTodayDateString();
+      const currentDayOfWeek = new Date().getDay();
+
+      let toastText = '';
+      let isDone = false;
+      setRoutines((prevRoutines) => {
+        const routine = prevRoutines.find((r) => r.id === routineId);
+        if (!routine) return prevRoutines;
+
+        if (routine.scheduleType === 'specific_days' && routine.selectedDays) {
+          if (!routine.selectedDays.includes(currentDayOfWeek)) {
+            showToast('Hari ini bukan jadwal pelaksanaan rutinitas ini 📅');
+            return prevRoutines;
+          }
+        }
+
+        if (todayStr < routine.startDate || todayStr > routine.endDate) {
+          showToast('Hari ini berada di luar rentang tanggal rutinitas ini.');
+          return prevRoutines;
+        }
+
+        const isDoneToday = routine.completedDates.includes(todayStr);
+        isDone = !isDoneToday;
+        const nextDates = isDoneToday
+          ? routine.completedDates.filter((d) => d !== todayStr)
+          : [...routine.completedDates, todayStr];
+
+        const nextRoutines = prevRoutines.map((r) =>
+          r.id === routineId ? { ...r, completedDates: nextDates } : r
+        );
+
+        try {
+          localStorage.setItem(STORAGE_ROUTINES_KEY, JSON.stringify(nextRoutines));
+        } catch {}
+
+        toastText = isDoneToday
+          ? 'Tanda selesai hari ini dibatalkan'
+          : `Absensi hari ini tuntas: "${routine.title}" ✨🎯`;
+        return nextRoutines;
+      });
+
+      if (toastText) showToast(toastText);
+
+      // Sinkronkan juga task terkait di tasks
+      setTasks((prevTasks) =>
+        prevTasks.map((t) => {
+          if (t.routineId === routineId || t.id === `routine-today-${routineId}`) {
+            return {
+              ...t,
+              isCompleted: isDone,
+              completedAt: isDone ? new Date().toISOString() : undefined,
+            };
+          }
+          return t;
+        })
+      );
+    },
+    [showToast]
+  );
 
   const addAISubTasks = useCallback((taskId: string, subTaskTitles: string[]) => {
     setTasks((prev) =>
@@ -2255,6 +2524,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setActiveScheduleVersion,
         toggleScheduleVersion,
         getTasksForDateAndVersion,
+        routines,
+        addRoutine,
+        deleteRoutine,
+        toggleRoutineCheckToday,
       }}
     >
       {children}

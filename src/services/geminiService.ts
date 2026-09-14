@@ -139,7 +139,7 @@ export const executeUniversalAICall = async (
     throw new Error('Mode Offline Aktif: Seluruh analisis dijalankan via Algoritma Lokal di perangkat.');
   }
 
-  const timeoutMs = options?.timeoutMs ?? 35000;
+  const timeoutMs = options?.timeoutMs ?? 75000;
   const createSignal = (ms: number) =>
     typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
       ? AbortSignal.timeout(ms)
@@ -161,7 +161,7 @@ export const executeUniversalAICall = async (
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          signal: createSignal(Math.min(timeoutMs, 35000)),
+          signal: createSignal(timeoutMs),
           body: JSON.stringify({
             contents: [
               {
@@ -1000,7 +1000,7 @@ WAJIB hasilkan output HANYA dalam format JSON murni yang ringkas & padat (maksim
   try {
     const { text, engineName } = await executeUniversalAICall(prompt, {
       expectJson: true,
-      timeoutMs: 50000,
+      timeoutMs: 90000,
     });
     const parsed = extractJsonFromText(text);
 

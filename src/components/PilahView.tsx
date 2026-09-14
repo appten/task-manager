@@ -48,7 +48,7 @@ export const PilahView: React.FC = () => {
   } = useTask();
 
   const [searchFilter, setSearchFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'tugas' | 'kegiatan' | 'pengingat'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'tugas' | 'kegiatan' | 'pengingat' | 'rutinitas'>('all');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Modal State untuk melihat alasan skor / durasi
@@ -203,6 +203,13 @@ export const PilahView: React.FC = () => {
         >
           Pengingat ({activeInboxTasks.filter((t) => t.inboxType === 'pengingat').length})
         </button>
+        <button
+          type="button"
+          className={`pilah-filter-btn ${typeFilter === 'rutinitas' ? 'active' : ''}`}
+          onClick={() => setTypeFilter('rutinitas')}
+        >
+          Rutinitas ({activeInboxTasks.filter((t) => t.inboxType === 'rutinitas').length})
+        </button>
       </div>
 
       {/* 3. Daftar Tugas Inbox dengan Analisis Independen */}
@@ -269,7 +276,13 @@ export const PilahView: React.FC = () => {
                       </h3>
                       <div className="pilah-meta-chips-inline">
                         <span className={`pilah-type-badge ${task.inboxType || 'tugas'}`}>
-                          {task.inboxType === 'kegiatan' ? 'Acara' : task.inboxType === 'pengingat' ? 'Pengingat' : 'Tugas'}
+                          {task.inboxType === 'rutinitas'
+                            ? 'Rutinitas'
+                            : task.inboxType === 'kegiatan'
+                            ? 'Acara'
+                            : task.inboxType === 'pengingat'
+                            ? 'Pengingat'
+                            : 'Tugas'}
                         </span>
                         {task.priority === 'high' && (
                           <span className="pilah-prio-badge high">P1</span>

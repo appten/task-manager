@@ -5580,6 +5580,12 @@ body {
   border: 1px solid #fef3c7;
 }
 
+.meta-inbox-badge.rutinitas {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #d1fae5;
+}
+
 /* Indikator Prioritas Bersih & Ringkas */
 .meta-urgent-clean {
   display: inline-flex;
@@ -10011,6 +10017,19 @@ body {
   color: #1d4ed8;
 }
 
+.inbox-subtab-badge.rutinitas-pending {
+  background: #fef2f2;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  font-weight: 750;
+}
+
+.inbox-subtab-btn.active .inbox-subtab-badge.rutinitas-pending {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+}
+
 /* ==========================================================================
    Welcome Demo Notification Modal
    ========================================================================== */
@@ -12865,6 +12884,48 @@ body {
 
 .req-star {
   color: #e11d48;
+}
+
+/* Mode Selector: Inbox vs Rutinitas */
+.task-form-mode-selector {
+  display: flex;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.form-mode-chip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.form-mode-chip:hover {
+  color: #1e293b;
+}
+
+.form-mode-chip.active {
+  background: #ffffff;
+  color: #0284c7;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.form-mode-chip.active:last-child {
+  color: #059669;
 }
 
 /* Segmented Type Cards */
@@ -17331,6 +17392,13 @@ body {
   border-radius: 4px;
 }
 
+.pilah-type-badge.rutinitas,
+.detail-type-badge.rutinitas {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
 .pilah-meta-chips-inline .pilah-prio-badge {
   font-size: 9.5px;
   padding: 1px 4px;
@@ -18180,6 +18248,571 @@ body {
   padding: 1px 5px;
   border-radius: 3px;
 }
+
+/* ==========================================================================
+   6. Rutinitas (Routine Tracker & Compact Horizontal Checklist)
+   ========================================================================== */
+.routine-tracker-container {
+  padding: 2px 0 16px 0;
+}
+
+.routine-goal-card {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.routine-goal-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.routine-goal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #e0f2fe;
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+.routine-goal-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0369a1;
+  margin: 0 0 1px 0;
+}
+
+.routine-goal-desc {
+  font-size: 10.5px;
+  color: #0c4a6e;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.routine-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.routine-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.btn-add-routine {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-add-routine:hover {
+  background: #1e293b;
+}
+
+/* Modal Form Tambah Rutinitas */
+.routine-form-modal {
+  max-width: 480px;
+  width: 95%;
+}
+
+.routine-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.routine-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.routine-form-group.half {
+  flex: 1;
+}
+
+.routine-form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.routine-form-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.routine-input-text {
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  font-size: 12.5px;
+  background: #ffffff;
+  color: #0f172a;
+  transition: border-color 0.15s;
+}
+
+.routine-input-text:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.routine-schedule-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.routine-schedule-tab {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.routine-schedule-tab.active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.routine-days-selector {
+  margin-top: 4px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.routine-days-caption {
+  display: block;
+  font-size: 10px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.routine-days-chips-row {
+  display: flex;
+  gap: 3px;
+}
+
+.routine-day-chip {
+  flex: 1;
+  padding: 4px 1px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.routine-day-chip.selected {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.routine-recurrence-options {
+  display: flex;
+  gap: 5px;
+}
+
+.routine-recurrence-btn {
+  flex: 1;
+  padding: 6px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.routine-recurrence-btn.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.routine-recurrence-btn:disabled,
+.routine-recurrence-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.btn-save-routine-submit {
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-save-routine-submit:hover {
+  background: #1e293b;
+}
+
+/* Cards List */
+.routine-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.routine-empty-card {
+  text-align: center;
+  padding: 28px 16px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.routine-empty-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 8px 0 2px 0;
+}
+
+.routine-empty-desc {
+  font-size: 11.5px;
+  color: #64748b;
+  max-width: 340px;
+  margin: 0 auto;
+  line-height: 1.4;
+}
+
+/* Routine Card Ringkas */
+.routine-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 9px 11px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease;
+}
+
+.routine-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.routine-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.routine-card-title-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.routine-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.routine-card-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.routine-inline-today-status {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.routine-inline-today-status.done {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.routine-inline-today-status.pending {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.routine-card-desc {
+  font-size: 11px;
+  color: #64748b;
+  margin: 2px 0 3px 0;
+  line-height: 1.35;
+}
+
+.routine-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.routine-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+  font-weight: 500;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+}
+
+.routine-badge.period {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.routine-badge.recurrence {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #dbeafe;
+}
+
+.routine-badge.days {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.routine-badge.stats {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  font-weight: 600;
+}
+
+.btn-delete-routine {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.btn-delete-routine:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+/* Kotak Ceklist Berjejer Secara Horizontal (Kompak) */
+.routine-horizontal-dates-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding: 3px 0 4px 0;
+}
+
+.routine-horizontal-dates-container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.routine-horizontal-dates-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 2px;
+}
+
+.routine-horizontal-dates-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.routine-horizontal-dates-track {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  min-width: min-content;
+}
+
+/* Kotak Ceklist Ringkas dengan Tanggal di Dalam */
+.routine-compact-check-box {
+  width: 32px;
+  min-width: 32px;
+  height: 35px;
+  border-radius: 6px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 1px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.compact-box-day {
+  font-size: 7.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1;
+  color: #64748b;
+}
+
+.compact-box-num {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  margin-top: 1px;
+}
+
+/* Status Hari Ini (Interaktif & Di-highlight) */
+.routine-compact-check-box.is-today {
+  border-color: #2563eb;
+  background: #eff6ff;
+  cursor: pointer;
+  box-shadow: 0 0 0 1.5px rgba(37, 99, 235, 0.25);
+}
+
+.routine-compact-check-box.is-today:hover {
+  transform: scale(1.05);
+  border-color: #1d4ed8;
+}
+
+.routine-compact-check-box.is-today .compact-box-day {
+  color: #1d4ed8;
+}
+
+.routine-compact-check-box.is-today .compact-box-num {
+  color: #1e3a8a;
+}
+
+.routine-compact-check-box.is-today.checked {
+  background: #10b981;
+  border-color: #059669;
+  box-shadow: 0 0 0 1.5px rgba(16, 185, 129, 0.3);
+}
+
+.routine-compact-check-box.is-today.checked .compact-box-day {
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+.routine-compact-check-box.is-today.checked .compact-box-num {
+  color: #ffffff;
+}
+
+/* Status Lampau */
+.routine-compact-check-box.is-past {
+  cursor: not-allowed;
+}
+
+.routine-compact-check-box.is-past.checked {
+  background: #10b981;
+  border-color: #059669;
+}
+
+.routine-compact-check-box.is-past.checked .compact-box-day {
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+.routine-compact-check-box.is-past.checked .compact-box-num {
+  color: #ffffff;
+}
+
+.routine-compact-check-box.is-past.missed {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  opacity: 0.65;
+}
+
+.routine-compact-check-box.is-past.missed .compact-box-day {
+  color: #94a3b8;
+}
+
+.routine-compact-check-box.is-past.missed .compact-box-num {
+  color: #94a3b8;
+}
+
+/* Status Masa Depan (Terkunci) */
+.routine-compact-check-box.is-future {
+  background: #fafafa;
+  border-color: #f1f5f9;
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.routine-compact-check-box.is-future .compact-box-day {
+  color: #cbd5e1;
+}
+
+.routine-compact-check-box.is-future .compact-box-num {
+  color: #cbd5e1;
+}
+
+
 
 
 

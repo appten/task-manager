@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useTask } from '../context/TaskContext';
 import { getFormattedDate } from '../data/seedTasks';
 import { Priority, Category, SubTask, InboxType, RecurrenceType } from '../types/task';
+import { RoutineScheduleType, RoutineRecurrence } from '../types/routine';
 import {
   Plus,
   Trash2,
@@ -18,8 +19,13 @@ import {
   Repeat,
   X,
   AlignLeft,
+  RotateCw,
+  Inbox as InboxIcon,
 } from 'lucide-react';
 import { generateSubTasksWithAI } from '../services/geminiService';
+
+const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const SHORT_DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
 export interface TaskFormProps {
   onSuccess?: () => void;
@@ -33,12 +39,21 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 }) => {
   const {
     addTask,
+    addRoutine,
     showToast,
     setIsTaskFormOpen,
   } = useTask();
 
-  // 1. Jenis Catatan
+  // Mode Pilihan: Inbox vs Rutinitas
+  const [formMode, setFormMode] = useState<'inbox' | 'rutinitas'>('inbox');
+
+  // 1. Jenis Catatan (untuk Inbox)
   const [inboxType, setInboxType] = useState<InboxType>('tugas');
+
+  // State khusus Rutinitas
+  const [routineScheduleType, setRoutineScheduleType] = useState<RoutineScheduleType>('daily');
+  const [routineSelectedDays, setRoutineSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [routineRecurrence, setRoutineRecurrence] = useState<RoutineRecurrence>('daily');
 
   // 2. Judul
   const [title, setTitle] = useState('');
@@ -133,6 +148,38 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       return;
     }
 
+    if (formMode === 'rutinitas') {
+      if (!startDate || !endDate) {
+        setErrorMsg('Tanggal mulai dan selesai wajib diisi');
+        return;
+      }
+      if (startDate > endDate) {
+        setErrorMsg('Tanggal mulai tidak boleh melebihi tanggal selesai');
+        return;
+      }
+      if (routineScheduleType === 'specific_days' && routineSelectedDays.length === 0) {
+        setErrorMsg('Pilih minimal 1 hari untuk jadwal rutinitas');
+        return;
+      }
+
+      addRoutine({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        startDate,
+        endDate,
+        scheduleType: routineScheduleType,
+        selectedDays: routineScheduleType === 'specific_days' ? routineSelectedDays : undefined,
+        recurrence: routineRecurrence,
+      });
+
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        setIsTaskFormOpen(false);
+      }
+      return;
+    }
+
     const isUserStartTimeFixed = Boolean(startTime.trim());
     const isUserEndTimeFixed = Boolean(endTime.trim());
 
@@ -143,7 +190,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       title: title.trim(),
       description: description.trim() || undefined,
       inboxType,
-      recurrence,
+      recurrence: 'none',
       dueDate: finalDueDate,
       dueTime: endTime.trim() || undefined,
       startDate: startDate || undefined,
@@ -169,55 +216,82 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="task-fast-form">
-      {/* 1. Jenis Catatan */}
+      {/* 0. Target Penyimpanan: Inbox vs Rutinitas */}
       <div className="fast-form-group">
         <label className="fast-section-label">
-          Jenis Catatan <span className="req-star">*</span>
+          Kategori Penyimpanan <span className="req-star">*</span>
         </label>
-        <div className="fast-inbox-type-grid">
+        <div className="task-form-mode-selector">
           <button
             type="button"
-            className={`fast-type-card ${inboxType === 'tugas' ? 'active tugas' : ''}`}
-            onClick={() => setInboxType('tugas')}
+            className={`form-mode-chip ${formMode === 'inbox' ? 'active' : ''}`}
+            onClick={() => setFormMode('inbox')}
           >
-            <div className="type-icon-wrapper">
-              <CheckSquare size={16} />
-            </div>
-            <div className="type-card-texts">
-              <span className="type-card-name">Tugas</span>
-              <span className="type-card-hint">To-do & aksi</span>
-            </div>
+            <InboxIcon size={13} />
+            <span>Inbox</span>
           </button>
-
           <button
             type="button"
-            className={`fast-type-card ${inboxType === 'kegiatan' ? 'active kegiatan' : ''}`}
-            onClick={() => setInboxType('kegiatan')}
+            className={`form-mode-chip ${formMode === 'rutinitas' ? 'active' : ''}`}
+            onClick={() => setFormMode('rutinitas')}
           >
-            <div className="type-icon-wrapper">
-              <Calendar size={16} />
-            </div>
-            <div className="type-card-texts">
-              <span className="type-card-name">Acara</span>
-              <span className="type-card-hint">Rapat & jadwal</span>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            className={`fast-type-card ${inboxType === 'pengingat' ? 'active pengingat' : ''}`}
-            onClick={() => setInboxType('pengingat')}
-          >
-            <div className="type-icon-wrapper">
-              <Bell size={16} />
-            </div>
-            <div className="type-card-texts">
-              <span className="type-card-name">Pengingat</span>
-              <span className="type-card-hint">Memo & alarm</span>
-            </div>
+            <RotateCw size={13} />
+            <span>Rutinitas</span>
           </button>
         </div>
       </div>
+
+      {formMode === 'inbox' && (
+        /* 1. Jenis Catatan Inbox */
+        <div className="fast-form-group">
+          <label className="fast-section-label">
+            Jenis Catatan <span className="req-star">*</span>
+          </label>
+          <div className="fast-inbox-type-grid">
+            <button
+              type="button"
+              className={`fast-type-card ${inboxType === 'tugas' ? 'active tugas' : ''}`}
+              onClick={() => setInboxType('tugas')}
+            >
+              <div className="type-icon-wrapper">
+                <CheckSquare size={16} />
+              </div>
+              <div className="type-card-texts">
+                <span className="type-card-name">Tugas</span>
+                <span className="type-card-hint">To-do & aksi</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={`fast-type-card ${inboxType === 'kegiatan' ? 'active kegiatan' : ''}`}
+              onClick={() => setInboxType('kegiatan')}
+            >
+              <div className="type-icon-wrapper">
+                <Calendar size={16} />
+              </div>
+              <div className="type-card-texts">
+                <span className="type-card-name">Acara</span>
+                <span className="type-card-hint">Rapat & jadwal</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={`fast-type-card ${inboxType === 'pengingat' ? 'active pengingat' : ''}`}
+              onClick={() => setInboxType('pengingat')}
+            >
+              <div className="type-icon-wrapper">
+                <Bell size={16} />
+              </div>
+              <div className="type-card-texts">
+                <span className="type-card-name">Pengingat</span>
+                <span className="type-card-hint">Memo & alarm</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 2. Judul Pokok */}
       <div className="fast-form-group">
@@ -411,25 +485,127 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         </span>
       </div>
 
-      {/* 5. Bagian Pengulangan (Posisinya Tepat Setelah Tanggal Waktu) */}
-      <div className="fast-form-group">
-        <label className="fast-section-label" htmlFor="fast-task-recurrence">
-          <Repeat size={13} className="label-icon" />
-          <span>Pengulangan Jadwal</span>
-        </label>
-        <select
-          id="fast-task-recurrence"
-          className="fast-select-input"
-          value={recurrence}
-          onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
-        >
-          <option value="none">Sekali Saja (Tidak Berulang)</option>
-          <option value="daily">🔁 Setiap Hari</option>
-          <option value="weekdays">🔁 Hari Kerja (Senin - Jumat)</option>
-          <option value="weekly">🔁 Setiap Minggu</option>
-          <option value="monthly">🔁 Setiap Bulan</option>
-        </select>
-      </div>
+      {/* Jika Rutinitas: Pengaturan Hari & Perulangan */}
+      {formMode === 'rutinitas' && (
+        <>
+          {/* Jadwal Pelaksanaan Hari */}
+          <div className="fast-form-group">
+            <label className="fast-section-label">Jadwal Pelaksanaan Hari</label>
+            <div className="routine-schedule-tabs">
+              <button
+                type="button"
+                className={`routine-schedule-tab ${routineScheduleType === 'daily' ? 'active' : ''}`}
+                onClick={() => {
+                  setRoutineScheduleType('daily');
+                  setRoutineRecurrence('daily');
+                }}
+              >
+                Setiap Hari
+              </button>
+              <button
+                type="button"
+                className={`routine-schedule-tab ${routineScheduleType === 'specific_days' ? 'active' : ''}`}
+                onClick={() => {
+                  setRoutineScheduleType('specific_days');
+                  if (routineRecurrence === 'daily') {
+                    setRoutineRecurrence('weekly');
+                  }
+                }}
+              >
+                Hari-Hari Tertentu
+              </button>
+            </div>
+
+            {routineScheduleType === 'specific_days' && (
+              <div className="routine-days-selector animate-fade-in">
+                <span className="routine-days-caption">Pilih hari aktif pelaksanaan:</span>
+                <div className="routine-days-chips-row">
+                  {SHORT_DAYS.map((dayLabel, idx) => {
+                    const isSelected = routineSelectedDays.includes(idx);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        className={`routine-day-chip ${isSelected ? 'selected' : ''}`}
+                        onClick={() => {
+                          if (isSelected) {
+                            if (routineSelectedDays.length <= 1) return;
+                            setRoutineSelectedDays(routineSelectedDays.filter((d) => d !== idx));
+                          } else {
+                            setRoutineSelectedDays([...routineSelectedDays, idx]);
+                          }
+                        }}
+                        title={DAY_NAMES[idx]}
+                      >
+                        {dayLabel}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Perulangan Rutinitas */}
+          <div className="fast-form-group">
+            <div className="flex items-center justify-between mb-1">
+              <label className="fast-section-label mb-0">Perulangan Rutinitas</label>
+              <span className="text-[10px] text-muted-foreground">
+                {routineScheduleType === 'daily'
+                  ? 'Otomatis harian'
+                  : 'Pilih mingguan atau bulanan'}
+              </span>
+            </div>
+            <div className="routine-recurrence-options">
+              <button
+                type="button"
+                disabled={routineScheduleType === 'specific_days'}
+                className={`routine-recurrence-btn ${routineRecurrence === 'daily' ? 'active' : ''} ${
+                  routineScheduleType === 'specific_days' ? 'disabled' : ''
+                }`}
+                onClick={() => setRoutineRecurrence('daily')}
+                title={
+                  routineScheduleType === 'specific_days'
+                    ? 'Tidak aktif untuk jadwal hari-hari tertentu'
+                    : 'Berulang setiap hari'
+                }
+              >
+                Setiap Hari
+              </button>
+              <button
+                type="button"
+                disabled={routineScheduleType === 'daily'}
+                className={`routine-recurrence-btn ${routineRecurrence === 'weekly' ? 'active' : ''} ${
+                  routineScheduleType === 'daily' ? 'disabled' : ''
+                }`}
+                onClick={() => setRoutineRecurrence('weekly')}
+                title={
+                  routineScheduleType === 'daily'
+                    ? 'Jadwal setiap hari otomatis berulang harian'
+                    : 'Berulang setiap minggu pada hari yang dipilih'
+                }
+              >
+                Setiap Minggu
+              </button>
+              <button
+                type="button"
+                disabled={routineScheduleType === 'daily'}
+                className={`routine-recurrence-btn ${routineRecurrence === 'monthly' ? 'active' : ''} ${
+                  routineScheduleType === 'daily' ? 'disabled' : ''
+                }`}
+                onClick={() => setRoutineRecurrence('monthly')}
+                title={
+                  routineScheduleType === 'daily'
+                    ? 'Jadwal setiap hari otomatis berulang harian'
+                    : 'Berulang setiap bulan pada hari yang dipilih'
+                }
+              >
+                Setiap Bulan
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 6. Bagian Sub Tugas (Di Bawah Pengulangan, Teks Kecil Dulu) */}
       <div className="fast-form-group">
@@ -709,7 +885,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
           disabled={!title.trim()}
         >
           <Plus size={16} />
-          <span>Simpan ke Inbox</span>
+          <span>{formMode === 'rutinitas' ? 'Simpan Rutinitas' : 'Simpan ke Inbox'}</span>
         </button>
       </div>
     </form>

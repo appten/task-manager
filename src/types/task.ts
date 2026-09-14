@@ -2,7 +2,7 @@ export type Priority = 'low' | 'medium' | 'high';
 
 export type Category = 'Pekerjaan' | 'Pribadi' | 'Belajar' | 'Kesehatan' | 'Istirahat' | 'Relasi' | 'Lainnya';
 
-export type InboxType = 'kegiatan' | 'tugas' | 'pengingat';
+export type InboxType = 'kegiatan' | 'tugas' | 'pengingat' | 'rutinitas';
 
 export type RecurrenceType = 'none' | 'daily' | 'weekdays' | 'weekly' | 'monthly';
 
@@ -22,9 +22,10 @@ export interface ScheduledSession {
 
 export interface Task {
   id: string;
+  routineId?: string; // ID rutinitas jika tugas ini berasal dari jadwal rutinitas
   title: string;
   description?: string;
-  inboxType?: InboxType; // 'kegiatan' (Kegiatan / Acara) | 'tugas' (Tugas) | 'pengingat' (Pengingat)
+  inboxType?: InboxType; // 'kegiatan' | 'tugas' | 'pengingat' | 'rutinitas'
   recurrence?: RecurrenceType; // 'none' | 'daily' | 'weekdays' | 'weekly' | 'monthly'
   dueDate: string; // Format: YYYY-MM-DD (Batas akhir / tanggal utama)
   dueTime?: string; // Format: HH:mm (Batas jam akhir / jam utama)

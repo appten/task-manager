@@ -188,7 +188,9 @@ export const TaskDetailModal: React.FC = () => {
         <div className="modal-header task-detail-header">
           <div className="detail-badge-group">
             <span className={`detail-type-badge ${currentTask.inboxType || 'tugas'}`}>
-              {currentTask.inboxType === 'kegiatan'
+              {currentTask.inboxType === 'rutinitas'
+                ? '🔄 Rutinitas'
+                : currentTask.inboxType === 'kegiatan'
                 ? '📅 Acara'
                 : currentTask.inboxType === 'pengingat'
                 ? '⏰ Pengingat'
