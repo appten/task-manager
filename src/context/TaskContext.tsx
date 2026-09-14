@@ -914,7 +914,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const isScheduledToday =
           routine.scheduleType === 'daily' ||
           (routine.selectedDays ? routine.selectedDays.includes(currentDow) : true);
-        const inDateRange = todayStr >= routine.startDate && todayStr <= routine.endDate;
+        const inDateRange =
+          (!routine.startDate || todayStr >= routine.startDate) &&
+          (!routine.endDate || todayStr <= routine.endDate);
 
         const isCompletedToday = routine.completedDates.includes(todayStr);
         const taskId = `routine-today-${routine.id}`;
@@ -925,11 +927,18 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isScheduledToday && inDateRange) {
           if (existingIdx >= 0) {
             const existing = updatedTasks[existingIdx];
-            if (existing.isCompleted !== isCompletedToday || existing.title !== routine.title) {
+            if (
+              existing.isCompleted !== isCompletedToday ||
+              existing.title !== routine.title ||
+              existing.startTime !== routine.startTime ||
+              existing.endTime !== routine.endTime
+            ) {
               updatedTasks[existingIdx] = {
                 ...existing,
                 title: routine.title,
                 description: routine.description,
+                startTime: routine.startTime,
+                endTime: routine.endTime,
                 isCompleted: isCompletedToday,
                 inboxType: 'rutinitas',
                 dueDate: todayStr,
@@ -943,6 +952,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
               routineId: routine.id,
               title: routine.title,
               description: routine.description,
+              startTime: routine.startTime,
+              endTime: routine.endTime,
               inboxType: 'rutinitas',
               dueDate: todayStr,
               startDate: todayStr,
@@ -1533,7 +1544,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const isScheduledToday =
         newRoutine.scheduleType === 'daily' ||
         (newRoutine.selectedDays ? newRoutine.selectedDays.includes(currentDow) : true);
-      const inDateRange = todayStr >= newRoutine.startDate && todayStr <= newRoutine.endDate;
+      const inDateRange =
+        (!newRoutine.startDate || todayStr >= newRoutine.startDate) &&
+        (!newRoutine.endDate || todayStr <= newRoutine.endDate);
 
       if (isScheduledToday && inDateRange) {
         const newTask: Task = {
@@ -1541,6 +1554,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           routineId: newRoutine.id,
           title: newRoutine.title,
           description: newRoutine.description,
+          startTime: newRoutine.startTime,
+          endTime: newRoutine.endTime,
           inboxType: 'rutinitas',
           dueDate: todayStr,
           startDate: todayStr,
@@ -1592,7 +1607,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        if (todayStr < routine.startDate || todayStr > routine.endDate) {
+        if ((routine.startDate && todayStr < routine.startDate) || (routine.endDate && todayStr > routine.endDate)) {
           showToast('Hari ini berada di luar rentang tanggal rutinitas ini.');
           return prevRoutines;
         }

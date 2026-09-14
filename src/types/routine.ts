@@ -5,8 +5,10 @@ export interface RoutineItem {
   id: string;
   title: string;
   description?: string;
-  startDate: string; // Format YYYY-MM-DD
-  endDate: string; // Format YYYY-MM-DD
+  startTime?: string; // Format HH:mm (Waktu mulai pelaksanaan aktivitas)
+  endTime?: string; // Format HH:mm (Waktu selesai pelaksanaan aktivitas)
+  startDate?: string; // Format YYYY-MM-DD (Opsional: Target periode rutinitas mulai)
+  endDate?: string; // Format YYYY-MM-DD (Opsional: Target periode rutinitas selesai)
   scheduleType: RoutineScheduleType;
   selectedDays?: number[]; // [0, 1, 2, 3, 4, 5, 6] (0 = Minggu, 1 = Senin, ..., 6 = Sabtu)
   recurrence: RoutineRecurrence;

@@ -92,7 +92,9 @@ export const InboxView: React.FC = () => {
       const isScheduledToday =
         routine.scheduleType === 'daily' ||
         (routine.selectedDays ? routine.selectedDays.includes(currentDow) : true);
-      const inDateRange = todayDateString >= routine.startDate && todayDateString <= routine.endDate;
+      const inDateRange =
+        (!routine.startDate || todayDateString >= routine.startDate) &&
+        (!routine.endDate || todayDateString <= routine.endDate);
       const isCompletedToday = routine.completedDates?.includes(todayDateString);
       return isScheduledToday && inDateRange && !isCompletedToday;
     }).length;

@@ -149,12 +149,12 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     }
 
     if (formMode === 'rutinitas') {
-      if (!startDate || !endDate) {
-        setErrorMsg('Tanggal mulai dan selesai wajib diisi');
+      if (startDate && endDate && startDate > endDate) {
+        setErrorMsg('Tanggal mulai periode tidak boleh melebihi tanggal selesai');
         return;
       }
-      if (startDate > endDate) {
-        setErrorMsg('Tanggal mulai tidak boleh melebihi tanggal selesai');
+      if (startTime && endTime && startTime > endTime) {
+        setErrorMsg('Jam mulai aktivitas tidak boleh melebihi jam selesai');
         return;
       }
       if (routineScheduleType === 'specific_days' && routineSelectedDays.length === 0) {
@@ -165,8 +165,10 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       addRoutine({
         title: title.trim(),
         description: description.trim() || undefined,
-        startDate,
-        endDate,
+        startTime: startTime.trim() || undefined,
+        endTime: endTime.trim() || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
         scheduleType: routineScheduleType,
         selectedDays: routineScheduleType === 'specific_days' ? routineSelectedDays : undefined,
         recurrence: routineRecurrence,
@@ -362,133 +364,226 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         </div>
       </div>
 
-      {/* 4. Waktu & Jadwal: Timestamp Mulai & Timestamp Selesai (Opsional) */}
-      <div className="fast-form-group">
-        <div className="fast-schedule-header-row">
-          <label className="fast-section-label">
-            <Calendar size={13} className="label-icon" />
-            <span>Waktu & Jadwal</span>
-          </label>
-          {/* Preset Tanggal Cepat */}
-          <div className="fast-quick-presets">
-            <button
-              type="button"
-              className="fast-quick-preset-chip"
-              onClick={() => handleDatePreset('today')}
-            >
-              Hari Ini
-            </button>
-            <button
-              type="button"
-              className="fast-quick-preset-chip"
-              onClick={() => handleDatePreset('tomorrow')}
-            >
-              Besok
-            </button>
-            <button
-              type="button"
-              className="fast-quick-preset-chip"
-              onClick={() => handleDatePreset('dayAfter')}
-            >
-              Lusa
-            </button>
-          </div>
-        </div>
-
-        <div className="fast-timestamp-grid">
-          {/* Timestamp Mulai */}
-          <div className="fast-timestamp-card">
-            <div className="timestamp-card-title">
-              <Clock size={12} className="text-emerald" />
-              <span>Mulai (Opsional)</span>
+      {/* 4. Waktu & Jadwal: Khusus Inbox (Mulai & Batas Selesai) */}
+      {formMode === 'inbox' && (
+        <div className="fast-form-group">
+          <div className="fast-schedule-header-row">
+            <label className="fast-section-label">
+              <Calendar size={13} className="label-icon" />
+              <span>Waktu & Jadwal</span>
+            </label>
+            {/* Preset Tanggal Cepat */}
+            <div className="fast-quick-presets">
+              <button
+                type="button"
+                className="fast-quick-preset-chip"
+                onClick={() => handleDatePreset('today')}
+              >
+                Hari Ini
+              </button>
+              <button
+                type="button"
+                className="fast-quick-preset-chip"
+                onClick={() => handleDatePreset('tomorrow')}
+              >
+                Besok
+              </button>
+              <button
+                type="button"
+                className="fast-quick-preset-chip"
+                onClick={() => handleDatePreset('dayAfter')}
+              >
+                Lusa
+              </button>
             </div>
-            <div className="timestamp-inputs-row">
-              <div className="timestamp-date-col">
-                <span className="timestamp-input-caption">Tanggal:</span>
-                <input
-                  type="date"
-                  className="fast-date-picker-input"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  title="Tanggal mulai (opsional)"
-                />
+          </div>
+
+          <div className="fast-timestamp-grid">
+            {/* Timestamp Mulai */}
+            <div className="fast-timestamp-card">
+              <div className="timestamp-card-title">
+                <Clock size={12} className="text-emerald" />
+                <span>Mulai (Opsional)</span>
               </div>
-              <div className="timestamp-time-col">
-                <span className="timestamp-input-caption">Jam:</span>
-                <div className="time-input-with-clear">
+              <div className="timestamp-inputs-row">
+                <div className="timestamp-date-col">
+                  <span className="timestamp-input-caption">Tanggal:</span>
                   <input
-                    type="time"
-                    className="fast-time-picker-input"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    title="Jam mulai (opsional)"
+                    type="date"
+                    className="fast-date-picker-input"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    title="Tanggal mulai (opsional)"
                   />
-                  {startTime && (
-                    <button
-                      type="button"
-                      className="fast-time-clear-btn"
-                      onClick={() => setStartTime('')}
-                      title="Hapus jam"
-                    >
-                      <X size={11} />
-                    </button>
-                  )}
+                </div>
+                <div className="timestamp-time-col">
+                  <span className="timestamp-input-caption">Jam:</span>
+                  <div className="time-input-with-clear">
+                    <input
+                      type="time"
+                      className="fast-time-picker-input"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      title="Jam mulai (opsional)"
+                    />
+                    {startTime && (
+                      <button
+                        type="button"
+                        className="fast-time-clear-btn"
+                        onClick={() => setStartTime('')}
+                        title="Hapus jam"
+                      >
+                        <X size={11} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Timestamp Selesai / Tenggat */}
+            <div className="fast-timestamp-card">
+              <div className="timestamp-card-title">
+                <Clock size={12} className="text-rose" />
+                <span>Selesai / Batas Akhir (Opsional)</span>
+              </div>
+              <div className="timestamp-inputs-row">
+                <div className="timestamp-date-col">
+                  <span className="timestamp-input-caption">Tanggal:</span>
+                  <input
+                    type="date"
+                    className="fast-date-picker-input"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    title="Tanggal selesai (opsional)"
+                  />
+                </div>
+                <div className="timestamp-time-col">
+                  <span className="timestamp-input-caption">Jam:</span>
+                  <div className="time-input-with-clear">
+                    <input
+                      type="time"
+                      className="fast-time-picker-input"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      title="Jam selesai (opsional)"
+                    />
+                    {endTime && (
+                      <button
+                        type="button"
+                        className="fast-time-clear-btn"
+                        onClick={() => setEndTime('')}
+                        title="Hapus jam"
+                      >
+                        <X size={11} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Timestamp Selesai / Tenggat */}
-          <div className="fast-timestamp-card">
-            <div className="timestamp-card-title">
-              <Clock size={12} className="text-rose" />
-              <span>Selesai / Batas Akhir (Opsional)</span>
-            </div>
-            <div className="timestamp-inputs-row">
-              <div className="timestamp-date-col">
-                <span className="timestamp-input-caption">Tanggal:</span>
-                <input
-                  type="date"
-                  className="fast-date-picker-input"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  title="Tanggal selesai (opsional)"
-                />
-              </div>
-              <div className="timestamp-time-col">
-                <span className="timestamp-input-caption">Jam:</span>
-                <div className="time-input-with-clear">
-                  <input
-                    type="time"
-                    className="fast-time-picker-input"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    title="Jam selesai (opsional)"
-                  />
-                  {endTime && (
-                    <button
-                      type="button"
-                      className="fast-time-clear-btn"
-                      onClick={() => setEndTime('')}
-                      title="Hapus jam"
-                    >
-                      <X size={11} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          <span className="fast-timestamp-hint">
+            * Anda dapat mengatur tanggal saja tanpa jam, atau mengisi salah satu / kedua timestamp sesuai kebutuhan.
+          </span>
         </div>
-        <span className="fast-timestamp-hint">
-          * Anda dapat mengatur tanggal saja tanpa jam, atau mengisi salah satu / kedua timestamp sesuai kebutuhan.
-        </span>
-      </div>
+      )}
 
-      {/* Jika Rutinitas: Pengaturan Hari & Perulangan */}
+      {/* Jika Rutinitas: Jam Aktivitas, Jadwal Hari, Perulangan, & Periode Opsional */}
       {formMode === 'rutinitas' && (
         <>
-          {/* Jadwal Pelaksanaan Hari */}
+          {/* 1. Jam Pelaksanaan Aktivitas Harian */}
+          <div className="fast-form-group">
+            <div className="routine-section-header-wrap">
+              <label className="fast-section-label mb-0">
+                <Clock size={13} className="label-icon" />
+                <span>Jam Pelaksanaan Aktivitas (Opsional)</span>
+              </label>
+              <span className="routine-section-hint">
+                Pukul berapa kegiatan ini dilakukan setiap harinya (kosongkan jika fleksibel).
+              </span>
+            </div>
+
+            <div className="routine-form-row mt-2">
+              <div className="routine-form-group half">
+                <label className="routine-sub-label">Jam Mulai</label>
+                <input
+                  type="time"
+                  className="fast-time-picker-input"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+              </div>
+
+              <div className="routine-form-group half">
+                <label className="routine-sub-label">Jam Selesai</label>
+                <input
+                  type="time"
+                  className="fast-time-picker-input"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Preset waktu cepat */}
+            <div className="routine-quick-times-row mt-1">
+              <button
+                type="button"
+                className="routine-quick-time-chip"
+                onClick={() => {
+                  setStartTime('06:00');
+                  setEndTime('07:00');
+                }}
+              >
+                Pagi (06:00)
+              </button>
+              <button
+                type="button"
+                className="routine-quick-time-chip"
+                onClick={() => {
+                  setStartTime('13:00');
+                  setEndTime('13:30');
+                }}
+              >
+                Siang (13:00)
+              </button>
+              <button
+                type="button"
+                className="routine-quick-time-chip"
+                onClick={() => {
+                  setStartTime('17:00');
+                  setEndTime('18:00');
+                }}
+              >
+                Sore (17:00)
+              </button>
+              <button
+                type="button"
+                className="routine-quick-time-chip"
+                onClick={() => {
+                  setStartTime('20:30');
+                  setEndTime('21:30');
+                }}
+              >
+                Malam (20:30)
+              </button>
+              {(startTime || endTime) && (
+                <button
+                  type="button"
+                  className="routine-quick-time-chip clear"
+                  onClick={() => {
+                    setStartTime('');
+                    setEndTime('');
+                  }}
+                >
+                  Reset / Fleksibel
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Jadwal Pelaksanaan Hari */}
           <div className="fast-form-group">
             <label className="fast-section-label">Jadwal Pelaksanaan Hari</label>
             <div className="routine-schedule-tabs">
@@ -546,7 +641,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
             )}
           </div>
 
-          {/* Perulangan Rutinitas */}
+          {/* 3. Perulangan Rutinitas */}
           <div className="fast-form-group">
             <div className="flex items-center justify-between mb-1">
               <label className="fast-section-label mb-0">Perulangan Rutinitas</label>
@@ -602,6 +697,43 @@ export const TaskForm: React.FC<TaskFormProps> = ({
               >
                 Setiap Bulan
               </button>
+            </div>
+          </div>
+
+          {/* 4. Periode Masa Berlaku Rutinitas (Opsional) */}
+          <div className="routine-form-section optional-period">
+            <div className="routine-section-header-wrap">
+              <label className="fast-section-label mb-0">
+                <Calendar size={13} className="label-icon" />
+                <span>Periode Masa Berlaku Rutinitas (Opsional)</span>
+              </label>
+              <span className="routine-section-hint">
+                Atur jika rutinitas memiliki target durasi (misal program 30 hari). Kosongkan jika berlaku selamanya.
+              </span>
+            </div>
+
+            <div className="routine-form-row mt-2">
+              <div className="routine-form-group half">
+                <label className="routine-sub-label">Mulai Tanggal</label>
+                <input
+                  type="date"
+                  className="fast-date-picker-input"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  title="Tanggal mulai (opsional)"
+                />
+              </div>
+
+              <div className="routine-form-group half">
+                <label className="routine-sub-label">Selesai Tanggal</label>
+                <input
+                  type="date"
+                  className="fast-date-picker-input"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  title="Tanggal selesai (opsional)"
+                />
+              </div>
             </div>
           </div>
         </>

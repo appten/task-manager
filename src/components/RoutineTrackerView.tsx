@@ -18,6 +18,7 @@ import {
   Target,
   ArrowRight,
   Flame,
+  Clock,
 } from 'lucide-react';
 
 const STORAGE_ROUTINES_KEY = 'ten_routines_v1';
@@ -37,6 +38,8 @@ export const RoutineTrackerView: React.FC = () => {
   // Form states
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [scheduleType, setScheduleType] = useState<RoutineScheduleType>('daily');
@@ -80,25 +83,14 @@ export const RoutineTrackerView: React.FC = () => {
     }
   };
 
-  // Open form modal with initial dates
+  // Open form modal with initial state
   const handleOpenCreateForm = () => {
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = String(today.getMonth() + 1).padStart(2, '0');
-    const d = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${y}-${m}-${d}`;
-
-    const nextMonth = new Date(today);
-    nextMonth.setDate(today.getDate() + 30);
-    const ny = nextMonth.getFullYear();
-    const nm = String(nextMonth.getMonth() + 1).padStart(2, '0');
-    const nd = String(nextMonth.getDate()).padStart(2, '0');
-    const nextMonthStr = `${ny}-${nm}-${nd}`;
-
     setTitle('');
     setDescription('');
-    setStartDate(todayStr);
-    setEndDate(nextMonthStr);
+    setStartTime('06:00');
+    setEndTime('07:00');
+    setStartDate('');
+    setEndDate('');
     setScheduleType('daily');
     setSelectedDays([1, 2, 3, 4, 5]);
     setRecurrence('daily');
@@ -111,12 +103,12 @@ export const RoutineTrackerView: React.FC = () => {
       showToast('Judul rutinitas wajib diisi');
       return;
     }
-    if (!startDate || !endDate) {
-      showToast('Tanggal mulai dan selesai wajib diisi');
+    if (startDate && endDate && startDate > endDate) {
+      showToast('Tanggal mulai periode tidak boleh melebihi tanggal selesai');
       return;
     }
-    if (startDate > endDate) {
-      showToast('Tanggal mulai tidak boleh melebihi tanggal selesai');
+    if (startTime && endTime && startTime > endTime) {
+      showToast('Jam mulai tidak boleh melebihi jam selesai');
       return;
     }
     if (scheduleType === 'specific_days' && selectedDays.length === 0) {
@@ -127,8 +119,10 @@ export const RoutineTrackerView: React.FC = () => {
     addRoutine({
       title: title.trim(),
       description: description.trim() || undefined,
-      startDate,
-      endDate,
+      startTime: startTime.trim() || undefined,
+      endTime: endTime.trim() || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
       scheduleType,
       selectedDays: scheduleType === 'specific_days' ? selectedDays : undefined,
       recurrence,
@@ -137,7 +131,7 @@ export const RoutineTrackerView: React.FC = () => {
     setIsFormOpen(false);
   };
 
-  // Generate sequence of dates between startDate and endDate
+  // Generate sequence of dates for attendance
   const getRoutineDates = (routine: RoutineItem) => {
     const dates: {
       dateStr: string;
@@ -151,13 +145,35 @@ export const RoutineTrackerView: React.FC = () => {
       isScheduled: boolean;
     }[] = [];
 
-    const start = new Date(routine.startDate + 'T00:00:00');
-    const end = new Date(routine.endDate + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let start: Date;
+    let end: Date;
+
+    if (routine.startDate && routine.endDate) {
+      start = new Date(routine.startDate + 'T00:00:00');
+      end = new Date(routine.endDate + 'T00:00:00');
+    } else if (routine.startDate && !routine.endDate) {
+      start = new Date(routine.startDate + 'T00:00:00');
+      end = new Date(Math.max(start.getTime(), today.getTime()));
+      end.setDate(end.getDate() + 21);
+    } else if (!routine.startDate && routine.endDate) {
+      end = new Date(routine.endDate + 'T00:00:00');
+      start = new Date(end);
+      start.setDate(start.getDate() - 28);
+    } else {
+      // Tanpa batas waktu (berkelanjutan): tampilkan rentang aktif 7 hari lalu s/d 21 hari ke depan
+      start = new Date(today);
+      start.setDate(today.getDate() - 7);
+      end = new Date(today);
+      end.setDate(today.getDate() + 21);
+    }
 
     // Safety guard to avoid infinite loops if date corrupted
     const curr = new Date(start);
     let count = 0;
-    while (curr <= end && count < 366) {
+    while (curr <= end && count < 180) {
       count++;
       const y = curr.getFullYear();
       const m = String(curr.getMonth() + 1).padStart(2, '0');
@@ -191,11 +207,14 @@ export const RoutineTrackerView: React.FC = () => {
   };
 
   // Format date helper: "14 Sep 2026"
-  const formatDateFriendly = (dateStr: string) => {
+  const formatDateFriendly = (dateStr?: string) => {
     if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-');
-    const mIdx = parseInt(m, 10) - 1;
-    return `${parseInt(d, 10)} ${MONTH_NAMES[mIdx] || m} ${y}`;
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const year = parts[0];
+    const month = MONTH_NAMES[parseInt(parts[1], 10) - 1] || parts[1];
+    const day = parseInt(parts[2], 10);
+    return `${day} ${month} ${year}`;
   };
 
   return (
@@ -288,38 +307,98 @@ export const RoutineTrackerView: React.FC = () => {
                 />
               </div>
 
-              {/* Tanggal Mulai & Tanggal Selesai */}
-              <div className="routine-form-row">
-                <div className="routine-form-group half">
-                  <label className="routine-form-label">
-                    <Calendar size={12} />
-                    <span>Tanggal Mulai</span> <span className="text-danger">*</span>
+              {/* 2. Jam Pelaksanaan Harian (Spesifik Kegiatan) */}
+              <div className="routine-form-section">
+                <div className="routine-section-header-wrap">
+                  <label className="routine-form-label section-title">
+                    <Clock size={13} className="text-primary" />
+                    <span>Jam Pelaksanaan Aktivitas (Opsional)</span>
                   </label>
-                  <input
-                    type="date"
-                    className="routine-input-text"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    required
-                  />
+                  <span className="routine-section-hint">
+                    Tentukan jam spesifik kapan kegiatan ini dilakukan setiap harinya (kosongkan jika fleksibel).
+                  </span>
                 </div>
 
-                <div className="routine-form-group half">
-                  <label className="routine-form-label">
-                    <Calendar size={12} />
-                    <span>Tanggal Selesai</span> <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    className="routine-input-text"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    required
-                  />
+                <div className="routine-form-row">
+                  <div className="routine-form-group half">
+                    <label className="routine-sub-label">Jam Mulai</label>
+                    <input
+                      type="time"
+                      className="routine-input-text"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="routine-form-group half">
+                    <label className="routine-sub-label">Jam Selesai</label>
+                    <input
+                      type="time"
+                      className="routine-input-text"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Preset waktu cepat */}
+                <div className="routine-quick-times-row">
+                  <button
+                    type="button"
+                    className="routine-quick-time-chip"
+                    onClick={() => {
+                      setStartTime('06:00');
+                      setEndTime('07:00');
+                    }}
+                  >
+                    Pagi (06:00)
+                  </button>
+                  <button
+                    type="button"
+                    className="routine-quick-time-chip"
+                    onClick={() => {
+                      setStartTime('13:00');
+                      setEndTime('13:30');
+                    }}
+                  >
+                    Siang (13:00)
+                  </button>
+                  <button
+                    type="button"
+                    className="routine-quick-time-chip"
+                    onClick={() => {
+                      setStartTime('17:00');
+                      setEndTime('18:00');
+                    }}
+                  >
+                    Sore (17:00)
+                  </button>
+                  <button
+                    type="button"
+                    className="routine-quick-time-chip"
+                    onClick={() => {
+                      setStartTime('20:30');
+                      setEndTime('21:30');
+                    }}
+                  >
+                    Malam (20:30)
+                  </button>
+                  {(startTime || endTime) && (
+                    <button
+                      type="button"
+                      className="routine-quick-time-chip clear"
+                      onClick={() => {
+                        setStartTime('');
+                        setEndTime('');
+                      }}
+                    >
+                      Reset / Fleksibel
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Pengaturan Jadwal Hari: Setiap Hari vs Hari-Hari Tertentu */}
+              {/* 3. Pengaturan Jadwal Hari: Setiap Hari vs Hari-Hari Tertentu */}
               <div className="routine-form-group">
                 <label className="routine-form-label">Jadwal Pelaksanaan Hari</label>
                 <div className="routine-schedule-tabs">
@@ -377,7 +456,7 @@ export const RoutineTrackerView: React.FC = () => {
                 )}
               </div>
 
-              {/* Pilihan Pengulangan (Recurrence) */}
+              {/* 4. Pilihan Pengulangan (Recurrence) */}
               <div className="routine-form-group">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <label className="routine-form-label" style={{ margin: 0 }}>Perulangan Rutinitas</label>
@@ -431,6 +510,41 @@ export const RoutineTrackerView: React.FC = () => {
                   >
                     Setiap Bulan
                   </button>
+                </div>
+              </div>
+
+              {/* 5. Periode Target Rutinitas (Opsional) */}
+              <div className="routine-form-section optional-period">
+                <div className="routine-section-header-wrap">
+                  <label className="routine-form-label section-title">
+                    <Calendar size={13} className="text-primary" />
+                    <span>Periode Masa Berlaku Rutinitas (Opsional)</span>
+                  </label>
+                  <span className="routine-section-hint">
+                    Atur jika rutinitas ini memiliki target durasi (misal program 30 hari). Kosongkan jika berlaku selamanya.
+                  </span>
+                </div>
+
+                <div className="routine-form-row">
+                  <div className="routine-form-group half">
+                    <label className="routine-sub-label">Mulai Tanggal</label>
+                    <input
+                      type="date"
+                      className="routine-input-text"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="routine-form-group half">
+                    <label className="routine-sub-label">Selesai Tanggal</label>
+                    <input
+                      type="date"
+                      className="routine-input-text"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -512,12 +626,33 @@ export const RoutineTrackerView: React.FC = () => {
 
                     {/* Metadata Badges Mini */}
                     <div className="routine-badges-row">
-                      <span className="routine-badge period" title="Periode">
-                        <Calendar size={10} />
-                        <span>
-                          {formatDateFriendly(routine.startDate)} - {formatDateFriendly(routine.endDate)}
+                      {/* Jam Pelaksanaan Aktivitas */}
+                      {routine.startTime && (
+                        <span className="routine-badge time" title="Waktu Pelaksanaan Aktivitas">
+                          <Clock size={10} />
+                          <span>
+                            {routine.startTime}
+                            {routine.endTime ? ` - ${routine.endTime}` : ''}
+                          </span>
                         </span>
-                      </span>
+                      )}
+
+                      {/* Periode Rutinitas (Opsional) */}
+                      {(routine.startDate || routine.endDate) ? (
+                        <span className="routine-badge period" title="Periode Target Rutinitas">
+                          <Calendar size={10} />
+                          <span>
+                            {routine.startDate ? formatDateFriendly(routine.startDate) : 'Mulai'}
+                            {' - '}
+                            {routine.endDate ? formatDateFriendly(routine.endDate) : 'Seterusnya'}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="routine-badge period ongoing" title="Periode: Berkelanjutan Tanpa Batas">
+                          <Calendar size={10} />
+                          <span>Berkelanjutan</span>
+                        </span>
+                      )}
 
                       <span className="routine-badge recurrence" title="Perulangan">
                         <RotateCw size={10} />

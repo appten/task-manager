@@ -18387,6 +18387,70 @@ body {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
+.routine-form-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.routine-form-section.optional-period {
+  background: #fcfcfd;
+  border-style: dashed;
+}
+
+.routine-section-header-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.routine-section-hint {
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.routine-sub-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.routine-quick-times-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.routine-quick-time-chip {
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.routine-quick-time-chip:hover {
+  border-color: #3b82f6;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.routine-quick-time-chip.clear {
+  border-color: #fecaca;
+  color: #dc2626;
+  background: #fef2f2;
+}
+
 .routine-schedule-tabs {
   display: flex;
   gap: 6px;
@@ -18621,10 +18685,23 @@ body {
   border-radius: 4px;
 }
 
+.routine-badge.time {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+  font-weight: 600;
+}
+
 .routine-badge.period {
   background: #f1f5f9;
   color: #334155;
   border: 1px solid #e2e8f0;
+}
+
+.routine-badge.period.ongoing {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px dashed #cbd5e1;
 }
 
 .routine-badge.recurrence {
