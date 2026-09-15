@@ -165,6 +165,7 @@ interface TaskContextType {
   // Fitur Rutinitas & Absensi Ceklist
   routines: RoutineItem[];
   addRoutine: (newRoutine: Omit<RoutineItem, 'id' | 'createdAt' | 'completedDates'>) => void;
+  updateRoutine: (updatedRoutine: RoutineItem) => void;
   deleteRoutine: (id: string) => void;
   toggleRoutineCheckToday: (routineId: string) => void;
 }
@@ -1662,6 +1663,37 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [showToast]
   );
 
+  const updateRoutine = useCallback(
+    (updatedRoutine: RoutineItem) => {
+      setRoutines((prev) => {
+        const next = prev.map((r) => (r.id === updatedRoutine.id ? updatedRoutine : r));
+        try {
+          localStorage.setItem(STORAGE_ROUTINES_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      // Sinkronkan tugas turunan rutinitas hari ini jika ada
+      setTasks((prev) =>
+        prev.map((t) => {
+          if (t.routineId === updatedRoutine.id || t.id === `routine-today-${updatedRoutine.id}`) {
+            return {
+              ...t,
+              title: updatedRoutine.title,
+              description: updatedRoutine.description,
+              startTime: updatedRoutine.startTime,
+              endTime: updatedRoutine.endTime,
+            };
+          }
+          return t;
+        })
+      );
+
+      showToast(`Rutinitas "${updatedRoutine.title}" berhasil diperbarui! ✨`);
+    },
+    [showToast]
+  );
+
   const deleteRoutine = useCallback(
     (id: string) => {
       setRoutines((prev) => {
@@ -2631,6 +2663,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getTasksForDateAndVersion,
         routines,
         addRoutine,
+        updateRoutine,
         deleteRoutine,
         toggleRoutineCheckToday,
       }}

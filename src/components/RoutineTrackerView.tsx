@@ -19,6 +19,8 @@ import {
   ArrowRight,
   Flame,
   Clock,
+  MoreVertical,
+  Pencil,
 } from 'lucide-react';
 
 const STORAGE_ROUTINES_KEY = 'ten_routines_v1';
@@ -31,9 +33,11 @@ const MONTH_NAMES = [
 ];
 
 export const RoutineTrackerView: React.FC = () => {
-  const { routines, addRoutine, deleteRoutine, toggleRoutineCheckToday, showToast } = useTask();
+  const { routines, addRoutine, updateRoutine, deleteRoutine, toggleRoutineCheckToday, showToast } = useTask();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingRoutine, setEditingRoutine] = useState<RoutineItem | null>(null);
+  const [openMenuRoutineId, setOpenMenuRoutineId] = useState<string | null>(null);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -85,6 +89,7 @@ export const RoutineTrackerView: React.FC = () => {
 
   // Open form modal with initial state
   const handleOpenCreateForm = () => {
+    setEditingRoutine(null);
     setTitle('');
     setDescription('');
     setStartTime('06:00');
@@ -95,6 +100,22 @@ export const RoutineTrackerView: React.FC = () => {
     setSelectedDays([1, 2, 3, 4, 5]);
     setRecurrence('daily');
     setIsFormOpen(true);
+  };
+
+  // Open form modal for editing existing routine
+  const handleOpenEditForm = (routine: RoutineItem) => {
+    setEditingRoutine(routine);
+    setTitle(routine.title);
+    setDescription(routine.description || '');
+    setStartTime(routine.startTime || '');
+    setEndTime(routine.endTime || '');
+    setStartDate(routine.startDate || '');
+    setEndDate(routine.endDate || '');
+    setScheduleType(routine.scheduleType);
+    setSelectedDays(routine.selectedDays || [1, 2, 3, 4, 5]);
+    setRecurrence(routine.recurrence || 'daily');
+    setIsFormOpen(true);
+    setOpenMenuRoutineId(null);
   };
 
   const handleSaveRoutine = (e: React.FormEvent) => {
@@ -116,19 +137,35 @@ export const RoutineTrackerView: React.FC = () => {
       return;
     }
 
-    addRoutine({
-      title: title.trim(),
-      description: description.trim() || undefined,
-      startTime: startTime.trim() || undefined,
-      endTime: endTime.trim() || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-      scheduleType,
-      selectedDays: scheduleType === 'specific_days' ? selectedDays : undefined,
-      recurrence,
-    });
+    if (editingRoutine) {
+      updateRoutine({
+        ...editingRoutine,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        startTime: startTime.trim() || undefined,
+        endTime: endTime.trim() || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        scheduleType,
+        selectedDays: scheduleType === 'specific_days' ? selectedDays : undefined,
+        recurrence,
+      });
+    } else {
+      addRoutine({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        startTime: startTime.trim() || undefined,
+        endTime: endTime.trim() || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        scheduleType,
+        selectedDays: scheduleType === 'specific_days' ? selectedDays : undefined,
+        recurrence,
+      });
+    }
 
     setIsFormOpen(false);
+    setEditingRoutine(null);
   };
 
   // Generate sequence of dates for attendance
@@ -266,13 +303,22 @@ export const RoutineTrackerView: React.FC = () => {
           >
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <RotateCw size={17} className="text-primary" />
-                <h3 className="modal-title">Tambah Rutinitas Baru</h3>
+                {editingRoutine ? (
+                  <Pencil size={17} className="text-primary" />
+                ) : (
+                  <RotateCw size={17} className="text-primary" />
+                )}
+                <h3 className="modal-title">
+                  {editingRoutine ? 'Edit Rutinitas' : 'Tambah Rutinitas Baru'}
+                </h3>
               </div>
               <button
                 type="button"
                 className="modal-close-btn"
-                onClick={() => setIsFormOpen(false)}
+                onClick={() => {
+                  setIsFormOpen(false);
+                  setEditingRoutine(null);
+                }}
               >
                 <X size={18} />
               </button>
@@ -553,12 +599,15 @@ export const RoutineTrackerView: React.FC = () => {
                 <button
                   type="button"
                   className="btn-cancel"
-                  onClick={() => setIsFormOpen(false)}
+                  onClick={() => {
+                    setIsFormOpen(false);
+                    setEditingRoutine(null);
+                  }}
                 >
                   Batal
                 </button>
                 <button type="submit" className="btn-save-routine-submit">
-                  Simpan Rutinitas
+                  {editingRoutine ? 'Simpan Perubahan' : 'Simpan Rutinitas'}
                 </button>
               </div>
             </form>
@@ -672,15 +721,57 @@ export const RoutineTrackerView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Tombol Hapus */}
-                  <button
-                    type="button"
-                    className="btn-delete-routine"
-                    onClick={() => handleDeleteRoutine(routine.id, routine.title)}
-                    title="Hapus rutinitas"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {/* Menu Opsi Titik Tiga: Edit & Hapus */}
+                  <div className="routine-more-wrap">
+                    <button
+                      type="button"
+                      className={`routine-more-btn ${openMenuRoutineId === routine.id ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuRoutineId((prev) => (prev === routine.id ? null : routine.id));
+                      }}
+                      title="Opsi rutinitas"
+                    >
+                      <MoreVertical size={15} />
+                    </button>
+
+                    {openMenuRoutineId === routine.id && (
+                      <>
+                        <div
+                          className="routine-menu-backdrop"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuRoutineId(null);
+                          }}
+                        />
+                        <div
+                          className="routine-menu-popover animate-scale-up"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className="routine-menu-item"
+                            onClick={() => handleOpenEditForm(routine)}
+                          >
+                            <Pencil size={13} className="text-primary" />
+                            <span>Edit Rutinitas</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="routine-menu-item danger"
+                            onClick={() => {
+                              setOpenMenuRoutineId(null);
+                              handleDeleteRoutine(routine.id, routine.title);
+                            }}
+                          >
+                            <Trash2 size={13} />
+                            <span>Hapus Rutinitas</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Kotak Ceklist Berjejer Secara Horizontal (Kompak, Tanpa Icon Check) */}
