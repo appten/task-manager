@@ -90,6 +90,8 @@ interface TaskContextType {
   toggleTodayTask: (taskId: string) => boolean;
   addToToday: (taskId: string) => boolean;
   removeFromToday: (taskId: string) => void;
+  isTodayCommitted: boolean;
+  commitToday: () => void;
   simulateMidnightRollover: () => void;
   isTaskFormOpen: boolean;
   setIsTaskFormOpen: (open: boolean) => void;
@@ -999,8 +1001,42 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fitur 5 Tugas Fokus Today
   const todayTasks = tasks.filter((t) => t.isToday).slice(0, 5);
 
+  // Status Kunci Komitmen Today
+  const [isTodayCommitted, setIsTodayCommitted] = useState<boolean>(false);
+
+  // Sinkronisasi status komitmen dari localStorage berdasarkan tanggal lokal
+  const syncTodayCommitment = useCallback(() => {
+    try {
+      const todayStr = getTodayDateString();
+      const saved = localStorage.getItem(`ten_today_committed_${todayStr}`);
+      setIsTodayCommitted(saved === 'true');
+    } catch {
+      setIsTodayCommitted(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isHydrated) {
+      syncTodayCommitment();
+    }
+  }, [isHydrated, syncTodayCommitment]);
+
+  const commitToday = useCallback(() => {
+    const todayStr = getTodayDateString();
+    try {
+      localStorage.setItem(`ten_today_committed_${todayStr}`, 'true');
+    } catch {}
+    setIsTodayCommitted(true);
+    showToast('Komitmen terkunci! Fokus penuh tuntaskan tugas hari ini 🎯 (terbuka kembali setelah jam 12 malam)');
+  }, [showToast]);
+
   const addToToday = useCallback(
     (taskId: string): boolean => {
+      if (isTodayCommitted) {
+        showToast('Komitmen Today sedang terkunci 🔒 (akan terbuka kembali setelah jam 12 malam).');
+        return false;
+      }
+
       const task = tasks.find((t) => t.id === taskId);
       if (!task) return false;
 
@@ -1038,11 +1074,16 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       showToast('Tugas dipilih ke Today ⭐');
       return true;
     },
-    [tasks, showToast]
+    [tasks, isTodayCommitted, showToast]
   );
 
   const removeFromToday = useCallback(
     (taskId: string) => {
+      if (isTodayCommitted) {
+        showToast('Komitmen Today sedang terkunci 🔒 (akan terbuka kembali setelah jam 12 malam).');
+        return;
+      }
+
       setTasks((prevTasks) =>
         prevTasks.map((t) =>
           t.id === taskId ? { ...t, isToday: false, todayOrder: undefined, todayDaysCount: undefined } : t
@@ -1050,7 +1091,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
       showToast('Tugas dikeluarkan dari Today');
     },
-    [showToast]
+    [isTodayCommitted, showToast]
   );
 
   const toggleTodayTask = useCallback(
@@ -1135,34 +1176,81 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     });
 
+    // 3. Sinkronkan kunci komitmen untuk tanggal hari baru (otomatis membuka kunci komitmen)
+    try {
+      const isCommittedForNewDate = localStorage.getItem(`ten_today_committed_${todayStr}`) === 'true';
+      setIsTodayCommitted(isCommittedForNewDate);
+    } catch {
+      setIsTodayCommitted(false);
+    }
+
     try {
       localStorage.setItem('ten_my_id_last_today_active_date', todayStr);
     } catch {}
   }, []);
 
-  // Periksa rollover otomatis pada load & setiap 60 detik
+  // Periksa rollover otomatis pada load, setiap interval, dan tepat jam 12 malam
   useEffect(() => {
     if (!isHydrated) return;
-    const checkDate = () => {
+
+    const checkDateAndMidnight = () => {
       const todayStr = getTodayDateString();
       const lastActiveDate = localStorage.getItem('ten_my_id_last_today_active_date');
       if (lastActiveDate && lastActiveDate !== todayStr) {
         applyMidnightRollover(todayStr);
-        showToast('Hari baru dimulai! Tugas Today yang selesai diarsipkan, tugas berlanjut diperbarui 🌅');
+        showToast('Hari baru dimulai! Kunci komitmen Today dibuka kembali 🌅');
       } else if (!lastActiveDate) {
         localStorage.setItem('ten_my_id_last_today_active_date', todayStr);
       }
+
+      // Pastikan status komitmen sinkron dengan tanggal aktif
+      try {
+        const savedCommit = localStorage.getItem(`ten_today_committed_${todayStr}`);
+        setIsTodayCommitted(savedCommit === 'true');
+      } catch {
+        setIsTodayCommitted(false);
+      }
     };
 
-    checkDate();
-    const interval = setInterval(checkDate, 60000);
-    return () => clearInterval(interval);
+    checkDateAndMidnight();
+
+    // Cek setiap 15 detik (fallback saat perangkat sleep/bangun)
+    const interval = setInterval(checkDateAndMidnight, 15000);
+
+    // Timer presisi tepat jam 00:00:01 tengah malam (pergantian hari)
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+    const msUntilMidnight = Math.max(1000, nextMidnight.getTime() - now.getTime());
+    const midnightTimer = setTimeout(() => {
+      checkDateAndMidnight();
+    }, msUntilMidnight);
+
+    const onFocusOrVisible = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        checkDateAndMidnight();
+      }
+    };
+    window.addEventListener('focus', onFocusOrVisible);
+    document.addEventListener('visibilitychange', onFocusOrVisible);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(midnightTimer);
+      window.removeEventListener('focus', onFocusOrVisible);
+      document.removeEventListener('visibilitychange', onFocusOrVisible);
+    };
   }, [isHydrated, applyMidnightRollover, showToast]);
 
   // Fungsi Simulasi untuk mempermudah testing user
   const simulateMidnightRollover = useCallback(() => {
+    const todayStr = getTodayDateString();
+    try {
+      // Hapus status kunci komitmen hari ini untuk simulasi pengujian pembukaan kunci
+      localStorage.removeItem(`ten_today_committed_${todayStr}`);
+    } catch {}
+    setIsTodayCommitted(false);
     applyMidnightRollover();
-    showToast('⚡ Simulasi ganti hari berhasil! Tugas selesai diarsipkan, tugas belum selesai berlanjut ke hari berikutnya.');
+    showToast('⚡ Simulasi pergantian jam 12 malam berhasil! Kunci komitmen terbuka dan tugas berlanjut diperbarui 🌅');
   }, [applyMidnightRollover, showToast]);
 
   // Fitur Perekaman Waktu Pengerjaan / Stopwatch Aktivitas
@@ -2490,6 +2578,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleTodayTask,
         addToToday,
         removeFromToday,
+        isTodayCommitted,
+        commitToday,
         simulateMidnightRollover,
         isTaskFormOpen,
         setIsTaskFormOpen,

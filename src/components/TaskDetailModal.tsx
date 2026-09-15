@@ -38,20 +38,11 @@ export const TaskDetailModal: React.FC = () => {
     pauseTaskTimer,
     stopTaskTimer,
     showToast,
+    isTodayCommitted,
   } = useTask();
 
   // Sinkronkan state task dengan tasks di context jika ada pembaruan (misal toggle subtask)
   const currentTask = viewingTask ? tasks.find((t) => t.id === viewingTask.id) || viewingTask : null;
-
-  // Cek apakah komitmen Today hari ini sedang aktif
-  const [isTodayCommitted, setIsTodayCommitted] = useState(false);
-  useEffect(() => {
-    try {
-      const todayKey = new Date().toISOString().slice(0, 10);
-      const committed = localStorage.getItem(`ten_today_committed_${todayKey}`);
-      setIsTodayCommitted(committed === 'true');
-    } catch {}
-  }, [viewingTask]);
 
   if (!currentTask) return null;
 

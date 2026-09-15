@@ -20,32 +20,18 @@ import {
 } from 'lucide-react';
 
 export const TodayView: React.FC = () => {
-  const { todayTasks, setActiveTab, showToast } = useTask();
+  const { todayTasks, setActiveTab, isTodayCommitted, commitToday } = useTask();
 
   // State untuk membuka view Riwayat Today
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-
-  // State Komitmen Today
-  const todayDateKey = new Date().toISOString().slice(0, 10);
-  const [isCommitted, setIsCommitted] = useState(false);
   const [showCommitModal, setShowCommitModal] = useState(false);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(`ten_today_committed_${todayDateKey}`);
-      if (saved === 'true') {
-        setIsCommitted(true);
-      }
-    } catch {}
-  }, [todayDateKey]);
+  // Status komitmen terpusat dari context (terbuka otomatis setelah jam 12 malam)
+  const isCommitted = isTodayCommitted;
 
   const handleConfirmCommit = () => {
-    setIsCommitted(true);
+    commitToday();
     setShowCommitModal(false);
-    try {
-      localStorage.setItem(`ten_today_committed_${todayDateKey}`, 'true');
-    } catch {}
-    showToast('Komitmen terkunci permanen! Fokus penuh tuntaskan tugas hari ini 🎯');
   };
 
   const maxSlots = 5;
@@ -184,7 +170,7 @@ export const TodayView: React.FC = () => {
                     <div className="empty-slot-number-pill">#{slotNumber}</div>
                     <div className="empty-slot-text">
                       <span className="empty-slot-label">Slot #{slotNumber} Kosong</span>
-                      <span className="empty-slot-hint">Komitmen sudah dikunci 🔒</span>
+                      <span className="empty-slot-hint">Komitmen dikunci s.d. jam 12 malam 🔒</span>
                     </div>
                   </div>
                 );
@@ -236,7 +222,7 @@ export const TodayView: React.FC = () => {
                 <div>
                   <h4 className="locked-title">Komitmen Hari Ini Terkunci 🔒</h4>
                   <p className="locked-desc">
-                    Komitmen telah dikunci secara permanen untuk hari ini. Fokus penuh tuntaskan {todayTasks.length} tugas yang telah Anda pilih.
+                    Komitmen telah dikunci untuk hari ini dan akan otomatis terbuka kembali setelah jam 12 malam (00:00). Fokus penuh tuntaskan {todayTasks.length} tugas yang telah Anda pilih.
                   </p>
                 </div>
               </div>
@@ -283,9 +269,9 @@ export const TodayView: React.FC = () => {
                 dan menyelesaikan {todayTasks.length} tugas yang terpilih hari ini tanpa terdistraksi tugas baru.
               </p>
 
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '9px 12px', marginTop: '10px' }}>
-                <span style={{ fontSize: '11.5px', color: '#b91c1c', fontWeight: 600, display: 'block', lineHeight: 1.4 }}>
-                  ⚠️ Perhatian: Sekali dikunci, komitmen hari ini TIDAK DAPAT diubah atau dibuka kembali. Anda hanya dapat melihat rincian, menyelesaikannya, dan menjalankan stopwatch timer.
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '9px 12px', marginTop: '10px' }}>
+                <span style={{ fontSize: '11.5px', color: '#b45309', fontWeight: 600, display: 'block', lineHeight: 1.4 }}>
+                  ⚠️ Perhatian: Komitmen terkunci hingga tengah malam (pukul 00:00). Setelah melewati jam 12 malam saat pergantian hari, kunci komitmen akan terbuka kembali secara otomatis.
                 </span>
               </div>
 
