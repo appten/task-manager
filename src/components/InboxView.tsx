@@ -332,7 +332,6 @@ export const InboxView: React.FC = () => {
         >
           <Users size={14} />
           <span>Reminder</span>
-          <span className="inbox-subtab-badge beta">Beta</span>
         </button>
       </div>
 
