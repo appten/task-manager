@@ -12,8 +12,10 @@ import {
   LifeRelationship,
 } from '../types/task';
 import { RoutineItem } from '../types/routine';
+import { ProjectItem, ProjectMilestone } from '../types/project';
 import { INITIAL_TASKS, getFormattedDate } from '../data/seedTasks';
 import { DEFAULT_RELATIONSHIPS } from '../data/seedRelationships';
+import { INITIAL_PROJECTS } from '../data/seedProjects';
 import { analyzeTasksWithCircadianAI } from '../services/geminiService';
 import {
   scheduleDailyTasksSmartly,
@@ -66,7 +68,7 @@ interface TaskContextType {
   resetPasswordUser: (email: string, recoveryPin: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   updateUserProfile: (name?: string, oldPassword?: string, newPassword?: string, recoveryPin?: string) => Promise<{ success: boolean; error?: string }>;
   // Fitur Pencadangan & Pemulihan Data Manual (File JSON)
-  exportBackupData: () => void;
+  exportBackupData: () => string;
   importBackupData: (parsedJson: any, mode: 'merge' | 'replace') => { success: boolean; count: number; error?: string };
   tasks: Task[];
   activeTab: TabType;
@@ -168,6 +170,16 @@ interface TaskContextType {
   updateRoutine: (updatedRoutine: RoutineItem) => void;
   deleteRoutine: (id: string) => void;
   toggleRoutineCheckToday: (routineId: string) => void;
+
+  // Fitur Proyek & Mini Goals Kuartal (3 Bulan)
+  projects: ProjectItem[];
+  addProject: (newProject: Omit<ProjectItem, 'id' | 'createdAt'>) => void;
+  updateProject: (updatedProject: ProjectItem) => void;
+  deleteProject: (id: string) => void;
+  toggleProjectMilestone: (projectId: string, milestoneId: string) => void;
+  addProjectMilestone: (projectId: string, milestoneTitle: string, dueDate?: string) => void;
+  deleteProjectMilestone: (projectId: string, milestoneId: string) => void;
+  toggleProjectComplete: (projectId: string) => void;
 }
 
 const STORAGE_KEY = 'ten_my_id_tasks_v01';
@@ -177,6 +189,7 @@ const STORAGE_ORIGINAL_KEY = 'ten_my_id_original_schedules_v01';
 const STORAGE_VERSION_KEY = 'ten_my_id_active_schedule_version_v01';
 const STORAGE_RELATIONSHIPS_KEY = 'ten_my_id_relationships_v01';
 const STORAGE_ROUTINES_KEY = 'ten_routines_v1';
+const STORAGE_PROJECTS_KEY = 'ten_projects_v1';
 
 const DEFAULT_LIFE_GOAL = 'Merilis produk digital berdampak, menjaga kesehatan fisik prima, dan mandiri finansial di tahun 2026';
 
@@ -297,6 +310,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // State Rutinitas
   const [routines, setRoutines] = useState<RoutineItem[]>([]);
 
+  // State Proyek (Mini Goals Kuartal 3 Bulan)
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
     setTimeout(() => {
@@ -385,6 +401,19 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRoutines(initialRoutines);
         try {
           localStorage.setItem(STORAGE_ROUTINES_KEY, JSON.stringify(initialRoutines));
+        } catch {}
+      }
+
+      // Load saved projects (Mini Goals Kuartal 3 Bulan)
+      const savedProjects = localStorage.getItem(STORAGE_PROJECTS_KEY);
+      if (savedProjects) {
+        try {
+          setProjects(JSON.parse(savedProjects));
+        } catch {}
+      } else if (!isDemoDismissed) {
+        setProjects(INITIAL_PROJECTS);
+        try {
+          localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(INITIAL_PROJECTS));
         } catch {}
       }
 
@@ -1771,6 +1800,166 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [showToast]
   );
 
+  // Fitur Proyek & Mini Goals Kuartal (3 Bulan)
+  const addProject = useCallback(
+    (newProj: Omit<ProjectItem, 'id' | 'createdAt'>) => {
+      const proj: ProjectItem = {
+        ...newProj,
+        id: `proj-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        createdAt: new Date().toISOString(),
+      };
+      setProjects((prev) => {
+        const next = [proj, ...prev];
+        try {
+          localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast(`Proyek "${proj.title}" berhasil dibuat! 🎯`);
+    },
+    [showToast]
+  );
+
+  const updateProject = useCallback(
+    (updatedProject: ProjectItem) => {
+      setProjects((prev) => {
+        const next = prev.map((p) =>
+          p.id === updatedProject.id ? { ...updatedProject, updatedAt: new Date().toISOString() } : p
+        );
+        try {
+          localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast(`Proyek "${updatedProject.title}" berhasil diperbarui! ✨`);
+    },
+    [showToast]
+  );
+
+  const deleteProject = useCallback(
+    (id: string) => {
+      setProjects((prev) => {
+        const next = prev.filter((p) => p.id !== id);
+        try {
+          localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast('Proyek berhasil dihapus');
+    },
+    [showToast]
+  );
+
+  const toggleProjectMilestone = useCallback(
+    (projectId: string, milestoneId: string) => {
+      let isDone = false;
+      setProjects((prev) => {
+        const next = prev.map((p) => {
+          if (p.id !== projectId) return p;
+          const nextMilestones = p.milestones.map((m) => {
+            if (m.id !== milestoneId) return m;
+            isDone = !m.isCompleted;
+            return {
+              ...m,
+              isCompleted: isDone,
+              completedAt: isDone ? new Date().toISOString() : undefined,
+            };
+          });
+
+          // Otomatis cek jika seluruh milestone selesai
+          const allCompleted = nextMilestones.length > 0 && nextMilestones.every((m) => m.isCompleted);
+          return {
+            ...p,
+            milestones: nextMilestones,
+            isCompleted: allCompleted ? true : p.isCompleted,
+            completedAt: allCompleted ? (p.completedAt || new Date().toISOString()) : p.completedAt,
+            updatedAt: new Date().toISOString(),
+          };
+        });
+        try {
+          localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast(isDone ? `Milestone selesai! 🎉` : 'Status milestone diperbarui');
+    },
+    [showToast]
+  );
+
+  const addProjectMilestone = useCallback(
+    (projectId: string, milestoneTitle: string, dueDate?: string) => {
+      if (!milestoneTitle.trim()) return;
+      const newMilestone: ProjectMilestone = {
+        id: `ms-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        title: milestoneTitle.trim(),
+        dueDate: dueDate || undefined,
+        isCompleted: false,
+      };
+      setProjects((prev) => {
+        const next = prev.map((p) => {
+          if (p.id !== projectId) return p;
+          return {
+            ...p,
+            milestones: [...p.milestones, newMilestone],
+            isCompleted: false,
+            updatedAt: new Date().toISOString(),
+          };
+        });
+        try {
+          localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast('Milestone baru ditambahkan! 📌');
+    },
+    [showToast]
+  );
+
+  const deleteProjectMilestone = useCallback(
+    (projectId: string, milestoneId: string) => {
+      setProjects((prev) => {
+        const next = prev.map((p) => {
+          if (p.id !== projectId) return p;
+          return {
+            ...p,
+            milestones: p.milestones.filter((m) => m.id !== milestoneId),
+            updatedAt: new Date().toISOString(),
+          };
+        });
+        try {
+          localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast('Milestone dihapus');
+    },
+    [showToast]
+  );
+
+  const toggleProjectComplete = useCallback(
+    (projectId: string) => {
+      let nowCompleted = false;
+      setProjects((prev) => {
+        const next = prev.map((p) => {
+          if (p.id !== projectId) return p;
+          nowCompleted = !p.isCompleted;
+          return {
+            ...p,
+            isCompleted: nowCompleted,
+            completedAt: nowCompleted ? new Date().toISOString() : undefined,
+            updatedAt: new Date().toISOString(),
+          };
+        });
+        try {
+          localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast(nowCompleted ? 'Selamat! Sasaran proyek berhasil tercapai! 🏆🎉' : 'Proyek dibuka kembali sebagai aktif');
+    },
+    [showToast]
+  );
+
   const addAISubTasks = useCallback((taskId: string, subTaskTitles: string[]) => {
     setTasks((prev) =>
       prev.map((task) => {
@@ -2079,11 +2268,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetToSampleData = useCallback(() => {
     setTasks(INITIAL_TASKS);
+    setProjects(INITIAL_PROJECTS);
     setOriginalSchedules({});
     setAiProposals({});
     setActiveScheduleModes({});
     setActiveScheduleVersion('ori');
     try {
+      localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(INITIAL_PROJECTS));
       localStorage.removeItem(STORAGE_ORIGINAL_KEY);
       localStorage.removeItem(STORAGE_VERSION_KEY);
     } catch {}
@@ -2092,6 +2283,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearAllTasksAndStartFresh = useCallback(() => {
     setTasks([]);
+    setProjects([]);
     setAiAnalysis(null);
     setUserGoal('');
     setOriginalSchedules({});
@@ -2100,6 +2292,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setActiveScheduleVersion('ori');
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+      localStorage.removeItem(STORAGE_PROJECTS_KEY);
       localStorage.removeItem(STORAGE_ANALYSIS_KEY);
       localStorage.removeItem(STORAGE_GOAL_KEY);
       localStorage.removeItem(STORAGE_ORIGINAL_KEY);
@@ -2112,11 +2305,11 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {
       console.error('Gagal membersihkan data tugas:', e);
     }
-    showToast('Semua data tugas, riwayat, dan analisis AI telah dibersihkan! ✨');
+    showToast('Semua data tugas, proyek, riwayat, dan analisis AI telah dibersihkan! ✨');
   }, [showToast]);
 
-  // Fitur Pencadangan Data Manual (Ekspor ke File JSON)
-  const exportBackupData = useCallback(() => {
+  // Fitur Pencadangan Data Manual (Ekspor ke File JSON Lengkap)
+  const exportBackupData = useCallback((): string => {
     try {
       let logs = [];
       try {
@@ -2124,20 +2317,33 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (rawLogs) logs = JSON.parse(rawLogs);
       } catch {}
 
+      const dateStr = new Date().toISOString().split('T')[0];
+      const fileName = `ten_tasks_backup_${dateStr}.json`;
+
       const backupObject = {
         appName: 'TEN Tasks Mobile',
-        appVersion: 'v1.4.0',
+        appVersion: 'v1.5.0',
         exportedAt: new Date().toISOString(),
         summary: {
           totalTasks: tasks.length,
           completedTasks: tasks.filter((t) => t.isCompleted).length,
           todayTasks: tasks.filter((t) => t.isToday).length,
+          totalProjects: projects.length,
+          activeProjects: projects.filter((p) => !p.isCompleted).length,
+          totalRoutines: routines.length,
+          totalRelationships: relationships.length,
         },
         tasks,
+        projects,
+        routines,
+        relationships,
         userGoal,
         completionLogs: logs,
         data: {
           tasks,
+          projects,
+          routines,
+          relationships,
           userGoal,
           completionLogs: logs,
         },
@@ -2147,35 +2353,57 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         JSON.stringify(backupObject, null, 2)
       )}`;
       const downloadAnchor = document.createElement('a');
-      const dateStr = new Date().toISOString().split('T')[0];
       downloadAnchor.setAttribute('href', jsonString);
-      downloadAnchor.setAttribute('download', `ten_tasks_backup_${dateStr}.json`);
+      downloadAnchor.setAttribute('download', fileName);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
 
-      showToast('Cadangan data berhasil diunduh ke berkas .json');
+      showToast(`Cadangan lengkap berhasil diunduh (${fileName}) 💾`);
+      return fileName;
     } catch (e: any) {
       console.error('Gagal mengekspor data cadangan:', e);
       showToast('Gagal mengunduh berkas cadangan');
+      return '';
     }
-  }, [tasks, userGoal, showToast]);
+  }, [tasks, projects, routines, relationships, userGoal, showToast]);
 
   // Fitur Pemulihan Data Manual (Impor dari File JSON)
   const importBackupData = useCallback(
     (parsedJson: any, mode: 'merge' | 'replace'): { success: boolean; count: number; error?: string } => {
       try {
         let importedTasks: Task[] = [];
+        let importedProjects: ProjectItem[] = [];
+        let importedRoutines: RoutineItem[] = [];
+        let importedRelationships: LifeRelationship[] = [];
         let importedGoal = '';
         let importedLogs: any[] = [];
 
-        // Deteksi format payload secara fleksibel (mendukung data.tasks, tasks, atau array)
-        if (parsedJson && parsedJson.data && Array.isArray(parsedJson.data.tasks)) {
-          importedTasks = parsedJson.data.tasks;
+        // Deteksi format payload secara fleksibel (mendukung format baru dan format lama)
+        if (parsedJson && parsedJson.data && (Array.isArray(parsedJson.data.tasks) || Array.isArray(parsedJson.data.projects))) {
+          importedTasks = Array.isArray(parsedJson.data.tasks) ? parsedJson.data.tasks : [];
+          importedProjects = Array.isArray(parsedJson.data.projects) ? parsedJson.data.projects : [];
+          importedRoutines = Array.isArray(parsedJson.data.routines) ? parsedJson.data.routines : [];
+          importedRelationships = Array.isArray(parsedJson.data.relationships) ? parsedJson.data.relationships : [];
           importedGoal = parsedJson.data.userGoal || '';
           importedLogs = Array.isArray(parsedJson.data.completionLogs) ? parsedJson.data.completionLogs : [];
-        } else if (parsedJson && Array.isArray(parsedJson.tasks)) {
-          importedTasks = parsedJson.tasks;
+        } else if (parsedJson && (Array.isArray(parsedJson.tasks) || Array.isArray(parsedJson.projects))) {
+          importedTasks = Array.isArray(parsedJson.tasks) ? parsedJson.tasks : [];
+          importedProjects = Array.isArray(parsedJson.projects)
+            ? parsedJson.projects
+            : Array.isArray(parsedJson.data?.projects)
+            ? parsedJson.data.projects
+            : [];
+          importedRoutines = Array.isArray(parsedJson.routines)
+            ? parsedJson.routines
+            : Array.isArray(parsedJson.data?.routines)
+            ? parsedJson.data.routines
+            : [];
+          importedRelationships = Array.isArray(parsedJson.relationships)
+            ? parsedJson.relationships
+            : Array.isArray(parsedJson.data?.relationships)
+            ? parsedJson.data.relationships
+            : [];
           importedGoal = parsedJson.userGoal || (parsedJson.data && parsedJson.data.userGoal) || '';
           importedLogs = Array.isArray(parsedJson.completionLogs)
             ? parsedJson.completionLogs
@@ -2188,13 +2416,26 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { success: false, count: 0, error: 'Format berkas tidak dikenali sebagai cadangan TEN Tasks' };
         }
 
-        if (importedTasks.length === 0 && !importedGoal) {
-          return { success: false, count: 0, error: 'Tidak ada tugas atau sasaran yang ditemukan dalam berkas cadangan' };
+        if (
+          importedTasks.length === 0 &&
+          importedProjects.length === 0 &&
+          importedRoutines.length === 0 &&
+          !importedGoal
+        ) {
+          return { success: false, count: 0, error: 'Tidak ada data tugas, proyek, atau rutinitas yang ditemukan dalam berkas cadangan' };
         }
 
         let finalTasks: Task[] = [];
+        let finalProjects: ProjectItem[] = [];
+        let finalRoutines: RoutineItem[] = [];
+        let finalRelationships: LifeRelationship[] = [];
+
         if (mode === 'replace') {
           finalTasks = importedTasks;
+          finalProjects = importedProjects.length > 0 ? importedProjects : projects;
+          finalRoutines = importedRoutines.length > 0 ? importedRoutines : routines;
+          finalRelationships = importedRelationships.length > 0 ? importedRelationships : relationships;
+
           if (importedGoal) {
             setUserGoal(importedGoal);
             try {
@@ -2207,24 +2448,39 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } catch {}
           }
         } else {
-          // Mode Merge: satukan tugas
+          // Mode Merge: satukan tanpa duplikat
           const existingIds = new Set(tasks.map((t) => t.id));
           const newTasks = importedTasks.filter((t) => !existingIds.has(t.id));
           finalTasks = [...tasks, ...newTasks];
+
+          if (importedProjects.length > 0) {
+            const existingProjectIds = new Set(projects.map((p) => p.id));
+            const newProjects = importedProjects.filter((p) => !existingProjectIds.has(p.id));
+            finalProjects = [...projects, ...newProjects];
+          } else {
+            finalProjects = projects;
+          }
+
+          if (importedRoutines.length > 0) {
+            const existingRoutineIds = new Set(routines.map((r) => r.id));
+            const newRoutines = importedRoutines.filter((r) => !existingRoutineIds.has(r.id));
+            finalRoutines = [...routines, ...newRoutines];
+          } else {
+            finalRoutines = routines;
+          }
+
+          if (importedRelationships.length > 0) {
+            const existingRelIds = new Set(relationships.map((r) => r.id));
+            const newRels = importedRelationships.filter((r) => !existingRelIds.has(r.id));
+            finalRelationships = [...relationships, ...newRels];
+          } else {
+            finalRelationships = relationships;
+          }
+
           if (!userGoal && importedGoal) {
             setUserGoal(importedGoal);
             try {
               localStorage.setItem(STORAGE_GOAL_KEY, importedGoal);
-            } catch {}
-          }
-          if (importedLogs.length > 0) {
-            try {
-              let existingLogs: any[] = [];
-              const raw = localStorage.getItem('today_daily_completion_logs_v1');
-              if (raw) existingLogs = JSON.parse(raw);
-              const logIds = new Set(existingLogs.map((l: any) => l.id || l.taskId));
-              const mergedLogs = [...existingLogs, ...importedLogs.filter((l: any) => !logIds.has(l.id || l.taskId))];
-              localStorage.setItem('today_daily_completion_logs_v1', JSON.stringify(mergedLogs));
             } catch {}
           }
         }
@@ -2232,17 +2488,45 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTasks(finalTasks);
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(finalTasks));
-          window.dispatchEvent(new Event('storage'));
         } catch {}
+
+        if (importedProjects.length > 0 || mode === 'replace') {
+          setProjects(finalProjects);
+          try {
+            localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(finalProjects));
+          } catch {}
+        }
+
+        if (importedRoutines.length > 0 || mode === 'replace') {
+          setRoutines(finalRoutines);
+          try {
+            localStorage.setItem(STORAGE_ROUTINES_KEY, JSON.stringify(finalRoutines));
+          } catch {}
+        }
+
+        if (importedRelationships.length > 0 || mode === 'replace') {
+          setRelationships(finalRelationships);
+          try {
+            localStorage.setItem(STORAGE_RELATIONSHIPS_KEY, JSON.stringify(finalRelationships));
+          } catch {}
+        }
+
+        window.dispatchEvent(new Event('storage'));
 
         if (currentUser) {
           cloudSyncService.pushTasks(currentUser.email, finalTasks, importedGoal || userGoal);
         }
 
+        const summaryParts: string[] = [];
+        if (importedTasks.length > 0) summaryParts.push(`${importedTasks.length} tugas`);
+        if (importedProjects.length > 0) summaryParts.push(`${importedProjects.length} proyek`);
+        if (importedRoutines.length > 0) summaryParts.push(`${importedRoutines.length} rutinitas`);
+        const summaryText = summaryParts.length > 0 ? summaryParts.join(', ') : 'seluruh data';
+
         showToast(
           mode === 'replace'
-            ? `Berhasil memulihkan ${importedTasks.length} tugas dari berkas cadangan`
-            : `Berhasil menggabungkan ${importedTasks.length} tugas ke daftar saat ini`
+            ? `Berhasil memulihkan ${summaryText} dari berkas cadangan! 📥`
+            : `Berhasil menggabungkan ${summaryText} ke data saat ini! 📥`
         );
 
         return { success: true, count: importedTasks.length };
@@ -2666,6 +2950,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateRoutine,
         deleteRoutine,
         toggleRoutineCheckToday,
+        projects,
+        addProject,
+        updateProject,
+        deleteProject,
+        toggleProjectMilestone,
+        addProjectMilestone,
+        deleteProjectMilestone,
+        toggleProjectComplete,
       }}
     >
       {children}

@@ -227,7 +227,9 @@ export const AccountView: React.FC = () => {
   const handleExportBackup = () => {
     try {
       const fileName = exportBackupData();
-      showToast(`Berkas cadangan berhasil diunduh: ${fileName}`);
+      if (!fileName) {
+        showToast('Gagal membuat berkas cadangan.');
+      }
     } catch (err: any) {
       showToast(err.message || 'Gagal membuat berkas cadangan.');
     }
@@ -258,10 +260,22 @@ export const AccountView: React.FC = () => {
           ? parsed.tasks
           : null;
 
+        const projectsArray = Array.isArray(parsed?.data?.projects)
+          ? parsed.data.projects
+          : Array.isArray(parsed?.projects)
+          ? parsed.projects
+          : null;
+
+        const routinesArray = Array.isArray(parsed?.data?.routines)
+          ? parsed.data.routines
+          : Array.isArray(parsed?.routines)
+          ? parsed.routines
+          : null;
+
         const hasGoal = Boolean(parsed?.data?.userGoal || parsed?.userGoal);
 
-        if (!tasksArray && !hasGoal) {
-          showToast('Berkas tidak valid: format tugas tidak dikenali.');
+        if (!tasksArray && !projectsArray && !routinesArray && !hasGoal) {
+          showToast('Berkas tidak valid: format cadangan tidak dikenali.');
           return;
         }
 
@@ -283,6 +297,20 @@ export const AccountView: React.FC = () => {
     if (Array.isArray(restoreFilePayload)) return restoreFilePayload.length;
     if (Array.isArray(restoreFilePayload?.data?.tasks)) return restoreFilePayload.data.tasks.length;
     if (Array.isArray(restoreFilePayload?.tasks)) return restoreFilePayload.tasks.length;
+    return 0;
+  }, [restoreFilePayload]);
+
+  const previewProjectsCount = React.useMemo(() => {
+    if (!restoreFilePayload) return 0;
+    if (Array.isArray(restoreFilePayload?.data?.projects)) return restoreFilePayload.data.projects.length;
+    if (Array.isArray(restoreFilePayload?.projects)) return restoreFilePayload.projects.length;
+    return 0;
+  }, [restoreFilePayload]);
+
+  const previewRoutinesCount = React.useMemo(() => {
+    if (!restoreFilePayload) return 0;
+    if (Array.isArray(restoreFilePayload?.data?.routines)) return restoreFilePayload.data.routines.length;
+    if (Array.isArray(restoreFilePayload?.routines)) return restoreFilePayload.routines.length;
     return 0;
   }, [restoreFilePayload]);
 
@@ -959,7 +987,7 @@ export const AccountView: React.FC = () => {
 
             <div className="auth-form" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <p style={{ fontSize: '12px', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
-                Simpan atau pulihkan catatan tugas dan sasaran secara mandiri langsung ke berkas .json di memori perangkat ini tanpa perlu internet.
+                Simpan atau pulihkan seluruh data (tugas, sasaran proyek kuartal, rutinitas, dan pengingat peran) secara mandiri langsung ke berkas .json di memori perangkat ini tanpa perlu internet.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1293,6 +1321,22 @@ export const AccountView: React.FC = () => {
                       {previewTasksCount} Tugas
                     </span>
                   </div>
+                  {previewProjectsCount > 0 && (
+                    <div className="summary-pill">
+                      <span className="summary-pill-label">Jumlah Proyek:</span>
+                      <span className="summary-pill-val font-bold text-primary">
+                        {previewProjectsCount} Proyek
+                      </span>
+                    </div>
+                  )}
+                  {previewRoutinesCount > 0 && (
+                    <div className="summary-pill">
+                      <span className="summary-pill-label">Jumlah Rutinitas:</span>
+                      <span className="summary-pill-val font-bold text-success">
+                        {previewRoutinesCount} Rutinitas
+                      </span>
+                    </div>
+                  )}
                   <div className="summary-pill full-width">
                     <span className="summary-pill-label">Sasaran Hidup:</span>
                     <span className="summary-pill-val">

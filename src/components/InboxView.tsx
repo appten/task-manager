@@ -6,6 +6,7 @@ import { InboxTaskRow } from './InboxTaskRow';
 import { TaskFormModal } from './TaskFormModal';
 import { RelationshipRolesCard } from './RelationshipRolesCard';
 import { RoutineTrackerView } from './RoutineTrackerView';
+import { ProjectTrackerView } from './ProjectTrackerView';
 import { InboxType } from '../types/task';
 import {
   Search,
@@ -21,12 +22,14 @@ import {
   Users,
   Flame,
   RotateCw,
+  Target,
 } from 'lucide-react';
 
 export const InboxView: React.FC = () => {
   const {
     tasks,
     routines,
+    projects,
     searchQuery,
     setSearchQuery,
     isTaskFormOpen,
@@ -35,8 +38,8 @@ export const InboxView: React.FC = () => {
     showToast,
   } = useTask();
 
-  // State sub-tab di Inbox: 'inbox', 'rutinitas', atau 'pengingat'
-  const [inboxTab, setInboxTab] = useState<'inbox' | 'rutinitas' | 'pengingat'>('inbox');
+  // State sub-tab di Inbox: 'tasks' (All Tasks), 'routine', 'project', atau 'reminder'
+  const [inboxTab, setInboxTab] = useState<'tasks' | 'routine' | 'project' | 'reminder'>('tasks');
 
   // State untuk Relasi yang sedang dibuka form-nya
   const [selectedRelForModal, setSelectedRelForModal] = useState<string | undefined>(undefined);
@@ -99,6 +102,10 @@ export const InboxView: React.FC = () => {
       return isScheduledToday && inDateRange && !isCompletedToday;
     }).length;
   }, [routines, todayDateString, currentDow]);
+
+  const activeProjectsCount = useMemo(() => {
+    return projects.filter((p) => !p.isCompleted).length;
+  }, [projects]);
 
   // Handle Quick Add instan (Tekan Enter atau klik +)
   const handleQuickAdd = (e: React.FormEvent) => {
@@ -271,27 +278,27 @@ export const InboxView: React.FC = () => {
         )}
       </form>
 
-      {/* 2. Sub-Tab Navigasi di bawah Quick Input: Tab All Inbox, Rutinitas, dan Pengingat */}
+      {/* 2. Sub-Tab Navigasi di bawah Quick Input: Tab All Tasks, Routine, Project, dan Reminder */}
       <div className="inbox-subtabs-bar">
         <button
           type="button"
-          className={`inbox-subtab-btn ${inboxTab === 'inbox' ? 'active' : ''}`}
-          onClick={() => setInboxTab('inbox')}
-          title="Tampilkan daftar seluruh tugas Inbox"
+          className={`inbox-subtab-btn ${inboxTab === 'tasks' ? 'active' : ''}`}
+          onClick={() => setInboxTab('tasks')}
+          title="Tampilkan daftar seluruh tugas aktif"
         >
           <InboxIcon size={14} />
-          <span>All Inbox</span>
+          <span>All Tasks</span>
           <span className="inbox-subtab-badge">{activeCount}</span>
         </button>
 
         <button
           type="button"
-          className={`inbox-subtab-btn ${inboxTab === 'rutinitas' ? 'active' : ''}`}
-          onClick={() => setInboxTab('rutinitas')}
+          className={`inbox-subtab-btn ${inboxTab === 'routine' ? 'active' : ''}`}
+          onClick={() => setInboxTab('routine')}
           title="Pelacak Rutinitas & Absensi Ceklist Harian"
         >
           <RotateCw size={14} className="text-primary" />
-          <span>Rutinitas</span>
+          <span>Routine</span>
           {pendingTodayRoutinesCount > 0 && (
             <span
               className="inbox-subtab-badge rutinitas-pending"
@@ -304,12 +311,27 @@ export const InboxView: React.FC = () => {
 
         <button
           type="button"
-          className={`inbox-subtab-btn ${inboxTab === 'pengingat' ? 'active' : ''}`}
-          onClick={() => setInboxTab('pengingat')}
+          className={`inbox-subtab-btn ${inboxTab === 'project' ? 'active' : ''}`}
+          onClick={() => setInboxTab('project')}
+          title="Target Proyek Personal Kuartal (3 Bulan)"
+        >
+          <Target size={14} className="text-amber" />
+          <span>Project</span>
+          {activeProjectsCount > 0 && (
+            <span className="inbox-subtab-badge project-badge" title={`${activeProjectsCount} proyek aktif`}>
+              {activeProjectsCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          className={`inbox-subtab-btn ${inboxTab === 'reminder' ? 'active' : ''}`}
+          onClick={() => setInboxTab('reminder')}
           title="Pengingat Peran & Jaga Hubungan"
         >
           <Users size={14} />
-          <span>Pengingat</span>
+          <span>Reminder</span>
           <span className="inbox-subtab-badge beta">Beta</span>
         </button>
       </div>
@@ -325,19 +347,22 @@ export const InboxView: React.FC = () => {
       />
 
       {/* 4. Konten berdasarkan Tab Aktif */}
-      {inboxTab === 'pengingat' ? (
-        /* Tab Pengingat: Fitur Peran & Jaga Hubungan (Maksimal 1 Tugas Aktif per Hubungan) */
+      {inboxTab === 'reminder' ? (
+        /* Tab Reminder: Fitur Peran & Jaga Hubungan (Maksimal 1 Tugas Aktif per Hubungan) */
         <RelationshipRolesCard
           onOpenFormForRole={(relId) => {
             setSelectedRelForModal(relId);
             setIsTaskFormOpen(true);
           }}
         />
-      ) : inboxTab === 'rutinitas' ? (
-        /* Tab Rutinitas: Manajemen Rutinitas & Absensi Ceklist Tanggal */
+      ) : inboxTab === 'routine' ? (
+        /* Tab Routine: Manajemen Rutinitas & Absensi Ceklist Tanggal */
         <RoutineTrackerView />
+      ) : inboxTab === 'project' ? (
+        /* Tab Project: Mini Goals Kuartal (3 Bulan) dengan Milestone & Deadline */
+        <ProjectTrackerView />
       ) : (
-        /* Tab Inbox: Kontrol Pencarian, Filter Chips, & List Tugas Inbox */
+        /* Tab All Tasks: Kontrol Pencarian, Filter Chips, & List Tugas */
         <>
           {/* Baris Pencarian & Filter Cepat (Clean & Subtle) */}
           <div className="inbox-controls-bar">
